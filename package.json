@@ -1,0 +1,51 @@
+{
+  "name": "donation-platform",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "psql -c 'drop database if exists test' && psql -c 'create database test' && psql -d test < db/schema.sql && PGDATABASE=test vitest",
+    "create-index": "yarn cti -b -w -q \\\" ./components ./src"
+  },
+  "dependencies": {
+    "@types/html-to-text": "^8.1.0",
+    "dkfds": "^7.5.3",
+    "ejs": "^3.1.8",
+    "formik": "^2.2.9",
+    "html-to-text": "^8.2.0",
+    "juice": "^8.0.0",
+    "lodash": "^4.17.21",
+    "minimist": "1.2.6",
+    "moment": "^2.29.4",
+    "next": "^12.1.1",
+    "node-fetch": "^3.2.3",
+    "nodemailer": "^6.7.3",
+    "pg": "^8.7.3",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
+    "swr": "^1.2.2",
+    "yup": "^0.32.11"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^5.16.3",
+    "@testing-library/react": "^12.1.4",
+    "@types/jest": "^27.4.1",
+    "@types/node": "^17.0.23",
+    "@types/nodemailer": "^6.4.4",
+    "@types/pg": "^8.6.5",
+    "@types/react": "^17.0.43",
+    "@vitest/ui": "^0.14.1",
+    "create-ts-index": "^1.14.0",
+    "eslint": "^8.12.0",
+    "eslint-config-next": "^12.1.1",
+    "jest": "^27.5.1",
+    "prettier": "^2.7.1",
+    "typescript": "^4.6.3",
+    "vite-tsconfig-paths": "^3.5.0",
+    "vitest": "^0.14.1",
+    "yarn-upgrade-all": "^0.6.1"
+  }
+}

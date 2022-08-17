@@ -1,0 +1,6 @@
+export PGDATABASE=giveffektivt
+export PGHOST=localhost
+export PGPORT=5432
+export PGUSER=postgres
+export PGPASSWORD=password
+export DATABASE_URL="postgres://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$PGDATABASE?sslmode=disable&search_path=giveffektivt" 

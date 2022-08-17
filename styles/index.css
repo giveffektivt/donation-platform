@@ -1,0 +1,170 @@
+no-margin-top {
+  margin-top: 0px;
+}
+
+mt-10 {
+  margin-top: 10px;
+}
+
+.clearfix::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-image: url("https://giveffektivt.dk/wp-content/uploads/2021/04/doug-linstedt-jEEYZsaxbH4-unsplash.jpg") !important;
+  background-blend-mode: overlay;
+  background-color: #916468 !important;
+  background-repeat: no-repeat;
+  background-size: cover;
+  display: flex;
+  justify-content: center;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+.wrapper {
+  border: 1px solid rgb(0, 0, 0);
+  max-width: 560px;
+  background-color: white;
+  margin: 0px 0 0px 0;
+}
+
+.wrapper2 {
+  width: 80%;
+  height: 100%;
+  max-width: 1080px;
+  margin: auto;
+  margin-top: auto;
+  margin-right: auto;
+  margin-bottom: auto;
+  margin-left: auto;
+  position: relative;
+}
+
+.custom-header {
+  background-color: #921223;
+  padding: 20px;
+  font-size: 26px;
+  color: white;
+  margin: -1px;
+  width: auto;
+  font-style: normal;
+}
+
+.form-wrapper {
+  margin: 24px 18px 25px 18px;
+}
+
+.form-select {
+  max-width: fit-content !important;
+  background-color: white;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6 1.41-1.42z'/%3E%3C/svg%3E") !important;
+}
+
+.button.button-primary.custom-button {
+  background-color: #921223;
+  border-width: 0px;
+  padding: 12px 3px;
+  font-size: 17px;
+  max-width: fit-content;
+  font-weight: 550;
+}
+
+.button.button-primary.custom-button:hover {
+  background-color: #921223;
+}
+
+.button-box {
+  margin: 0 20px;
+  display: flex;
+  align-items: center;
+}
+
+.f16px {
+  font-size: 16px;
+}
+
+.arrow {
+  padding: 0 12px 0 0;
+}
+
+.custom-back-link {
+  cursor: pointer;
+  display: inline;
+  border-bottom: 1px solid #747474;
+  line-height: 2.4rem;
+}
+
+.flex-container {
+  flex-direction: row;
+  display: flex;
+  align-items: center;
+}
+
+.icones {
+  font-size: 100px;
+  color: #358000;
+  padding-right: 0px;
+}
+
+.icones-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 130px;
+}
+
+.img {
+  height: 150px;
+  width: 160px;
+  margin: 0 20px 0 0;
+}
+
+@media (max-width: 400px) {
+  .flex-container {
+    flex-direction: column;
+  }
+  .img {
+    height: 150px;
+    width: 160px;
+    margin: 0 0 10px 0;
+  }
+}
+
+.f-s-20 {
+  font-size: 20px;
+}
+
+.flx-center {
+  display: flex;
+  flex-direction: row;
+  align-content: center;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gap-10 {
+  gap: 10px;
+}
+.gap-5 {
+  gap: 2px;
+}
+
+.wrap {
+  flex-wrap: wrap;
+}
+
+@media (min-width: 400px) {
+  .gap-5 {
+    gap: 15px;
+  }
+}

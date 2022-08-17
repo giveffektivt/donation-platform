@@ -1,0 +1,23 @@
+version: "3.7"
+
+volumes:
+  postgres14:
+
+services:
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+  giveffektivt-db:
+    build: db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=giveffektivt
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres14:/var/lib/postgresql/data

@@ -1,0 +1,40 @@
+version: "0.2"
+ignorePaths: []
+dictionaryDefinitions: []
+dictionaries: []
+words:
+  - Adminer
+  - autocapture
+  - betalingsmetode
+  - dbmate
+  - direnv
+  - envrc
+  - formik
+  - fradragsberettigelse
+  - Inspirér
+  - lindeloev
+  - Lucida
+  - maximbaz
+  - medlemsab
+  - medlemsnummer
+  - mobilepay
+  - nobullet
+  - noverby
+  - orderid
+  - pgcli
+  - PGDATABASE
+  - PGHOST
+  - PGPASSWORD
+  - PGPORT
+  - PGUSER
+  - psql
+  - redigér
+  - Sightsavers
+  - sslmode
+  - VERCEL
+  - vitest
+ignoreWords:
+  - Zæøå
+  - DDMMÅÅ
+  - dkfds
+import: []
