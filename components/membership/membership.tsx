@@ -66,7 +66,7 @@ export const Membership = () => {
           setStep((step) => step + 1);
           break;
         case 1:
-          await submitForm(values, bag, "/api/payment");
+          await submitForm(values, bag);
           break;
       }
     } catch (err) {

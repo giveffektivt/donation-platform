@@ -5,11 +5,7 @@ import React, { useState } from "react";
 type WizardProps = {
   children: any;
   initialValues: any;
-  onSubmit: (
-    values: any,
-    bag: any,
-    submitUrl: "/api/payment" | "/api/payment-en"
-  ) => Promise<void>;
+  onSubmit: (values: any, bag: any) => Promise<void>;
 };
 
 const errorMessage = `
@@ -52,7 +48,7 @@ export const Wizard = ({ children, initialValues, onSubmit }: WizardProps) => {
           next(values);
           break;
         case 2:
-          await onSubmit(values, bag, "/api/payment");
+          await onSubmit(values, bag);
           if (values.method === "bankTransfer") {
             next(values);
           }
