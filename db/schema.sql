@@ -415,8 +415,8 @@ CREATE VIEW giveffektivt.kpi AS
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt membership'::giveffektivt.donation_recipient))
-        ), donations_monthly AS (
-         SELECT sum(c1.amount) AS donations_monthly
+        ), donations_recurring_per_year AS (
+         SELECT ((12)::numeric * sum(c1.amount)) AS donations_recurring_per_year
            FROM ( SELECT DISTINCT ON (d.id) d.amount,
                     c.status
                    FROM (giveffektivt.donation d
@@ -424,38 +424,19 @@ CREATE VIEW giveffektivt.kpi AS
                   WHERE ((d.recipient <> 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
                   ORDER BY d.id, c.created_at DESC) c1
           WHERE (c1.status = 'charged'::giveffektivt.charge_status)
-        ), members AS (
-         SELECT (count(DISTINCT ds.tin))::numeric AS members
-           FROM ((giveffektivt.donor_with_sensitive_info ds
-             JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient = 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (date_trunc('year'::text, c.created_at) = date_trunc('year'::text, now())))
-        ), verified_count_200 AS (
-         SELECT (count(*))::numeric AS verified_count_200
-           FROM ( SELECT sum(d.amount) AS sum
-                   FROM ((giveffektivt.donor_with_sensitive_info p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((d.recipient <> 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (p.country = 'Denmark'::text) AND (p.tin IS NOT NULL) AND (p.name IS NOT NULL) AND (p.address IS NOT NULL))
-                  GROUP BY p.tin) c1
-          WHERE (c1.sum >= (200)::numeric)
-        ), verified_total AS (
-         SELECT sum(d.amount) AS verified_total
+        ), members_dk AS (
+         SELECT (count(DISTINCT p.tin))::numeric AS members_dk
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient <> 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (p.country = 'Denmark'::text) AND (p.tin IS NOT NULL) AND (p.name IS NOT NULL) AND (p.address IS NOT NULL))
+          WHERE ((d.recipient = 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (p.country = 'Denmark'::text))
         )
- SELECT members.members,
-    verified_total.verified_total,
-    verified_count_200.verified_count_200,
+ SELECT members_dk.members_dk,
     donations_total.donations_total,
-    donations_monthly.donations_monthly
-   FROM members,
-    verified_total,
-    verified_count_200,
+    donations_recurring_per_year.donations_recurring_per_year
+   FROM members_dk,
     donations_total,
-    donations_monthly;
+    donations_recurring_per_year;
 
 
 --
@@ -637,4 +618,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20220811105252'),
     ('20220812002209'),
     ('20220812162001'),
-    ('20220816152738');
+    ('20220816152738'),
+    ('20220823110152');

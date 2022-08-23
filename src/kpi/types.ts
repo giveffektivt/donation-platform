@@ -5,11 +5,9 @@
 // but if we ever need to have proper numeric types, let's change type on DB at that time.
 
 export type Kpi = {
-  members: number;
+  members_dk: number;
   donations_total: number;
-  donations_monthly: number;
-  verified_count_200: number;
-  verified_total: number;
+  donations_recurring_per_year: number;
 };
 
 export type RecipientDistribution = {
