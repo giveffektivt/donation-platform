@@ -126,3 +126,15 @@ export async function setDonationScanPayId(
     [donation.gateway_metadata?.scanpay_id, donation.id]
   );
 }
+
+export async function getDonationIdsByOldDonorId(
+  client: PoolClient,
+  old_donor_id: string
+): Promise<string[]> {
+  return (
+    await client.query(
+      "select donation_id from old_ids_map where old_donor_id = $1",
+      [old_donor_id]
+    )
+  ).rows.map((r) => r.donation_id);
+}

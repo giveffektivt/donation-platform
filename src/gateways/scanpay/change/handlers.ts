@@ -1,6 +1,7 @@
 import { PoolClient } from "pg";
 import {
   ChargeStatus,
+  getDonationIdsByOldDonorId,
   insertInitialCharge,
   ScanPayChange,
   setChargeWithGatewayResponseByShortId,
@@ -9,7 +10,12 @@ import {
 
 /** Add scanpayId to a donation */
 async function handleSubscriber(db: PoolClient, change: ScanPayChange) {
-  for (let donationId of change.ref.split("_")) {
+  // If change.ref is a number, it's actually a donor ID in the old database
+  const donationIds = /^\d+$/.test(change.ref)
+    ? await getDonationIdsByOldDonorId(db, change.ref)
+    : change.ref.split("_");
+
+  for (let donationId of donationIds) {
     await setDonationScanPayId(db, {
       id: donationId,
       gateway_metadata: {
