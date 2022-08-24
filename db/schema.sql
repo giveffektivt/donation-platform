@@ -440,6 +440,23 @@ CREATE VIEW giveffektivt.kpi AS
 
 
 --
+-- Name: old_ids_map; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.old_ids_map AS
+ SELECT p.id AS donor_id,
+    p._old_id AS old_donor_id,
+    d.id AS donation_id,
+    d._old_id AS old_donation_id,
+    c.id AS charge_id,
+    c._old_id AS old_charge_id
+   FROM ((giveffektivt._donor p
+     LEFT JOIN giveffektivt._donation d ON ((p.id = d.donor_id)))
+     LEFT JOIN giveffektivt._charge c ON ((d.id = c.donation_id)))
+  WHERE ((p.deleted_at IS NULL) AND (d.deleted_at IS NULL) AND (c.deleted_at IS NULL) AND ((p._old_id IS NOT NULL) OR (d._old_id IS NOT NULL) OR (c._old_id IS NOT NULL)));
+
+
+--
 -- Name: recipient_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -619,4 +636,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20220812002209'),
     ('20220812162001'),
     ('20220816152738'),
-    ('20220823110152');
+    ('20220823110152'),
+    ('20220824195743');

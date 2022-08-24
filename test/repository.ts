@@ -6,7 +6,7 @@ import {
   DonationWithGatewayInfoScanPay,
   DonorWithSensitiveInfo,
 } from "../src";
-import { DonationWithGatewayInfoAny } from "./types";
+import { DonationWithGatewayInfoAny, DonorWithOldId } from "./types";
 
 export async function insertCharge(
   client: PoolClient,
@@ -69,4 +69,16 @@ export async function findAllCharges(
   client: PoolClient
 ): Promise<ChargeWithGatewayInfo[]> {
   return (await client.query(`select * from charge_with_gateway_info`)).rows;
+}
+
+export async function insertOldDonor(
+  client: PoolClient,
+  donor: Partial<DonorWithOldId>
+): Promise<DonorWithOldId> {
+  return (
+    await client.query(
+      `insert into _donor(email, _old_id) values ($1, $2) returning *`,
+      [donor.email, donor._old_id]
+    )
+  ).rows[0];
 }

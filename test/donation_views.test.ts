@@ -6,6 +6,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
+  getDonationIdsByOldDonorId,
   getDonationsToEmail,
   insertCharge,
   insertDonationMembershipViaScanPay,
@@ -15,6 +16,7 @@ import {
   setDonationEmailed,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
+import { insertOldDonor } from "./repository";
 
 const client = dbClient();
 
@@ -194,4 +196,52 @@ test("Should not email to a donation that was already attempted to be emailed", 
   });
 
   expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should find donation ID by old donor ID", async () => {
+  const db = await client;
+
+  const oldDonor = await insertOldDonor(db, {
+    email: "hello@example.com",
+    _old_id: "123",
+  });
+
+  const newDonor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const oldDonation1 = await insertDonationMembershipViaScanPay(db, {
+    donor_id: oldDonor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  const oldDonation2 = await insertDonationMembershipViaScanPay(db, {
+    donor_id: oldDonor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  const newDonation1 = await insertDonationMembershipViaScanPay(db, {
+    donor_id: newDonor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  const newDonation2 = await insertDonationMembershipViaScanPay(db, {
+    donor_id: newDonor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertCharge(db, {
+    donation_id: oldDonation1.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertCharge(db, {
+    donation_id: newDonation1.id,
+    status: ChargeStatus.Charged,
+  });
+
+  expect(await getDonationIdsByOldDonorId(db, oldDonor._old_id)).toEqual([
+    oldDonation1.id,
+    oldDonation2.id,
+  ]);
 });
