@@ -9,7 +9,6 @@ import {
   EmailedStatus,
   getDonationsToEmail,
   membershipReceipt,
-  membershipReceiptEn,
   paymentReceipt,
   sendEmail,
   setDonationEmailed,
@@ -51,25 +50,16 @@ export async function sendMembershipEmail(
 ) {
   const { email } = donation;
 
-  const inDanish = donation.country === "Denmark";
-
-  const htmlNoInline = inDanish
-    ? membershipReceipt(donation, bank)
-    : membershipReceiptEn(donation, bank);
-
+  const htmlNoInline = membershipReceipt(donation, bank);
   const text = htmlToText(htmlNoInline);
   const html = juice(htmlNoInline);
   const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
-
-  const subject = inDanish
-    ? `${prefix}Dit medlemskab af Giv Effektivt`
-    : `${prefix}Your membership of Giv Effektivt`;
 
   const letter: any = {
     from: '"Giv Effektivt" <kvittering@giveffektivt.dk>',
     replyTo: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
     to: `<${email}>`,
-    subject: subject,
+    subject: `${prefix}Dit medlemskab af Giv Effektivt`,
     attachments: [
       {
         filename: "t.png",

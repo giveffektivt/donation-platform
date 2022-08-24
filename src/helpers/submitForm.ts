@@ -8,12 +8,8 @@ const options = (values: any) => {
   return options;
 };
 
-export const submitForm = async (
-  values: any,
-  bag: any,
-  url: "/api/payment" | "/api/payment-en"
-): Promise<void> => {
-  const response = await fetch(url, options(values));
+export const submitForm = async (values: any, bag: any): Promise<void> => {
+  const response = await fetch("/api/payment", options(values));
 
   if (!response.ok) {
     throw new Error(response.statusText);

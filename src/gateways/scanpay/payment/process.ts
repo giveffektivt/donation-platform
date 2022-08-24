@@ -17,7 +17,6 @@ import {
   scanPayOneTimeUrl,
   scanPaySubscriptionUrl,
   SubmitData,
-  EnSubmitData,
 } from "src";
 
 export async function processScanPayPayment(
@@ -104,9 +103,7 @@ async function generateRedirectUrl(
 
   const successUrl = !!donation
     ? process.env.SUCCESS_URL
-    : donor.country === "Denmark"
-    ? process.env.SUCCESS_URL_MEMBERSHIP_ONLY
-    : process.env.SUCCESS_URL_MEMBERSHIP_ONLY_EN;
+    : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
 
   const url = await (donation && donationCharge
     ? scanPayOneTimeUrl(donor, donation, donationCharge, customerIp, successUrl)
@@ -121,25 +118,3 @@ async function generateRedirectUrl(
 const isAutoCapturedPayment = (submitData: SubmitData) =>
   parseDonationFrequency(submitData.subscription) === DonationFrequency.Once &&
   !submitData.membership;
-
-export const processEnPayment = async (
-  submitData: EnSubmitData,
-  ip: string
-): Promise<string> => {
-  const data = {
-    ...submitData,
-    membershipOnly: true,
-    membership: true,
-    method: "creditCard",
-
-    // HACK: unused "required" fields,
-    // not to make all of those optional in validation schema if we are not going to keep this for long time
-    amount: 1,
-    recipient: "Giv Effektivt membership",
-    subscription: "oneTime",
-    taxDeduction: false,
-  };
-  const url = await processScanPayPayment(data, ip);
-
-  return url;
-};

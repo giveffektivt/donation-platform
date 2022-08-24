@@ -111,23 +111,3 @@ export const validationSchema = {
     .oneOf([true], "Handelsbetingelserne skal accepteres"),
   taxDeduction: yup.bool().required().oneOf([true, false]),
 };
-
-export const validationSchemaEn = {
-  name: yup.string().required("Write your name"),
-  email: yup
-    .string()
-    .required("Write your email address")
-    .matches(/@/, "Email address is invalid"),
-  tin: yup.string().required("TIN is required"),
-  address: yup.string().required("Address is required"),
-  zip: yup.string().required("Postcode is required"),
-  city: yup.string().required("City is required"),
-  birthday: yup
-    .date()
-    .required("Birthday is required")
-    .typeError("Birthday is required"),
-  country: yup.string().required("Country is required"),
-};
-
-const enSchemaObj = yup.object(validationSchemaEn);
-export type EnSubmitData = yup.InferType<typeof enSchemaObj>;

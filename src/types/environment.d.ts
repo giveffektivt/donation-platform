@@ -7,7 +7,6 @@ declare global {
       SCANPAY_HOSTNAME: string;
       SUCCESS_URL: string;
       SUCCESS_URL_MEMBERSHIP_ONLY: string;
-      SUCCESS_URL_MEMBERSHIP_ONLY_EN: string;
       URL: string;
     }
   }

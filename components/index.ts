@@ -1,5 +1,4 @@
 export * from "./membership";
-export * from "./membershipEn";
 export * from "./AmountInput";
 export * from "./BackButton";
 export * from "./BankTransferStep";
