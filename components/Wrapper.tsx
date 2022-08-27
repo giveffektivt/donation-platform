@@ -1,4 +1,3 @@
-import React from "react";
 import { Helper } from "./Helper";
 
 export const Wrapper = ({ children }: any) => {

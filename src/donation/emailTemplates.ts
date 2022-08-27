@@ -1,9 +1,9 @@
 import {
   BankTransferInfo,
   DonationFrequency,
-  DonationToEmail,
   donationPurpose,
   DonationRecipient,
+  DonationToEmail,
 } from "src";
 
 export function paymentReceipt(

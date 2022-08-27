@@ -1,4 +1,9 @@
-import { DonationGatewayMetadataScanpay, DonationRecipient } from "src";
+import {
+  DonationGatewayMetadataQuickpay,
+  DonationGatewayMetadataScanpay,
+  DonationRecipient,
+  PaymentGateway,
+} from "src";
 
 export enum ChargeStatus {
   Created = "created",
@@ -27,9 +32,17 @@ export type ChargeToCharge = {
   short_id: string;
   amount: number;
   email: string;
+  gateway: PaymentGateway;
   recipient: DonationRecipient;
-  gateway_metadata?: ChargeGatewayMetadataScanpay;
-  donation_gateway_metadata?: DonationGatewayMetadataScanpay;
+};
+
+export type ChargeToChargeScanpay = ChargeToCharge & {
+  gateway_metadata: ChargeGatewayMetadataScanpay;
+  donation_gateway_metadata: DonationGatewayMetadataScanpay;
+};
+
+export type ChargeToChargeQuickpay = ChargeToCharge & {
+  donation_gateway_metadata: DonationGatewayMetadataQuickpay;
 };
 
 export type ChargeGatewayMetadataScanpay = {

@@ -4,13 +4,15 @@ import {
   dbClient,
   dbRollbackTransaction,
   insertCharge,
+  insertDonationMembershipViaQuickpay,
   insertDonationMembershipViaScanpay,
   insertDonorWithSensitiveInfo,
-  insertInitialCharge,
+  insertInitialChargeQuickpay,
+  insertInitialChargeScanpay,
   PaymentMethod,
-  setChargeWithGatewayResponseByShortId,
   setChargeIdempotencyKey,
   setChargeStatus,
+  setChargeWithGatewayResponseByShortId,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllCharges, findCharge } from "./repository";
@@ -50,7 +52,7 @@ test("Insert charge for a donation", async () => {
   expect(charge.short_id).toHaveLength(4);
 });
 
-test("Insert initial charge for a donation only once", async () => {
+test("Insert initial charge for a donation via Scanpay only once", async () => {
   const db = await client;
 
   const donor = await insertDonorWithSensitiveInfo(db, {
@@ -62,7 +64,7 @@ test("Insert initial charge for a donation only once", async () => {
     method: PaymentMethod.CreditCard,
   });
 
-  const charge = await insertInitialCharge(db, {
+  const charge = await insertInitialChargeScanpay(db, {
     donation_id: donation.id,
   });
 
@@ -75,9 +77,43 @@ test("Insert initial charge for a donation only once", async () => {
 
   expect(await findAllCharges(db)).toHaveLength(1);
 
-  await insertInitialCharge(db, {
+  await insertInitialChargeScanpay(db, {
     donation_id: donation.id,
   });
+
+  expect(await findAllCharges(db)).toHaveLength(1);
+});
+
+test("Insert initial charge for a donation via Quickpay only once", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  const charge = await insertInitialChargeQuickpay(
+    db,
+    donation.gateway_metadata.quickpay_order
+  );
+
+  expect(charge).toMatchObject({
+    donation_id: donation.id,
+    status: ChargeStatus.Created,
+  });
+
+  expect(charge.short_id).toHaveLength(4);
+
+  expect(await findAllCharges(db)).toHaveLength(1);
+
+  await insertInitialChargeQuickpay(
+    db,
+    donation.gateway_metadata.quickpay_order
+  );
 
   expect(await findAllCharges(db)).toHaveLength(1);
 });

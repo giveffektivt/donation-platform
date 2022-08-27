@@ -45,15 +45,9 @@ export const Membership = () => {
   };
 
   const [step, setStep] = useState(0);
-  const handlePrevious = () => {
-    setStep((step) => step - 1);
-  };
 
   // I have no idea what are the keys used to
-  const steps = [
-    <MembershipStep1 key={0} />,
-    <MembershipStep2 handlePrevious={handlePrevious} key={1} />,
-  ];
+  const steps = [<MembershipStep1 key={0} />, <MembershipStep2 key={1} />];
   const maxStep = steps.length;
 
   const validations = [validateStep1, validateStep2];

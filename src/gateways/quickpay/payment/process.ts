@@ -5,36 +5,37 @@ import {
   dbExecuteInTransaction,
   DonationFrequency,
   DonationRecipient,
-  DonationWithGatewayInfoScanpay,
+  DonationWithGatewayInfoQuickpay,
   DonorWithSensitiveInfo,
   insertCharge,
-  insertDonationMembershipViaScanpay,
-  insertDonationViaScanpay,
+  insertDonationMembershipViaQuickpay,
+  insertDonationViaQuickpay,
   insertDonorWithSensitiveInfo,
   parseDonationFrequency,
   parseDonationRecipient,
   parsePaymentMethod,
-  PaymentMethod,
-  scanpayOneTimeUrl,
-  scanpaySubscriptionUrl,
+  quickpayCreatePayment,
+  quickpayCreateSubscription,
+  quickpayOneTimeUrl,
+  quickpaySubscriptionUrl,
+  setDonationQuickpayId,
   SubmitData,
 } from "src";
 
-export async function processScanpayPayment(
-  submitData: SubmitData,
-  customerIp: string
+export async function processQuickpayPayment(
+  submitData: SubmitData
 ): Promise<string> {
-  const [donor, donation, charge] = await dbExecuteInTransaction(
-    async (db) => await insertScanpayData(db, submitData)
+  const [donation, charge] = await dbExecuteInTransaction(
+    async (db) => await insertQuickpayDataWithQuickpayId(db, submitData)
   );
-  return await generateRedirectUrl(donor, donation, charge, customerIp);
+  return await generateRedirectUrl(donation, charge);
 }
 
-export async function insertScanpayData(
+export async function insertQuickpayData(
   db: PoolClient,
   submitData: SubmitData
 ): Promise<
-  [DonorWithSensitiveInfo, DonationWithGatewayInfoScanpay, Charge | null]
+  [DonorWithSensitiveInfo, DonationWithGatewayInfoQuickpay, Charge | null]
 > {
   const donor = await insertDonorWithSensitiveInfo(db, {
     name: submitData.name,
@@ -48,11 +49,11 @@ export async function insertScanpayData(
   });
 
   const donation = submitData.membership
-    ? await insertDonationMembershipViaScanpay(db, {
+    ? await insertDonationMembershipViaQuickpay(db, {
         donor_id: donor.id,
         method: parsePaymentMethod(submitData.method),
       })
-    : await insertDonationViaScanpay(db, {
+    : await insertDonationViaQuickpay(db, {
         donor_id: donor.id,
         amount: submitData.amount,
         recipient: parseDonationRecipient(submitData.recipient),
@@ -73,11 +74,24 @@ export async function insertScanpayData(
   return [donor, donation, charge];
 }
 
+async function insertQuickpayDataWithQuickpayId(
+  db: PoolClient,
+  submitData: SubmitData
+): Promise<[DonationWithGatewayInfoQuickpay, Charge | null]> {
+  const [_donor, donation, charge] = await insertQuickpayData(db, submitData);
+
+  donation.gateway_metadata.quickpay_id = await (donation && charge
+    ? quickpayCreatePayment(charge.short_id, donation)
+    : quickpayCreateSubscription(donation));
+
+  await setDonationQuickpayId(db, donation);
+
+  return [donation, charge];
+}
+
 async function generateRedirectUrl(
-  donor: DonorWithSensitiveInfo,
-  donation: DonationWithGatewayInfoScanpay,
-  charge: Charge | null,
-  customerIp: string
+  donation: DonationWithGatewayInfoQuickpay,
+  charge: Charge | null
 ) {
   const successUrl =
     donation.recipient !== DonationRecipient.GivEffektivt
@@ -85,11 +99,8 @@ async function generateRedirectUrl(
       : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
 
   const url = await (charge
-    ? scanpayOneTimeUrl(donor, donation, charge, customerIp, successUrl)
-    : scanpaySubscriptionUrl(donor, donation, customerIp, successUrl));
+    ? quickpayOneTimeUrl(donation, successUrl)
+    : quickpaySubscriptionUrl(donation, successUrl));
 
-  const slug =
-    donation.method === PaymentMethod.MobilePay ? "?go=mobilepay" : "";
-
-  return url + slug;
+  return url;
 }

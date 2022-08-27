@@ -49,8 +49,10 @@ To install, follow https://github.com/amacneil/dbmate
 2. Run `yarn install` to install dependencies.
 3. Spin up the database with `docker-compose up` and (if you haven't done that) apply migrations with `dbmate migrate` (check spinning up the database)
 4. Create a file `.env` and copy contents of `.env.example` to it.
-5. Swap value of `SCANPAY_KEY`, email username and email password with real values.
-6. and `yarn dev` to run the app.
+5. Swap value of email username and email password with real values.
+6. Set `PAYMENT_GATEWAY` to a preferred payment gateway (supported values are listed in `payment_gateway` enum in database).
+7. Set values for corresponding payment gateways (leave `QUICKPAY_CALLBACK_URL` empty unless you want Quickpay to send you a callback).
+8. and `yarn dev` to run the app.
 
 ### Database tools
 
@@ -95,7 +97,11 @@ There are integration tests validating database logic, which can be executed usi
 ## FAQ
 
 - _How to test the payment gateway?_
-  There is no way to test the payment gateway locally, but you can contact Scanpay and ask for a test account. Use 4111 1111 1111 1111 as the card number.
+
+There is no way to test the payment gateway locally, but for a development environment:
+
+- For Quickpay, use [Quickpay test cards](https://learn.quickpay.net/tech-talk/appendixes/test/#test-data) and these transactions would automatically be treated as test transactions.
+- For Scanpay, you can ask them for a test account. Then use `4111 1111 1111 1111` as the card number.
 
 ## Credits
 

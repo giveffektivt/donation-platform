@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   parsePaymentMethod,
+  PaymentGateway,
   PaymentMethod,
   processBankTransferPayment,
+  processQuickpayPayment,
   processScanpayPayment,
   SubmitData,
   validationSchema,
@@ -25,7 +27,7 @@ const firstElementOrString = (x: any) => {
 
 /**
  * 1. Creates donor record and maybe donor subscription, charges, membership, payment or bank_transfer
- * 2. Requests link from Scanpay for credit card or MobilePay, otherwise returns bank transfer info
+ * 2. Requests link from payment gateway for credit card or MobilePay, otherwise returns bank transfer info
  */
 export default async function handler(
   req: NextApiRequest,
@@ -58,12 +60,30 @@ export default async function handler(
 
       case PaymentMethod.CreditCard:
       case PaymentMethod.MobilePay:
-        const redirectUrl = await processScanpayPayment(submitData, ip);
-        res.status(200).json({
-          message: "OK",
-          redirect: redirectUrl,
-        });
-        return;
+        switch (process.env.PAYMENT_GATEWAY) {
+          case PaymentGateway.Quickpay:
+            res.status(200).json({
+              message: "OK",
+              redirect: await processQuickpayPayment(submitData),
+            });
+            return;
+
+          case PaymentGateway.Scanpay:
+            res.status(200).json({
+              message: "OK",
+              redirect: await processScanpayPayment(submitData, ip),
+            });
+            return;
+
+          default:
+            console.error(
+              `api/payment: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`
+            );
+            res.status(400).json({
+              message: `Unsupported payment method '${submitData.method}'`,
+            });
+            return;
+        }
     }
   } catch (err) {
     console.error("api/payment:", err);

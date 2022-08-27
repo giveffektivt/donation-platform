@@ -1,24 +1,8 @@
 import { Button, Input } from "comps";
 
-interface StepInterface {
-  handlePrevious: () => void;
-}
-
-export const MembershipStep2 = ({ handlePrevious }: StepInterface) => {
+export const MembershipStep2 = () => {
   return (
     <>
-      {/* <div className="form-group" style={{ padding: "2px 17px 2px 17px" }}>
-        <h5 style={{ marginTop: "15px" }}>
-          Kurv{" "}
-          <span
-            onClick={handlePrevious}
-            className="custom-back-link"
-            style={{ fontWeight: "normal" }}
-          >
-            (redigér)
-          </span>
-        </h5>
-      </div> */}
       <Input
         label={<>Adresse</>}
         name="address"

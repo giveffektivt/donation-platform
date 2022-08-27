@@ -73,7 +73,8 @@ CREATE TYPE giveffektivt.emailed_status AS ENUM (
 --
 
 CREATE TYPE giveffektivt.payment_gateway AS ENUM (
-    'ScanPay',
+    'Quickpay',
+    'Scanpay',
     'Bank transfer'
 );
 
@@ -302,12 +303,13 @@ CREATE VIEW giveffektivt.charges_to_charge AS
     dc.email,
     d.amount,
     d.recipient,
+    d.gateway,
     c.gateway_metadata,
     d.gateway_metadata AS donation_gateway_metadata
    FROM ((giveffektivt.donor_with_contact_info dc
      JOIN giveffektivt.donation_with_gateway_info d ON ((d.donor_id = dc.id)))
      JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
-  WHERE ((d.gateway = 'ScanPay'::giveffektivt.payment_gateway) AND (NOT d.cancelled) AND (c.status = 'created'::giveffektivt.charge_status));
+  WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (c.status = 'created'::giveffektivt.charge_status));
 
 
 --
@@ -350,7 +352,7 @@ CREATE VIEW giveffektivt.donations_to_create_charges AS
                 END AS next_charge
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.gateway = 'ScanPay'::giveffektivt.payment_gateway) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])))
+          WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])))
           ORDER BY d.id, c.created_at DESC) s
   WHERE (s.next_charge <= now());
 
@@ -642,4 +644,6 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20220902221653'),
     ('20221007155850'),
     ('20221007165120'),
+    ('20221008192012'),
+    ('20221008192244'),
     ('20221026214644');

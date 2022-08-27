@@ -4,7 +4,7 @@ import { Charge, Donation, DonorWithContactInfo } from "src";
 const client = scanpay(process.env.SCANPAY_KEY);
 
 /** Make a request to Scanpay API to get a one time payment link*/
-export async function scanPayOneTimeUrl(
+export async function scanpayOneTimeUrl(
   donor: DonorWithContactInfo,
   donation: Donation,
   charge: Charge,
@@ -40,7 +40,7 @@ export async function scanPayOneTimeUrl(
 }
 
 /** Make a request to Scanpay API to get a subscription link*/
-export async function scanPaySubscriptionUrl(
+export async function scanpaySubscriptionUrl(
   donor: DonorWithContactInfo,
   donation: Donation,
   customerIp: string,

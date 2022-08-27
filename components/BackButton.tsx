@@ -1,5 +1,4 @@
 import { useFormikContext } from "formik";
-import { useEffect } from "react";
 
 export const BackButton = ({
   ...props
@@ -47,15 +46,6 @@ export const BackButton = ({
           )}
           {taxDeduction ? <li>Du har ønsket fradrag.</li> : ""}
         </ul>
-        {/* <span>
-        {" "}
-        <span style={{ padding: "0px 10px 0 0 " }}>◂</span>
-        {formik.values.amount} kr til {formik.values.recipient} (
-        <span {...props} className="custom-back-link">
-          redigér
-        </span>
-        )
-      </span> */}
       </div>
     </>
   );

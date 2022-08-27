@@ -5,6 +5,7 @@ import {
   DonationRecipient,
   DonationToEmail,
   DonationWithGatewayInfoBankTransfer,
+  DonationWithGatewayInfoQuickpay,
   DonationWithGatewayInfoScanpay,
   EmailedStatus,
   PaymentGateway,
@@ -50,6 +51,28 @@ export async function insertDonationViaScanpay(
   ).rows[0];
 }
 
+export async function insertDonationViaQuickpay(
+  client: PoolClient,
+  donation: Partial<Donation>
+): Promise<DonationWithGatewayInfoQuickpay> {
+  return (
+    await client.query(
+      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+       returning *`,
+      [
+        donation.donor_id,
+        donation.amount,
+        donation.recipient,
+        donation.frequency,
+        PaymentGateway.Quickpay,
+        donation.method,
+        donation.tax_deductible,
+      ]
+    )
+  ).rows[0];
+}
+
 export async function insertDonationMembershipViaScanpay(
   client: PoolClient,
   donation: Partial<DonationWithGatewayInfoScanpay>
@@ -65,6 +88,28 @@ export async function insertDonationMembershipViaScanpay(
         DonationRecipient.GivEffektivt,
         DonationFrequency.Yearly,
         PaymentGateway.Scanpay,
+        donation.method,
+        false,
+      ]
+    )
+  ).rows[0];
+}
+
+export async function insertDonationMembershipViaQuickpay(
+  client: PoolClient,
+  donation: Partial<Donation>
+): Promise<DonationWithGatewayInfoQuickpay> {
+  return (
+    await client.query(
+      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+       returning *`,
+      [
+        donation.donor_id,
+        50,
+        DonationRecipient.GivEffektivt,
+        DonationFrequency.Yearly,
+        PaymentGateway.Quickpay,
         donation.method,
         false,
       ]
@@ -124,6 +169,16 @@ export async function setDonationScanpayId(
   return await client.query(
     `update donation_with_gateway_info set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
     [donation.gateway_metadata?.scanpay_id, donation.id]
+  );
+}
+
+export async function setDonationQuickpayId(
+  client: PoolClient,
+  donation: Partial<DonationWithGatewayInfoQuickpay>
+) {
+  return await client.query(
+    `update donation_with_gateway_info set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
+    [donation.gateway_metadata?.quickpay_id, donation.id]
   );
 }
 

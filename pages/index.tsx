@@ -1,7 +1,7 @@
 import { BankTransferStep, Step1, Step2, Wizard, WizardStep } from "comps";
 import type { NextPage } from "next";
-import { submitForm, validationSchema } from "src/helpers";
 import { DonationRecipient } from "src/donation/types";
+import { submitForm, validationSchema } from "src/helpers";
 import * as Yup from "yup";
 
 const initialValues = {

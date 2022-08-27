@@ -1,9 +1,9 @@
-import type { AppProps } from 'next/app'
+import "dkfds/dist/css/dkfds.css";
+import type { AppProps } from "next/app";
 import "../styles/index.css";
-import "dkfds/dist/css/dkfds.css"
 
 function DonationPlatform({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />
+  return <Component {...pageProps} />;
 }
 
-export default DonationPlatform
+export default DonationPlatform;

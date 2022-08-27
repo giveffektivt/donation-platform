@@ -1,9 +1,8 @@
-import { useField } from "formik";
 import { Button } from "components";
+import { useField } from "formik";
 import { useRef, useState } from "react";
 
 export const AmountInput = ({ label, helper, ...props }: any) => {
-  let width;
   const [field, meta, helpers] = useField(props);
   const { setValue } = helpers;
   const [visible, setVisible] = useState(false);

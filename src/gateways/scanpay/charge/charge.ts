@@ -2,7 +2,7 @@ import { PoolClient } from "pg";
 import scanpay from "scanpay";
 import {
   ChargeStatus,
-  ChargeToCharge,
+  ChargeToChargeScanpay,
   setChargeIdempotencyKey,
   setChargeStatus,
 } from "src";
@@ -10,9 +10,9 @@ import {
 const client = scanpay(process.env.SCANPAY_KEY);
 
 /** Charges subscriber and updates data in Database */
-export async function chargeWithScanpay(
+export async function scanpayChargeSubscription(
   db: PoolClient,
-  charge: ChargeToCharge
+  charge: ChargeToChargeScanpay
 ) {
   let scanpayId = charge.donation_gateway_metadata?.scanpay_id;
   if (!scanpayId) {

@@ -2,7 +2,7 @@ import { PoolClient } from "pg";
 import {
   ChargeStatus,
   getDonationIdsByOldDonorId,
-  insertInitialCharge,
+  insertInitialChargeScanpay,
   ScanpayChange,
   setChargeWithGatewayResponseByShortId,
   setDonationScanpayId,
@@ -27,7 +27,7 @@ async function handleSubscriber(db: PoolClient, change: ScanpayChange) {
     });
 
     // Now that we know Scanpay ID, create initial charges for this donation
-    await insertInitialCharge(db, { donation_id: donationId });
+    await insertInitialChargeScanpay(db, { donation_id: donationId });
   }
 }
 
