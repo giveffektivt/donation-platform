@@ -67,7 +67,7 @@ test("Insert charges for donations that need new charges", async () => {
     method: PaymentMethod.MobilePay,
   });
 
-  const now = moment().set("date", 1);
+  const now = moment().set("date", 3);
 
   // ...each successfully charged in the past
   await insertCharge(db, {
@@ -197,7 +197,7 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     method: PaymentMethod.CreditCard,
   });
 
-  const now = moment().set("date", 1);
+  const now = moment().set("date", 3);
 
   await insertCharge(db, {
     created_at: now.clone().add(-2, "year").toDate(),
