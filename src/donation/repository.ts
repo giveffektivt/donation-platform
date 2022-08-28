@@ -79,7 +79,7 @@ export async function insertDonationViaBankTransfer(
   return (
     await client.query(
       `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"bank_msg": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''id'''))::jsonb)
+       values ($1, $2, $3, $4, $5, $6, $7, format('{"bank_msg": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''bank_msg'''))::jsonb)
        returning *`,
       [
         donation.donor_id,
