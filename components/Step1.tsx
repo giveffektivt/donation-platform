@@ -43,6 +43,9 @@ export const Step1 = () => {
         <option value="GiveWell Maximum Impact Fund" key={1}>
           {"GiveWell Maximum Impact Fund (vores anbefaling)"}
         </option>
+        <option value="GiveWell All Grants Fund">
+          GiveWell All Grants Fund
+        </option>
         <option value="Against Malaria Foundation">
           Against Malaria Foundation
         </option>

@@ -1,6 +1,7 @@
 export enum DonationRecipient {
   GivEffektivtMembership = "Giv Effektivt membership",
   GiveWellMaximumImpactFund = "GiveWell Maximum Impact Fund",
+  GiveWellAllGrantsFund = "GiveWell All Grants Fund",
   AgainstMalariaFoundation = "Against Malaria Foundation",
   MalariaConsortium = "Malaria Consortium",
   HelenKellerInternational = "Helen Keller International",
