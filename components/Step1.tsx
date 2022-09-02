@@ -32,7 +32,15 @@ export const Step1 = () => {
   return (
     <>
       <AmountInput
-        label={<>Beløb i DKK</>}
+        label={
+          <>
+            Beløb
+            <span className="form-hint" style={{ display: "inline" }}>
+              {" "}
+              (i DKK)
+            </span>
+          </>
+        }
         name="amount"
         type="number"
         placeholder="Andet"
@@ -40,18 +48,24 @@ export const Step1 = () => {
       />
 
       <Select
-        label="Hvad vil du støtte?"
-        name="recipient"
-        icon={
-          <a
-            href="https://giveffektivt.dk/bedste-organisationer/"
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: "inline-block", verticalAlign: "middle" }}
-          >
-            <i className="icon icon-help"></i>
-          </a>
+        label={
+          <>
+            Hvad vil du støtte?
+            <a
+              href="https://giveffektivt.dk/bedste-organisationer/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-block",
+                verticalAlign: "middle",
+                marginLeft: 5,
+              }}
+            >
+              <i className="icon icon-help"></i>
+            </a>
+          </>
         }
+        name="recipient"
       >
         <option value="GiveWell Maximum Impact Fund" key={1}>
           Stor og sikker effekt (vores anbefaling)
@@ -79,13 +93,18 @@ export const Step1 = () => {
         name="taxDeduction"
         checkboxLabel={
           <>
-            Få skattefradrag.{" "}
+            Få skattefradrag.
             <a
-              target={"_blank"}
-              rel="noreferrer"
               href="https://giveffektivt.dk/fradrag/"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-block",
+                verticalAlign: "middle",
+                marginLeft: 5,
+              }}
             >
-              Læs mere her.
+              <i className="icon icon-help"></i>
             </a>
           </>
         }
@@ -93,10 +112,17 @@ export const Step1 = () => {
 
       {formik.values.taxDeduction && (
         <CprInput
-          label={<>CPR-nr.</>}
+          label={
+            <>
+              CPR-nummer
+              <span className="form-hint" style={{ display: "inline" }}>
+                {" "}
+                (bruges af Skatteforvaltningen)
+              </span>
+            </>
+          }
           name="tin"
           type="text"
-          helper={<>Skriv CPR-nr. for at få skattefradrag.</>}
           style={{ maxWidth: "14rem" }}
         />
       )}
