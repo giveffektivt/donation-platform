@@ -93,7 +93,7 @@ export const Step1 = () => {
         name="taxDeduction"
         checkboxLabel={
           <>
-            Få skattefradrag.
+            Få skattefradrag
             <a
               href="https://giveffektivt.dk/fradrag/"
               target="_blank"
