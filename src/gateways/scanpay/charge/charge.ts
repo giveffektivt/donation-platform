@@ -31,10 +31,6 @@ export async function chargeWithScanPay(
   if (!charge.gateway_metadata.idempotency_key) {
     charge.gateway_metadata.idempotency_key = client.generateIdempotencyKey();
     await setChargeIdempotencyKey(db, charge);
-  } else {
-    console.warn(
-      `Charge with ID '${charge.id}' already has an idempotency key, charging it again`
-    );
   }
 
   const options = {
@@ -60,29 +56,19 @@ export async function chargeWithScanPay(
     autocapture: true,
   };
 
-  for (let i = 0; i < 3; i++) {
-    try {
-      await client.subscriber.charge(scanpayId, data, options);
-      await setChargeStatus(db, {
-        id: charge.id,
-        status: ChargeStatus.Waiting,
-      });
-      return;
-    } catch (err: any) {
-      console.error(`Error while charging ID '${charge.id}':`, err);
+  let status = ChargeStatus.Waiting;
 
-      if (err?.type === "ScanpayError") {
-        charge.gateway_metadata.idempotency_key =
-          client.generateIdempotencyKey();
-        options.headers["Idempotency-Key"] =
-          charge.gateway_metadata.idempotency_key;
-        await setChargeIdempotencyKey(db, charge);
-      }
+  try {
+    await client.subscriber.charge(scanpayId, data, options);
+  } catch (err: any) {
+    console.error(`Error while charging ID '${charge.id}':`, err);
+    status = ChargeStatus.Error;
+
+    if (err?.type === "ScanpayError") {
+      charge.gateway_metadata.idempotency_key = client.generateIdempotencyKey();
+      await setChargeIdempotencyKey(db, charge);
     }
   }
 
-  console.error(
-    `Charging ID "${charge.id}" failed several times, will not retry anymore`
-  );
-  await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
+  await setChargeStatus(db, { id: charge.id, status });
 }
