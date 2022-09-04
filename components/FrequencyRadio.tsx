@@ -32,16 +32,6 @@ export const FrequencyRadio = () => {
           <li>
             <input
               className="form-radio radio-large"
-              id={oneTimeField.value}
-              type="radio"
-              {...oneTimeField}
-            />
-            <label htmlFor={oneTimeField.value}>Kun en gang</label>
-          </li>
-
-          <li>
-            <input
-              className="form-radio radio-large"
               id={everyMonthField.value}
               type="radio"
               {...everyMonthField}
@@ -49,6 +39,16 @@ export const FrequencyRadio = () => {
             <label htmlFor={everyMonthField.value}>
               Hver måned (trækkes automatisk)
             </label>
+          </li>
+
+          <li>
+            <input
+              className="form-radio radio-large"
+              id={oneTimeField.value}
+              type="radio"
+              {...oneTimeField}
+            />
+            <label htmlFor={oneTimeField.value}>Kun én gang</label>
           </li>
         </ul>
       </fieldset>
