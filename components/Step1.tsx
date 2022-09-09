@@ -68,7 +68,7 @@ export const Step1 = () => {
         name="recipient"
       >
         <option value="GiveWell Maximum Impact Fund" key={1}>
-          Vores anbefaling (GiveWell Maximum Impact Fund)
+          Vores anbefaling (GiveWell Top Charities Fund)
         </option>
         <option value="GiveWell All Grants Fund">
           Større, men variabel effekt (GiveWell All Grants Fund)
