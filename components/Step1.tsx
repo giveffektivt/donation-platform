@@ -68,7 +68,7 @@ export const Step1 = () => {
         name="recipient"
       >
         <option value="GiveWell Maximum Impact Fund" key={1}>
-          Vores anbefaling (GiveWell Top Charities Fund)
+          Vores anbefaling
         </option>
         <option value="GiveWell All Grants Fund">
           Større, men variabel effekt (GiveWell All Grants Fund)
@@ -93,7 +93,7 @@ export const Step1 = () => {
         name="taxDeduction"
         checkboxLabel={
           <>
-            Få skattefradrag
+            Jeg ønsker skattefradrag
             <a
               href="https://giveffektivt.dk/fradrag/"
               target="_blank"
@@ -111,20 +111,32 @@ export const Step1 = () => {
       />
 
       {formik.values.taxDeduction && (
-        <CprInput
-          label={
-            <>
-              CPR-nummer
-              <span className="form-hint" style={{ display: "inline" }}>
-                {" "}
-                (bruges af Skatteforvaltningen)
-              </span>
-            </>
-          }
-          name="tin"
-          type="text"
-          style={{ maxWidth: "14rem" }}
-        />
+        <>
+          <div className="form-hint">
+            Betinget af, at SKAT godkender vores ansøgning.{" "}
+            <a
+              href="https://giveffektivt.dk/fradrag/"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Læs mere...
+            </a>
+          </div>
+          <CprInput
+            label={
+              <>
+                CPR-nummer
+                <span className="form-hint" style={{ display: "inline" }}>
+                  {" "}
+                  (bruges af Skatteforvaltningen)
+                </span>
+              </>
+            }
+            name="tin"
+            type="text"
+            style={{ maxWidth: "14rem" }}
+          />
+        </>
       )}
 
       <Button type="submit">
