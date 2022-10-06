@@ -29,7 +29,7 @@ export async function sendNewEmails() {
     for (let donation of donationsToEmail) {
       try {
         await setDonationEmailed(db, donation, EmailedStatus.Attempted);
-        if (donation.recipient === DonationRecipient.GivEffektivtMembership) {
+        if (donation.recipient === DonationRecipient.GivEffektivt) {
           await sendMembershipEmail(donation);
         } else {
           await sendPaymentEmail(donation);

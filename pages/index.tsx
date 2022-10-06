@@ -8,11 +8,12 @@ import {
 } from "comps";
 import type { NextPage } from "next";
 import { submitForm, validationSchema } from "src/helpers";
+import { DonationRecipient } from "src/donation/types";
 import * as Yup from "yup";
 
 const initialValues = {
   amount: "",
-  recipient: "GiveWell Maximum Impact Fund",
+  recipient: DonationRecipient.VoresAnbefaling,
   subscription: "",
   name: "",
   email: "",

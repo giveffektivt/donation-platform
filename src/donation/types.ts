@@ -1,11 +1,12 @@
 export enum DonationRecipient {
-  GivEffektivtMembership = "Giv Effektivt membership",
-  GiveWellMaximumImpactFund = "GiveWell Maximum Impact Fund",
-  GiveWellAllGrantsFund = "GiveWell All Grants Fund",
-  AgainstMalariaFoundation = "Against Malaria Foundation",
-  MalariaConsortium = "Malaria Consortium",
-  HelenKellerInternational = "Helen Keller International",
-  NewIncentives = "New Incentives",
+  GivEffektivt = "Giv Effektivt",
+
+  VoresAnbefaling = "Vores anbefaling",
+  StørreMenVariabelEffekt = "Større, men variabel effekt",
+  MyggenetModMalaria = "Myggenet mod malaria",
+  MedicinModMalaria = "Medicin mod malaria",
+  VitaminModMangelsygdomme = "Vitamin mod mangelsygdomme",
+  VaccinerTilSpædbørn = "Vacciner til spædbørn",
 }
 
 export enum DonationFrequency {

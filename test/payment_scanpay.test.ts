@@ -29,7 +29,7 @@ test("One-time donation using ScanPay", async () => {
   await insertScanPayData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "oneTime",
     membership: false,
     membershipOnly: false,
@@ -64,7 +64,7 @@ test("One-time donation using ScanPay", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.MobilePay,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
@@ -84,7 +84,7 @@ test("Monthly donation using ScanPay", async () => {
   await insertScanPayData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     membership: false,
     membershipOnly: false,
@@ -119,7 +119,7 @@ test("Monthly donation using ScanPay", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
@@ -134,7 +134,7 @@ test("One-time donation using ScanPay + membership", async () => {
   await insertScanPayData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "oneTime",
     membership: true,
     membershipOnly: false,
@@ -170,7 +170,7 @@ test("One-time donation using ScanPay + membership", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
     },
     {
@@ -181,7 +181,7 @@ test("One-time donation using ScanPay + membership", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.GivEffektivtMembership,
+      recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
     },
   ]);
@@ -196,7 +196,7 @@ test("Monthly donation using ScanPay + membership", async () => {
   await insertScanPayData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     membership: true,
     membershipOnly: false,
@@ -232,7 +232,7 @@ test("Monthly donation using ScanPay + membership", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
     },
     {
@@ -243,7 +243,7 @@ test("Monthly donation using ScanPay + membership", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.GivEffektivtMembership,
+      recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
     },
   ]);
@@ -260,7 +260,7 @@ test("Membership only", async () => {
     // some of those fields will simply be unused for membership-only payments
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     membership: true,
     membershipOnly: true,
@@ -295,7 +295,7 @@ test("Membership only", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.ScanPay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.GivEffektivtMembership,
+      recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
     },
   ]);

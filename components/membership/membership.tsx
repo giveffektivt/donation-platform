@@ -2,7 +2,8 @@ import { GEFrame } from "comps";
 import { MembershipStep1, MembershipStep2 } from "comps/membership";
 import { Formik } from "formik";
 import { useState } from "react";
-import { validationSchema, submitForm } from "src/helpers";
+import { DonationRecipient } from "src/donation/types";
+import { submitForm, validationSchema } from "src/helpers";
 import * as yup from "yup";
 
 const errorMessage = `
@@ -39,7 +40,7 @@ export const Membership = () => {
     // HACK: unused "required" fields,
     // not to make all of those optional in validation schema if we are not going to keep this for long time
     amount: 1,
-    recipient: "Giv Effektivt membership",
+    recipient: DonationRecipient.GivEffektivt,
     subscription: "oneTime",
     taxDeduction: false,
   };

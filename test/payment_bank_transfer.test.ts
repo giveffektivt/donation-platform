@@ -28,7 +28,7 @@ test("One-time donation using bank transfer", async () => {
   await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "oneTime",
     membership: false,
     membershipOnly: false,
@@ -63,7 +63,7 @@ test("One-time donation using bank transfer", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
@@ -79,7 +79,7 @@ test("Monthly donation using bank transfer", async () => {
   await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     membership: false,
     membershipOnly: false,
@@ -114,7 +114,7 @@ test("Monthly donation using bank transfer", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
@@ -130,7 +130,7 @@ test("One-time donation using bank transfer + membership", async () => {
   await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "oneTime",
     membership: true,
     membershipOnly: false,
@@ -166,7 +166,7 @@ test("One-time donation using bank transfer + membership", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
     },
     {
@@ -177,7 +177,7 @@ test("One-time donation using bank transfer + membership", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.GivEffektivtMembership,
+      recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
     },
   ]);
@@ -192,7 +192,7 @@ test("Monthly donation using bank transfer + membership", async () => {
   await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     membership: true,
     membershipOnly: false,
@@ -228,7 +228,7 @@ test("Monthly donation using bank transfer + membership", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.HelenKellerInternational,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
     },
     {
@@ -239,7 +239,7 @@ test("Monthly donation using bank transfer + membership", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.GivEffektivtMembership,
+      recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
     },
   ]);
@@ -254,7 +254,7 @@ test("Membership only", async () => {
   const submitData = {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     membership: true,
     membershipOnly: true,

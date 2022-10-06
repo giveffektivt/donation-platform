@@ -1,4 +1,10 @@
-import { BankTransferInfo, DonationFrequency, DonationToEmail } from "src";
+import {
+  BankTransferInfo,
+  DonationFrequency,
+  DonationToEmail,
+  donationPurpose,
+  DonationRecipient,
+} from "src";
 
 export function paymentReceipt(
   donation: DonationToEmail,
@@ -12,7 +18,9 @@ export function paymentReceipt(
      <li>Besked til modtager: <b>d-${bank.msg}</b></li>`
     : "";
 
-  const text = `<li>${amount} DKK til <a href="https://giveffektivt.dk/bedste-organisationer/" target="_blank">${recipient}</a>.</li>
+  const text = `<li>${amount} DKK til <a href="https://giveffektivt.dk/bedste-organisationer/" target="_blank">${
+    donationPurpose[recipient as DonationRecipient]
+  }</a>.</li>
 ${
   frequency === DonationFrequency.Monthly
     ? `<li>Donationen er månedlig.</li>`

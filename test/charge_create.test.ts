@@ -47,7 +47,7 @@ test("Insert charges for donations that need new charges", async () => {
   const donation2 = await insertDonationViaScanPay(db, {
     donor_id: donor1.id,
     amount: 88,
-    recipient: DonationRecipient.AgainstMalariaFoundation,
+    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
@@ -56,7 +56,7 @@ test("Insert charges for donations that need new charges", async () => {
   const donation3 = await insertDonationViaScanPay(db, {
     donor_id: donor2.id,
     amount: 77,
-    recipient: DonationRecipient.HelenKellerInternational,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,

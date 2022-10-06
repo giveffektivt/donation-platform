@@ -62,7 +62,7 @@ export async function insertDonationMembershipViaScanPay(
       [
         donation.donor_id,
         50,
-        DonationRecipient.GivEffektivtMembership,
+        DonationRecipient.GivEffektivt,
         DonationFrequency.Yearly,
         PaymentGateway.ScanPay,
         donation.method,
@@ -106,7 +106,7 @@ export async function insertDonationMembershipViaBankTransfer(
       [
         donation.donor_id,
         50,
-        DonationRecipient.GivEffektivtMembership,
+        DonationRecipient.GivEffektivt,
         DonationFrequency.Yearly,
         PaymentGateway.BankTransfer,
         PaymentMethod.BankTransfer,

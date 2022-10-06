@@ -45,15 +45,15 @@ CREATE TYPE giveffektivt.donation_frequency AS ENUM (
 --
 
 CREATE TYPE giveffektivt.donation_recipient AS ENUM (
-    'Giv Effektivt membership',
-    'GiveWell Maximum Impact Fund',
-    'GiveWell All Grants Fund',
-    'Against Malaria Foundation',
-    'Give Directly',
-    'Malaria Consortium',
-    'Helen Keller International',
-    'SCI Foundation',
-    'New Incentives'
+    'Giv Effektivt',
+    'Vores anbefaling',
+    'Større, men variabel effekt',
+    'Myggenet mod malaria',
+    'Kontanter overførsler til verdens fattigste',
+    'Medicin mod malaria',
+    'Vitamin mod mangelsygdomme',
+    'Ormekur',
+    'Vacciner til spædbørn'
 );
 
 
@@ -415,14 +415,14 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT sum(d.amount) AS donations_total
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt membership'::giveffektivt.donation_recipient))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
         ), donations_recurring_per_year AS (
          SELECT ((12)::numeric * sum(c1.amount)) AS donations_recurring_per_year
            FROM ( SELECT DISTINCT ON (d.id) d.amount,
                     c.status
                    FROM (giveffektivt.donation d
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((d.recipient <> 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
+                  WHERE ((d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
                   ORDER BY d.id, c.created_at DESC) c1
           WHERE (c1.status = 'charged'::giveffektivt.charge_status)
         ), members_dk AS (
@@ -430,7 +430,7 @@ CREATE VIEW giveffektivt.kpi AS
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient = 'Giv Effektivt membership'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (p.country = 'Denmark'::text))
+          WHERE ((d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (p.country = 'Denmark'::text))
         )
  SELECT members_dk.members_dk,
     donations_total.donations_total,
@@ -639,4 +639,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20220816152738'),
     ('20220823110152'),
     ('20220824195743'),
-    ('20220902221653');
+    ('20220902221653'),
+    ('20221007155850');
