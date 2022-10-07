@@ -2,7 +2,6 @@ export * from "./membership";
 export * from "./AmountInput";
 export * from "./BackButton";
 export * from "./BankTransferStep";
-export * from "./Basket";
 export * from "./Button";
 export * from "./Checkbox";
 export * from "./CprInput";
