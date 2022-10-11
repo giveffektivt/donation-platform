@@ -8,7 +8,7 @@ export const Wrapper = ({ children }: any) => {
     <>
       <div className="wrapper">
         <div className="custom-header">
-          Støt en effektiv velgørende organisation
+          Støt et effektivt velgørende formål
           {isTestEnv && " ***TEST ENVIRONMENT***"}
         </div>
         <div className="form-wrapper">{children}</div>

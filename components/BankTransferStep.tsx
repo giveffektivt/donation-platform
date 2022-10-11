@@ -35,8 +35,8 @@ export const BankTransferStep = () => {
 
       <p>
         Du kan opsætte månedlige overførsler i din netbank eller mobilbank med
-        den samme besked. Så sender vi donationen til den valgte velgørende
-        organisation og indberetter evt. fradrag.
+        den samme besked. Så sender vi donationen til det valgte velgørende
+        formål og indberetter evt. fradrag.
       </p>
 
       <div style={{ display: "flex", alignItems: "center" }}>
