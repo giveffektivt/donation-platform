@@ -6,7 +6,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
-  insertScanPayData,
+  insertScanpayData,
   PaymentGateway,
   PaymentMethod,
 } from "src";
@@ -23,10 +23,10 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-test("One-time donation using ScanPay", async () => {
+test("One-time donation using Scanpay", async () => {
   const db = await client;
 
-  await insertScanPayData(db, {
+  await insertScanpayData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -62,7 +62,7 @@ test("One-time donation using ScanPay", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Once,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.MobilePay,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
@@ -78,10 +78,10 @@ test("One-time donation using ScanPay", async () => {
   ]);
 });
 
-test("Monthly donation using ScanPay", async () => {
+test("Monthly donation using Scanpay", async () => {
   const db = await client;
 
-  await insertScanPayData(db, {
+  await insertScanpayData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -117,7 +117,7 @@ test("Monthly donation using ScanPay", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Monthly,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
@@ -128,10 +128,10 @@ test("Monthly donation using ScanPay", async () => {
   expect(charges).toHaveLength(0);
 });
 
-test("One-time donation using ScanPay + membership", async () => {
+test("One-time donation using Scanpay + membership", async () => {
   const db = await client;
 
-  await insertScanPayData(db, {
+  await insertScanpayData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -168,7 +168,7 @@ test("One-time donation using ScanPay + membership", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Once,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
@@ -179,7 +179,7 @@ test("One-time donation using ScanPay + membership", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Yearly,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
       recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
@@ -190,10 +190,10 @@ test("One-time donation using ScanPay + membership", async () => {
   expect(charges).toHaveLength(0);
 });
 
-test("Monthly donation using ScanPay + membership", async () => {
+test("Monthly donation using Scanpay + membership", async () => {
   const db = await client;
 
-  await insertScanPayData(db, {
+  await insertScanpayData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -230,7 +230,7 @@ test("Monthly donation using ScanPay + membership", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Monthly,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
@@ -241,7 +241,7 @@ test("Monthly donation using ScanPay + membership", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Yearly,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
       recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,
@@ -255,7 +255,7 @@ test("Monthly donation using ScanPay + membership", async () => {
 test("Membership only", async () => {
   const db = await client;
 
-  await insertScanPayData(db, {
+  await insertScanpayData(db, {
     // Since it's a temporary solution,
     // some of those fields will simply be unused for membership-only payments
     amount: 10,
@@ -293,7 +293,7 @@ test("Membership only", async () => {
       donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Yearly,
-      gateway: PaymentGateway.ScanPay,
+      gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
       recipient: DonationRecipient.GivEffektivt,
       tax_deductible: false,

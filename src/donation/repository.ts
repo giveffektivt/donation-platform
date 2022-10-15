@@ -5,7 +5,7 @@ import {
   DonationRecipient,
   DonationToEmail,
   DonationWithGatewayInfoBankTransfer,
-  DonationWithGatewayInfoScanPay,
+  DonationWithGatewayInfoScanpay,
   EmailedStatus,
   PaymentGateway,
   PaymentMethod,
@@ -28,10 +28,10 @@ export async function setDonationEmailed(
   ]);
 }
 
-export async function insertDonationViaScanPay(
+export async function insertDonationViaScanpay(
   client: PoolClient,
   donation: Partial<Donation>
-): Promise<DonationWithGatewayInfoScanPay> {
+): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(
       `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible)
@@ -42,7 +42,7 @@ export async function insertDonationViaScanPay(
         donation.amount,
         donation.recipient,
         donation.frequency,
-        PaymentGateway.ScanPay,
+        PaymentGateway.Scanpay,
         donation.method,
         donation.tax_deductible,
       ]
@@ -50,10 +50,10 @@ export async function insertDonationViaScanPay(
   ).rows[0];
 }
 
-export async function insertDonationMembershipViaScanPay(
+export async function insertDonationMembershipViaScanpay(
   client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanPay>
-): Promise<DonationWithGatewayInfoScanPay> {
+  donation: Partial<DonationWithGatewayInfoScanpay>
+): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(
       `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible)
@@ -64,7 +64,7 @@ export async function insertDonationMembershipViaScanPay(
         50,
         DonationRecipient.GivEffektivt,
         DonationFrequency.Yearly,
-        PaymentGateway.ScanPay,
+        PaymentGateway.Scanpay,
         donation.method,
         false,
       ]
@@ -117,9 +117,9 @@ export async function insertDonationMembershipViaBankTransfer(
   ).rows[0];
 }
 
-export async function setDonationScanPayId(
+export async function setDonationScanpayId(
   client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanPay>
+  donation: Partial<DonationWithGatewayInfoScanpay>
 ) {
   return await client.query(
     `update donation_with_gateway_info set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,

@@ -3,11 +3,11 @@ import {
   dbClient,
   dbRollbackTransaction,
   EmailedStatus,
-  insertDonationMembershipViaScanPay,
+  insertDonationMembershipViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
   setDonationEmailed,
-  setDonationScanPayId,
+  setDonationScanpayId,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findDonation } from "./repository";
@@ -29,7 +29,7 @@ test("Update donation to mark it as emailed", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -41,21 +41,21 @@ test("Update donation to mark it as emailed", async () => {
   expect((await findDonation(db, donation)).emailed).toBe(EmailedStatus.Yes);
 });
 
-test("Update donation to add ScanPay ID", async () => {
+test("Update donation to add Scanpay ID", async () => {
   const db = await client;
 
   const donor = await insertDonorWithSensitiveInfo(db, {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
 
   expect(donation.gateway_metadata).toEqual({});
 
-  await setDonationScanPayId(db, {
+  await setDonationScanpayId(db, {
     id: donation.id,
     gateway_metadata: {
       scanpay_id: 1234,
@@ -66,7 +66,7 @@ test("Update donation to add ScanPay ID", async () => {
     scanpay_id: 1234,
   });
 
-  await setDonationScanPayId(db, {
+  await setDonationScanpayId(db, {
     id: donation.id,
     gateway_metadata: {
       scanpay_id: 5678,

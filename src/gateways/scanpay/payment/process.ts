@@ -4,11 +4,11 @@ import {
   ChargeStatus,
   dbExecuteInTransaction,
   DonationFrequency,
-  DonationWithGatewayInfoScanPay,
+  DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
   insertCharge,
-  insertDonationMembershipViaScanPay,
-  insertDonationViaScanPay,
+  insertDonationMembershipViaScanpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   parseDonationFrequency,
   parseDonationRecipient,
@@ -19,13 +19,13 @@ import {
   SubmitData,
 } from "src";
 
-export async function processScanPayPayment(
+export async function processScanpayPayment(
   submitData: SubmitData,
   customerIp: string
 ): Promise<string> {
   const [donor, donation, donationCharge, membership] =
     await dbExecuteInTransaction(
-      async (db) => await insertScanPayData(db, submitData)
+      async (db) => await insertScanpayData(db, submitData)
     );
   return await generateRedirectUrl(
     donor,
@@ -36,15 +36,15 @@ export async function processScanPayPayment(
   );
 }
 
-export async function insertScanPayData(
+export async function insertScanpayData(
   db: PoolClient,
   submitData: SubmitData
 ): Promise<
   [
     DonorWithSensitiveInfo,
-    DonationWithGatewayInfoScanPay | null,
+    DonationWithGatewayInfoScanpay | null,
     Charge | null,
-    DonationWithGatewayInfoScanPay | null
+    DonationWithGatewayInfoScanpay | null
   ]
 > {
   const donor = await insertDonorWithSensitiveInfo(db, {
@@ -60,7 +60,7 @@ export async function insertScanPayData(
 
   const donation = submitData.membershipOnly
     ? null
-    : await insertDonationViaScanPay(db, {
+    : await insertDonationViaScanpay(db, {
         donor_id: donor.id,
         amount: submitData.amount,
         recipient: parseDonationRecipient(submitData.recipient),
@@ -79,7 +79,7 @@ export async function insertScanPayData(
       : null;
 
   const membership = submitData.membership
-    ? await insertDonationMembershipViaScanPay(db, {
+    ? await insertDonationMembershipViaScanpay(db, {
         donor_id: donor.id,
         method: parsePaymentMethod(submitData.method),
       })
@@ -92,13 +92,13 @@ export async function insertScanPayData(
 
 async function generateRedirectUrl(
   donor: DonorWithSensitiveInfo,
-  donation: DonationWithGatewayInfoScanPay | null,
+  donation: DonationWithGatewayInfoScanpay | null,
   donationCharge: Charge | null,
-  membership: DonationWithGatewayInfoScanPay | null,
+  membership: DonationWithGatewayInfoScanpay | null,
   customerIp: string
 ) {
   const donations = [donation, membership].filter(
-    (el): el is DonationWithGatewayInfoScanPay => el !== null
+    (el): el is DonationWithGatewayInfoScanpay => el !== null
   );
 
   const successUrl = !!donation

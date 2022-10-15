@@ -3,7 +3,7 @@ import {
   parsePaymentMethod,
   PaymentMethod,
   processBankTransferPayment,
-  processScanPayPayment,
+  processScanpayPayment,
   SubmitData,
   validationSchema,
 } from "src";
@@ -58,7 +58,7 @@ export default async function handler(
 
       case PaymentMethod.CreditCard:
       case PaymentMethod.MobilePay:
-        const redirectUrl = await processScanPayPayment(submitData, ip);
+        const redirectUrl = await processScanpayPayment(submitData, ip);
         res.status(200).json({
           message: "OK",
           redirect: redirectUrl,

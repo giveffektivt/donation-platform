@@ -9,8 +9,8 @@ import {
   getDonationIdsByOldDonorId,
   getDonationsToEmail,
   insertCharge,
-  insertDonationMembershipViaScanPay,
-  insertDonationViaScanPay,
+  insertDonationMembershipViaScanpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
   setDonationEmailed,
@@ -43,12 +43,12 @@ test("Finds first successful donations to email", async () => {
   });
 
   // ...having two and one donations correspondingly
-  const donation1 = await insertDonationMembershipViaScanPay(db, {
+  const donation1 = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor1.id,
     method: PaymentMethod.CreditCard,
   });
 
-  const donation2 = await insertDonationViaScanPay(db, {
+  const donation2 = await insertDonationViaScanpay(db, {
     donor_id: donor1.id,
     amount: 77,
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -57,7 +57,7 @@ test("Finds first successful donations to email", async () => {
     tax_deductible: true,
   });
 
-  const donation3 = await insertDonationMembershipViaScanPay(db, {
+  const donation3 = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.MobilePay,
   });
@@ -129,7 +129,7 @@ test("Should not email to a donation that wasn't charged", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -149,7 +149,7 @@ test("Should not email to a donation that was already emailed", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -177,7 +177,7 @@ test("Should not email to a donation that was already attempted to be emailed", 
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -210,22 +210,22 @@ test("Should find donation ID by old donor ID", async () => {
     email: "hello@example.com",
   });
 
-  const oldDonation1 = await insertDonationMembershipViaScanPay(db, {
+  const oldDonation1 = await insertDonationMembershipViaScanpay(db, {
     donor_id: oldDonor.id,
     method: PaymentMethod.CreditCard,
   });
 
-  const oldDonation2 = await insertDonationMembershipViaScanPay(db, {
+  const oldDonation2 = await insertDonationMembershipViaScanpay(db, {
     donor_id: oldDonor.id,
     method: PaymentMethod.CreditCard,
   });
 
-  const newDonation1 = await insertDonationMembershipViaScanPay(db, {
+  const newDonation1 = await insertDonationMembershipViaScanpay(db, {
     donor_id: newDonor.id,
     method: PaymentMethod.CreditCard,
   });
 
-  const newDonation2 = await insertDonationMembershipViaScanPay(db, {
+  const newDonation2 = await insertDonationMembershipViaScanpay(db, {
     donor_id: newDonor.id,
     method: PaymentMethod.CreditCard,
   });

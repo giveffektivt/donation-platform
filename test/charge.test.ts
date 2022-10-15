@@ -4,7 +4,7 @@ import {
   dbClient,
   dbRollbackTransaction,
   insertCharge,
-  insertDonationMembershipViaScanPay,
+  insertDonationMembershipViaScanpay,
   insertDonorWithSensitiveInfo,
   insertInitialCharge,
   PaymentMethod,
@@ -32,7 +32,7 @@ test("Insert charge for a donation", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -57,7 +57,7 @@ test("Insert initial charge for a donation only once", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -89,7 +89,7 @@ test("Update charge status", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -106,14 +106,14 @@ test("Update charge status", async () => {
   expect((await findCharge(db, charge)).status).toBe(ChargeStatus.Error);
 });
 
-test("Update charge ScanPay idempotency key", async () => {
+test("Update charge Scanpay idempotency key", async () => {
   const db = await client;
 
   const donor = await insertDonorWithSensitiveInfo(db, {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -155,7 +155,7 @@ test("Update charge gateway response", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

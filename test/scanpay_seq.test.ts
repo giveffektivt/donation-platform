@@ -2,8 +2,8 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  getLatestScanPaySeq,
-  insertScanPaySeq,
+  getLatestScanpaySeq,
+  insertScanpaySeq,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
@@ -17,12 +17,12 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-test("ScanPay sequence tracking", async () => {
+test("Scanpay sequence tracking", async () => {
   const db = await client;
 
-  await insertScanPaySeq(db, 3);
-  await insertScanPaySeq(db, 4);
-  await insertScanPaySeq(db, 5);
+  await insertScanpaySeq(db, 3);
+  await insertScanpaySeq(db, 4);
+  await insertScanpaySeq(db, 5);
 
-  expect(await getLatestScanPaySeq(db)).toBe(5);
+  expect(await getLatestScanpaySeq(db)).toBe(5);
 });

@@ -6,9 +6,9 @@ import {
   DonationRecipient,
   EmailedStatus,
   insertDonationMembershipViaBankTransfer,
-  insertDonationMembershipViaScanPay,
+  insertDonationMembershipViaScanpay,
   insertDonationViaBankTransfer,
-  insertDonationViaScanPay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentGateway,
   PaymentMethod,
@@ -25,14 +25,14 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-test("Insert donation for Giv Effektivt membership using ScanPay", async () => {
+test("Insert donation for Giv Effektivt membership using Scanpay", async () => {
   const db = await client;
 
   const donor = await insertDonorWithSensitiveInfo(db, {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -46,7 +46,7 @@ test("Insert donation for Giv Effektivt membership using ScanPay", async () => {
     cancelled: false,
     method: PaymentMethod.CreditCard,
     tax_deductible: false,
-    gateway: PaymentGateway.ScanPay,
+    gateway: PaymentGateway.Scanpay,
     gateway_metadata: {},
   });
 });
@@ -77,14 +77,14 @@ test("Insert donation for Giv Effektivt membership using bank transfer", async (
   });
 });
 
-test("Insert donation using ScanPay", async () => {
+test("Insert donation using Scanpay", async () => {
   const db = await client;
 
   const donor = await insertDonorWithSensitiveInfo(db, {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationViaScanPay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
     amount: 123,
     recipient: DonationRecipient.MyggenetModMalaria,
@@ -102,7 +102,7 @@ test("Insert donation using ScanPay", async () => {
     cancelled: false,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
-    gateway: PaymentGateway.ScanPay,
+    gateway: PaymentGateway.Scanpay,
   });
 });
 

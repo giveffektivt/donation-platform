@@ -3,33 +3,33 @@ import {
   ChargeStatus,
   getDonationIdsByOldDonorId,
   insertInitialCharge,
-  ScanPayChange,
+  ScanpayChange,
   setChargeWithGatewayResponseByShortId,
-  setDonationScanPayId,
+  setDonationScanpayId,
 } from "src";
 
 /** Add scanpayId to a donation */
-async function handleSubscriber(db: PoolClient, change: ScanPayChange) {
+async function handleSubscriber(db: PoolClient, change: ScanpayChange) {
   // If change.ref is a number, it's actually a donor ID in the old database
   const donationIds = /^\d+$/.test(change.ref)
     ? await getDonationIdsByOldDonorId(db, change.ref)
     : change.ref.split("_");
 
   for (let donationId of donationIds) {
-    await setDonationScanPayId(db, {
+    await setDonationScanpayId(db, {
       id: donationId,
       gateway_metadata: {
         scanpay_id: change.id,
       },
     });
 
-    // Now that we know ScanPay ID, create initial charges for this donation
+    // Now that we know Scanpay ID, create initial charges for this donation
     await insertInitialCharge(db, { donation_id: donationId });
   }
 }
 
 /** Add gateway response to a charge */
-async function handleCharge(db: PoolClient, change: ScanPayChange) {
+async function handleCharge(db: PoolClient, change: ScanpayChange) {
   await setChargeWithGatewayResponseByShortId(db, {
     status: getChargeStatusFromLatestAct(change),
     short_id: change.orderid,
@@ -48,7 +48,7 @@ export async function handleChange(db: PoolClient, change: any) {
   }
 }
 
-const getChargeStatusFromLatestAct = (change: ScanPayChange) => {
+const getChargeStatusFromLatestAct = (change: ScanpayChange) => {
   const latestAct = change.acts?.sort((a, b) => b.time - a.time)[0]?.act;
 
   switch (latestAct) {
@@ -60,7 +60,7 @@ const getChargeStatusFromLatestAct = (change: ScanPayChange) => {
       return ChargeStatus.Error;
     default:
       console.error(
-        "Unexpected latest act in ScanPay change (assuming it was charged):",
+        "Unexpected latest act in Scanpay change (assuming it was charged):",
         change.acts
       );
       return ChargeStatus.Charged;

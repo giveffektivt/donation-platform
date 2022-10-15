@@ -2,12 +2,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import {
   charge,
   dbClient,
-  getLatestScanPaySeq,
+  getLatestScanpaySeq,
   handleChange,
-  insertScanPaySeq,
-  lockScanPaySeq,
+  insertScanpaySeq,
+  lockScanpaySeq,
   sendNewEmails,
-  unlockScanPaySeq,
+  unlockScanpaySeq,
 } from "src";
 
 const scanpay = require("scanpay")(process.env.SCANPAY_KEY);
@@ -23,20 +23,20 @@ export default async function handler(
   const db = await dbClient();
   try {
     try {
-      // Validate that the request comes from ScanPay
+      // Validate that the request comes from Scanpay
       await scanpay.sync.parsePing(
         JSON.stringify(req.body),
         req.headers["x-signature"]
       );
 
       // Obtain an exclusive lock for scanpay_seq table
-      await lockScanPaySeq(db);
+      await lockScanpaySeq(db);
 
       // All the seq numbers are stored in database. The most recent one represents the place
-      // where we are in the string of changes send by ScanPay
-      const dbSeq = await getLatestScanPaySeq(db);
+      // where we are in the string of changes send by Scanpay
+      const dbSeq = await getLatestScanpaySeq(db);
 
-      // Pull latest changes from ScanPay since the last known seq
+      // Pull latest changes from Scanpay since the last known seq
       const { changes, seq: scanpaySeq } = await scanpay.sync.pull(dbSeq, {
         hostname: process.env.SCANPAY_HOSTNAME,
       });
@@ -44,7 +44,7 @@ export default async function handler(
       // Process all the new changes
       if (changes.length > 0) {
         console.log(
-          `Processing ${changes.length} ScanPay changes (seq ${dbSeq} -> ${scanpaySeq})`
+          `Processing ${changes.length} Scanpay changes (seq ${dbSeq} -> ${scanpaySeq})`
         );
 
         for (let change of changes) {
@@ -54,7 +54,7 @@ export default async function handler(
 
       // Save new seq to DB
       if (dbSeq !== scanpaySeq) {
-        await insertScanPaySeq(db, scanpaySeq);
+        await insertScanpaySeq(db, scanpaySeq);
       }
 
       // Process new donations that just happened
@@ -66,7 +66,7 @@ export default async function handler(
       console.error("api/ping:", err);
       res.status(500).json({ message: "Something went wrong" });
     } finally {
-      await unlockScanPaySeq(db);
+      await unlockScanpaySeq(db);
     }
   } finally {
     db.release();

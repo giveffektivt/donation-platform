@@ -3,7 +3,7 @@ import {
   Charge,
   ChargeWithGatewayInfo,
   Donation,
-  DonationWithGatewayInfoScanPay,
+  DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
 } from "../src";
 import { DonationWithGatewayInfoAny, DonorWithOldId } from "./types";
@@ -44,8 +44,8 @@ export async function setDonationCancelled(
 
 export async function findDonation(
   client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanPay>
-): Promise<DonationWithGatewayInfoScanPay> {
+  donation: Partial<DonationWithGatewayInfoScanpay>
+): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(`select * from donation_with_gateway_info where id=$1`, [
       donation.id,

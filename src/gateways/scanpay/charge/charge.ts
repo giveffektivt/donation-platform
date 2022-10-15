@@ -10,14 +10,14 @@ import {
 const client = scanpay(process.env.SCANPAY_KEY);
 
 /** Charges subscriber and updates data in Database */
-export async function chargeWithScanPay(
+export async function chargeWithScanpay(
   db: PoolClient,
   charge: ChargeToCharge
 ) {
   let scanpayId = charge.donation_gateway_metadata?.scanpay_id;
   if (!scanpayId) {
     console.error(
-      `Charge with ID '${charge.id}' does not have a corresponding ScanPay ID that is required for charging`
+      `Charge with ID '${charge.id}' does not have a corresponding Scanpay ID that is required for charging`
     );
     await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
     return;

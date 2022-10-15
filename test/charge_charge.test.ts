@@ -8,8 +8,8 @@ import {
   DonationRecipient,
   getChargesToCharge,
   insertDonationMembershipViaBankTransfer,
-  insertDonationMembershipViaScanPay,
-  insertDonationViaScanPay,
+  insertDonationMembershipViaScanpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
 } from "src";
@@ -39,12 +39,12 @@ test("Find created charges to charge", async () => {
   });
 
   // ...having two donations each (3 recurring and 1 one-time)
-  const donation1 = await insertDonationMembershipViaScanPay(db, {
+  const donation1 = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor1.id,
     method: PaymentMethod.CreditCard,
   });
 
-  const donation2 = await insertDonationViaScanPay(db, {
+  const donation2 = await insertDonationViaScanpay(db, {
     donor_id: donor1.id,
     amount: 88,
     recipient: DonationRecipient.MyggenetModMalaria,
@@ -53,7 +53,7 @@ test("Find created charges to charge", async () => {
     tax_deductible: true,
   });
 
-  const donation3 = await insertDonationViaScanPay(db, {
+  const donation3 = await insertDonationViaScanpay(db, {
     donor_id: donor2.id,
     amount: 77,
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -62,7 +62,7 @@ test("Find created charges to charge", async () => {
     tax_deductible: true,
   });
 
-  const donation4 = await insertDonationMembershipViaScanPay(db, {
+  const donation4 = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.MobilePay,
   });
@@ -144,7 +144,7 @@ test("Donation that has no charges should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const _donation = await insertDonationMembershipViaScanPay(db, {
+  const _donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -159,7 +159,7 @@ test("Donation that is cancelled should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -203,7 +203,7 @@ test("Old charges in created status should *still* be charged again (until we se
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -239,7 +239,7 @@ test("Charges with error status should not be charged again", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanPay(db, {
+  const donation = await insertDonationMembershipViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

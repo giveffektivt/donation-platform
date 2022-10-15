@@ -1,4 +1,4 @@
-export type ScanPayChange = {
+export type ScanpayChange = {
   type: string;
   id: number;
   orderid: string;

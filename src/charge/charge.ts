@@ -1,4 +1,4 @@
-import { chargeWithScanPay, dbClient, getChargesToCharge } from "src";
+import { chargeWithScanpay, dbClient, getChargesToCharge } from "src";
 
 export async function charge() {
   const db = await dbClient();
@@ -6,7 +6,7 @@ export async function charge() {
   try {
     for (let charge of await getChargesToCharge(db)) {
       try {
-        await chargeWithScanPay(db, charge);
+        await chargeWithScanpay(db, charge);
       } catch (err) {
         console.error(`Error charging ID '${charge.id}'`, err);
       }

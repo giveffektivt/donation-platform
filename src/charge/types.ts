@@ -1,4 +1,4 @@
-import { DonationGatewayMetadataScanPay, DonationRecipient } from "src";
+import { DonationGatewayMetadataScanpay, DonationRecipient } from "src";
 
 export enum ChargeStatus {
   Created = "created",
@@ -28,10 +28,10 @@ export type ChargeToCharge = {
   amount: number;
   email: string;
   recipient: DonationRecipient;
-  gateway_metadata?: ChargeGatewayMetadataScanPay;
-  donation_gateway_metadata?: DonationGatewayMetadataScanPay;
+  gateway_metadata?: ChargeGatewayMetadataScanpay;
+  donation_gateway_metadata?: DonationGatewayMetadataScanpay;
 };
 
-export type ChargeGatewayMetadataScanPay = {
+export type ChargeGatewayMetadataScanpay = {
   idempotency_key: string;
 };

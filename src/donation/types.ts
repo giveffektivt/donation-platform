@@ -16,7 +16,7 @@ export enum DonationFrequency {
 }
 
 export enum PaymentGateway {
-  ScanPay = "ScanPay",
+  Scanpay = "ScanPay",
   BankTransfer = "Bank transfer",
 }
 
@@ -47,15 +47,15 @@ export type Donation = {
   updated_at: Date;
 };
 
-export type DonationWithGatewayInfoScanPay = Donation & {
-  gateway_metadata: DonationGatewayMetadataScanPay;
+export type DonationWithGatewayInfoScanpay = Donation & {
+  gateway_metadata: DonationGatewayMetadataScanpay;
 };
 
 export type DonationWithGatewayInfoBankTransfer = Donation & {
   gateway_metadata: DonationGatewayMetadataBankTransfer;
 };
 
-export type DonationGatewayMetadataScanPay = {
+export type DonationGatewayMetadataScanpay = {
   scanpay_id: number;
 };
 
