@@ -4,6 +4,7 @@ import {
   ChargeStatus,
   dbExecuteInTransaction,
   DonationFrequency,
+  DonationRecipient,
   DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
   insertCharge,
@@ -23,29 +24,17 @@ export async function processScanpayPayment(
   submitData: SubmitData,
   customerIp: string
 ): Promise<string> {
-  const [donor, donation, donationCharge, membership] =
-    await dbExecuteInTransaction(
-      async (db) => await insertScanpayData(db, submitData)
-    );
-  return await generateRedirectUrl(
-    donor,
-    donation,
-    donationCharge,
-    membership,
-    customerIp
+  const [donor, donation, donationCharge] = await dbExecuteInTransaction(
+    async (db) => await insertScanpayData(db, submitData)
   );
+  return await generateRedirectUrl(donor, donation, donationCharge, customerIp);
 }
 
 export async function insertScanpayData(
   db: PoolClient,
   submitData: SubmitData
 ): Promise<
-  [
-    DonorWithSensitiveInfo,
-    DonationWithGatewayInfoScanpay | null,
-    Charge | null,
-    DonationWithGatewayInfoScanpay | null
-  ]
+  [DonorWithSensitiveInfo, DonationWithGatewayInfoScanpay, Charge | null]
 > {
   const donor = await insertDonorWithSensitiveInfo(db, {
     name: submitData.name,
@@ -58,8 +47,11 @@ export async function insertScanpayData(
     birthday: submitData.birthday,
   });
 
-  const donation = submitData.membershipOnly
-    ? null
+  const donation = submitData.membership
+    ? await insertDonationMembershipViaScanpay(db, {
+        donor_id: donor.id,
+        method: parsePaymentMethod(submitData.method),
+      })
     : await insertDonationViaScanpay(db, {
         donor_id: donor.id,
         amount: submitData.amount,
@@ -71,50 +63,33 @@ export async function insertScanpayData(
 
   // Only create charges at this moment for auto-captured one-time donations
   const donationCharge =
-    donation && isAutoCapturedPayment(submitData)
+    donation.frequency === DonationFrequency.Once
       ? await insertCharge(db, {
           donation_id: donation.id,
           status: ChargeStatus.Waiting,
         })
       : null;
 
-  const membership = submitData.membership
-    ? await insertDonationMembershipViaScanpay(db, {
-        donor_id: donor.id,
-        method: parsePaymentMethod(submitData.method),
-      })
-    : null;
-
-  // Membership charge for sure will not be auto-captured
-
-  return [donor, donation, donationCharge, membership];
+  return [donor, donation, donationCharge];
 }
 
 async function generateRedirectUrl(
   donor: DonorWithSensitiveInfo,
-  donation: DonationWithGatewayInfoScanpay | null,
+  donation: DonationWithGatewayInfoScanpay,
   donationCharge: Charge | null,
-  membership: DonationWithGatewayInfoScanpay | null,
   customerIp: string
 ) {
-  const donations = [donation, membership].filter(
-    (el): el is DonationWithGatewayInfoScanpay => el !== null
-  );
-
-  const successUrl = !!donation
-    ? process.env.SUCCESS_URL
-    : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
+  const successUrl =
+    donation.recipient !== DonationRecipient.GivEffektivt
+      ? process.env.SUCCESS_URL
+      : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
 
   const url = await (donation && donationCharge
     ? scanPayOneTimeUrl(donor, donation, donationCharge, customerIp, successUrl)
-    : scanPaySubscriptionUrl(donor, donations, customerIp, successUrl));
+    : scanPaySubscriptionUrl(donor, donation, customerIp, successUrl));
 
   const slug =
-    donations[0].method === PaymentMethod.MobilePay ? "?go=mobilepay" : "";
+    donation.method === PaymentMethod.MobilePay ? "?go=mobilepay" : "";
 
   return url + slug;
 }
-
-const isAutoCapturedPayment = (submitData: SubmitData) =>
-  parseDonationFrequency(submitData.subscription) === DonationFrequency.Once &&
-  !submitData.membership;

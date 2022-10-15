@@ -10,10 +10,13 @@ import {
 
 /** Add scanpayId to a donation */
 async function handleSubscriber(db: PoolClient, change: ScanpayChange) {
-  // If change.ref is a number, it's actually a donor ID in the old database
   const donationIds = /^\d+$/.test(change.ref)
-    ? await getDonationIdsByOldDonorId(db, change.ref)
-    : change.ref.split("_");
+    ? // if change.ref is a number, it's actually a donor ID in the old database,
+      // updates to those might still be coming, so we need to keep code to support them.
+      await getDonationIdsByOldDonorId(db, change.ref)
+    : // previously we charged donation and membership through a single Scanpay subscription
+      // updates to those might still be coming, so we need to keep code to support them
+      change.ref.split("_");
 
   for (let donationId of donationIds) {
     await setDonationScanpayId(db, {

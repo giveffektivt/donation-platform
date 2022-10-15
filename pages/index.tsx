@@ -1,11 +1,4 @@
-import {
-  BankTransferStep,
-  MembershipStep,
-  Step1,
-  Step3,
-  Wizard,
-  WizardStep,
-} from "comps";
+import { BankTransferStep, Step1, Step2, Wizard, WizardStep } from "comps";
 import type { NextPage } from "next";
 import { submitForm, validationSchema } from "src/helpers";
 import { DonationRecipient } from "src/donation/types";
@@ -20,7 +13,6 @@ const initialValues = {
   method: "",
   tin: "",
   membership: false,
-  membershipOnly: false,
   address: "",
   zip: "",
   city: "",
@@ -46,24 +38,12 @@ const Home: NextPage = () => {
         </WizardStep>
         <WizardStep
           validationSchema={Yup.object().shape({
-            membership: validationSchema.membership,
-            name: validationSchema.name,
-            address: validationSchema.address,
-            zip: validationSchema.zip,
-            city: validationSchema.city,
-            tin: validationSchema.tin,
-          })}
-        >
-          <MembershipStep />
-        </WizardStep>
-        <WizardStep
-          validationSchema={Yup.object().shape({
             email: validationSchema.email,
             method: validationSchema.method,
             rulesAccepted: validationSchema.rulesAccepted,
           })}
         >
-          <Step3 />
+          <Step2 />
         </WizardStep>
         <WizardStep>
           <BankTransferStep />

@@ -42,7 +42,7 @@ export async function scanPayOneTimeUrl(
 /** Make a request to Scanpay API to get a subscription link*/
 export async function scanPaySubscriptionUrl(
   donor: DonorWithContactInfo,
-  donations: Donation[],
+  donation: Donation,
   customerIp: string,
   successUrl: string
 ): Promise<string> {
@@ -53,13 +53,11 @@ export async function scanPaySubscriptionUrl(
     },
   };
 
-  const donation_ids = donations.map((d) => d.id).join("_");
-
   const order = {
     language: "da",
     successurl: successUrl,
     subscriber: {
-      ref: donation_ids,
+      ref: donation.id,
     },
 
     billing: {

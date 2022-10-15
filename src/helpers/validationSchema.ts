@@ -34,12 +34,7 @@ export const validationSchema = {
     .string()
     .when("membership", {
       is: true,
-      then: (schema) =>
-        schema.when("membershipOnly", {
-          is: true,
-          then: (schema) => schema.oneOf(["creditCard"]),
-          otherwise: (schema) => schema.oneOf(["creditCard", "bankTransfer"]),
-        }),
+      then: (schema) => schema.oneOf(["creditCard"]),
       otherwise: (schema) =>
         schema.oneOf(["creditCard", "mobilePay", "bankTransfer"]),
     })
@@ -61,15 +56,7 @@ export const validationSchema = {
     })
     .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX")
     .transform((value) => (!value ? undefined : value)),
-  membership: yup
-    .boolean()
-    .required()
-    .when("membershipOnly", {
-      is: true,
-      then: (schema) => schema.oneOf([true]),
-      otherwise: (schema) => schema,
-    }),
-  membershipOnly: yup.boolean().required(),
+  membership: yup.boolean().required(),
   address: yup
     .string()
     .when("membership", {

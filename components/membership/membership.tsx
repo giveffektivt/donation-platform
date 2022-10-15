@@ -34,7 +34,6 @@ export const Membership = () => {
     country: "Denmark",
     tin: "",
     membership: true,
-    membershipOnly: true,
     method: "creditCard",
 
     // HACK: unused "required" fields,

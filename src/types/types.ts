@@ -9,7 +9,6 @@ export type SubmitData = {
   method: string;
   tin?: string;
   membership: boolean;
-  membershipOnly: boolean;
   city?: string;
   zip?: string;
   address?: string;

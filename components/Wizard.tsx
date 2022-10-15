@@ -45,15 +45,12 @@ export const Wizard = ({ children, initialValues, onSubmit }: WizardProps) => {
           next(values);
           break;
         case 1:
-          next(values);
-          break;
-        case 2:
           await onSubmit(values, bag);
           if (values.method === "bankTransfer") {
             next(values);
           }
           break;
-        case 3:
+        case 2:
           (window.top || window).location.href =
             "https://giveffektivt.dk/tak-for-din-stotte/";
           break;

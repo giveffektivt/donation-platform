@@ -4,7 +4,7 @@ import Image from "next/image";
 import info from "public/info.png";
 import { FormikData } from "src";
 
-export const Step3 = () => {
+export const Step2 = () => {
   const formik = useFormikContext<FormikData>();
 
   return (

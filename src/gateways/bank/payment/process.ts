@@ -6,42 +6,32 @@ import {
   DonationToEmail,
   DonationWithGatewayInfoBankTransfer,
   DonorWithSensitiveInfo,
-  insertDonationMembershipViaBankTransfer,
+  EmailedStatus,
   insertDonationViaBankTransfer,
   insertDonorWithSensitiveInfo,
   parseDonationFrequency,
   parseDonationRecipient,
-  sendMembershipEmail,
   sendPaymentEmail,
   setDonationEmailed,
   SubmitData,
 } from "src";
-import { EmailedStatus } from "src/donation";
 
 export async function processBankTransferPayment(
   submitData: SubmitData
 ): Promise<string> {
-  const [donor, donation, membership] = await dbExecuteInTransaction(
+  const [donor, donation] = await dbExecuteInTransaction(
     async (db) => await insertBankTransferData(db, submitData)
   );
-  await sendEmails(donor, donation, membership);
+  await sendEmails(donor, donation);
   return donation.gateway_metadata.bank_msg;
 }
 
 export async function insertBankTransferData(
   db: PoolClient,
   submitData: SubmitData
-): Promise<
-  [
-    DonorWithSensitiveInfo,
-    DonationWithGatewayInfoBankTransfer,
-    DonationWithGatewayInfoBankTransfer | null
-  ]
-> {
-  if (submitData.membershipOnly) {
-    throw new Error(
-      "Bank transfer is not supported for membership-only payments"
-    );
+): Promise<[DonorWithSensitiveInfo, DonationWithGatewayInfoBankTransfer]> {
+  if (submitData.membership) {
+    throw new Error("Bank transfer is not supported for membership payments");
   }
 
   const donor = await insertDonorWithSensitiveInfo(db, {
@@ -63,29 +53,17 @@ export async function insertBankTransferData(
     tax_deductible: submitData.taxDeduction,
   });
 
-  const membership = submitData.membership
-    ? await insertDonationMembershipViaBankTransfer(db, {
-        donor_id: donor.id,
-        gateway_metadata: donation.gateway_metadata,
-      })
-    : null;
-
-  return [donor, donation, membership];
+  return [donor, donation];
 }
 
 async function sendEmails(
   donor: DonorWithSensitiveInfo,
-  donation: DonationWithGatewayInfoBankTransfer,
-  membership: DonationWithGatewayInfoBankTransfer | null
+  donation: DonationWithGatewayInfoBankTransfer
 ) {
-  const donations = membership ? [donation.id, membership.id] : [donation.id];
-  console.log(
-    `Sending ${donations.length} bank transfer donation email(s):`,
-    donations
-  );
+  console.log(`Sending bank transfer donation email: ${donation.id}`);
 
   const bankTransferInfo: BankTransferInfo = {
-    amount: donation.amount + (membership ? membership.amount : 0),
+    amount: donation.amount,
     msg: donation.gateway_metadata.bank_msg,
   };
 
@@ -109,32 +87,6 @@ async function sendEmails(
     } catch (err) {
       console.error(
         `Error sending payment email for ID "${donation.id}":`,
-        err
-      );
-    }
-
-    if (!membership) {
-      return;
-    }
-
-    // Membership email
-    const membershipToEmail: DonationToEmail = {
-      id: membership.id,
-      email: donor.email,
-      amount: membership.amount,
-      recipient: membership.recipient,
-      frequency: membership.frequency,
-      tax_deductible: membership.tax_deductible,
-      country: donor.country,
-    };
-
-    try {
-      await setDonationEmailed(db, membershipToEmail, EmailedStatus.Attempted);
-      await sendMembershipEmail(membershipToEmail, bankTransferInfo);
-      await setDonationEmailed(db, membershipToEmail, EmailedStatus.Yes);
-    } catch (err) {
-      console.error(
-        `Error sending membership email for ID "${donation.id}":`,
         err
       );
     }
