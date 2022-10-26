@@ -46,7 +46,7 @@ CREATE TYPE giveffektivt.donation_frequency AS ENUM (
 
 CREATE TYPE giveffektivt.donation_recipient AS ENUM (
     'Giv Effektivt',
-    'Vores anbefaling',
+    'Giv Effektivts anbefaling',
     'Større, men variabel effekt',
     'Myggenet mod malaria',
     'Kontanter overførsler til verdens fattigste',
@@ -641,4 +641,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20220824195743'),
     ('20220902221653'),
     ('20221007155850'),
-    ('20221007165120');
+    ('20221007165120'),
+    ('20221026214644');

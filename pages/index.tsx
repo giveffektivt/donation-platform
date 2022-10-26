@@ -6,7 +6,7 @@ import * as Yup from "yup";
 
 const initialValues = {
   amount: "",
-  recipient: DonationRecipient.VoresAnbefaling,
+  recipient: DonationRecipient.GivEffektivtsAnbefaling,
   subscription: "",
   name: "",
   email: "",
