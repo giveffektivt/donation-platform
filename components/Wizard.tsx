@@ -80,7 +80,7 @@ export const Wizard = ({ children, initialValues, onSubmit }: WizardProps) => {
         <div className="wrapper2">
           <Wrapper>
             <Form autoComplete="off" action="">
-              {(stepNumber === 1 || stepNumber === 2) && (
+              {stepNumber === 1 && (
                 <div>
                   <BackButton
                     onClick={() => previous(formik.values)}
