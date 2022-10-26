@@ -50,11 +50,16 @@ export const validationSchema = {
     .when("taxDeduction", {
       is: true,
       then: (schema) =>
-        schema.required("CPR-nr. kræves for at få skattefradrag."),
+        schema.required(
+          "CPR-nr. eller CVR-nr. kræves for at få skattefradrag."
+        ),
 
       otherwise: (schema) => schema,
     })
-    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX")
+    .matches(
+      /^(\d{6}-\d{4}|\d{8})?$/,
+      "Angiv CPR-nr. som DDMMÅÅ-XXXX eller CVR-nr. som XXXXXXXX"
+    )
     .transform((value) => (!value ? undefined : value)),
   membership: yup.boolean().required(),
   address: yup

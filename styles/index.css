@@ -163,6 +163,10 @@ code {
   flex-wrap: wrap;
 }
 
+.inline {
+  display: inline !important;
+}
+
 @media (min-width: 400px) {
   .gap-5 {
     gap: 15px;

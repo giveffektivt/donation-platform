@@ -4,13 +4,24 @@ import React from "react";
 
 export const CprInput = ({ label, helper, ...props }: any) => {
   const [field, meta] = useField(props);
+  const [hasTypedDash, setHasTypedDash] = React.useState(false);
 
   const onChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     let newEvent = event;
     let value: string = event.target.value;
 
-    if (value.length > 6 && value.indexOf("-") === -1) {
-      newEvent.target.value = `${value.slice(0, 6)}-${value.slice(6)}`;
+    if (value.indexOf("-") === -1) {
+      setHasTypedDash(false);
+    } else if (value[value.length - 1] === "-") {
+      setHasTypedDash(true);
+    }
+
+    if (value.length == 10) {
+      if (value.indexOf("-") === -1) {
+        newEvent.target.value = `${value.slice(0, 6)}-${value.slice(6)}`;
+      } else if (!hasTypedDash) {
+        newEvent.target.value = value.replace("-", "");
+      }
     }
 
     return field.onChange(newEvent);

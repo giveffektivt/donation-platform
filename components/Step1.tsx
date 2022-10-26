@@ -16,6 +16,11 @@ export const Step1 = () => {
   // Reset payment method in case user selected MobilePay, clicked back and now wants to pick monthly donation
   formik.values.method = "";
 
+  const isCpr = () => /^\d{6}-\d{4}$/.test(formik.values.tin);
+  const isCvr = () => /^\d{8}$/.test(formik.values.tin);
+  const isCprOrCvr = () => /^(\d{6}-\d{4}|\d{8})$/.test(formik.values.tin);
+  const dimWhen = (condition: boolean) => (condition ? "form-hint inline" : "");
+
   return (
     <>
       <AmountInput
@@ -93,32 +98,21 @@ export const Step1 = () => {
       />
 
       {formik.values.taxDeduction && (
-        <>
-          <div className="form-hint">
-            Betinget af, at SKAT godkender vores ansøgning.{" "}
-            <a
-              href="https://giveffektivt.dk/fradrag/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Læs mere...
-            </a>
-          </div>
-          <CprInput
-            label={
-              <>
-                CPR-nummer
-                <span className="form-hint" style={{ display: "inline" }}>
-                  {" "}
-                  (bruges af Skatteforvaltningen)
-                </span>
-              </>
-            }
-            name="tin"
-            type="text"
-            style={{ maxWidth: "14rem" }}
-          />
-        </>
+        <CprInput
+          label={
+            <>
+              <span className={dimWhen(isCvr())}>CPR-nr.</span>{" "}
+              <span className={dimWhen(isCprOrCvr())}>eller </span>{" "}
+              <span className={dimWhen(isCpr())}>CVR-nr.</span>{" "}
+              <span className="form-hint inline">
+                (bruges af Skatteforvaltningen)
+              </span>
+            </>
+          }
+          name="tin"
+          type="text"
+          style={{ maxWidth: "14rem" }}
+        />
       )}
 
       <Button type="submit">
