@@ -25,12 +25,12 @@ export async function quickpayCreatePayment(
         {
           qty: 1,
           item_no: 1,
-          item_name: description(donation.recipient),
+          item_name: "Giv Effektivt donation",
           item_price: donation.amount * 100,
           vat_rate: 0,
         },
       ],
-      text_on_statement: description(donation.recipient),
+      text_on_statement: "giveffektivt.dk",
     }
   );
 
@@ -41,6 +41,12 @@ export async function quickpayCreatePayment(
 export async function quickpayCreateSubscription(
   donation: DonationWithGatewayInfoQuickpay
 ): Promise<string> {
+  const description = `Giv Effektivt ${
+    donation.recipient === DonationRecipient.GivEffektivt
+      ? "medlem"
+      : "donation"
+  }`;
+
   const response = await request(
     "POST",
     "subscriptions",
@@ -48,8 +54,8 @@ export async function quickpayCreateSubscription(
     {
       currency: "dkk",
       order_id: donation.gateway_metadata.quickpay_order,
-      description: description(donation.recipient),
-      text_on_statement: description(donation.recipient),
+      description,
+      text_on_statement: "giveffektivt.dk",
     }
   );
 
@@ -119,7 +125,7 @@ export async function quickpayChargeSubscription(
         amount: charge.amount * 100,
         order_id: charge.short_id,
         auto_capture: true,
-        text_on_statement: `Giv Effektivt ${charge.short_id}`,
+        text_on_statement: "giveffektivt.dk",
         description: `Giv Effektivt ${charge.short_id}`,
       }
     );
@@ -167,10 +173,4 @@ function buildAuthorizationHeader(recipient: DonationRecipient) {
 
   const base64key = Buffer.from(`:${apiKey}`).toString("base64");
   return `Basic ${base64key}`;
-}
-
-function description(recipient: DonationRecipient) {
-  return `Giv Effektivt ${
-    recipient === DonationRecipient.GivEffektivt ? "medlem" : "donation"
-  }`;
 }
