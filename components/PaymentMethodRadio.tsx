@@ -32,7 +32,6 @@ export const PaymentMethodRadio = () => {
   const canUseCreditCard = formik.values.amount < 7400;
 
   const canUseMobilePay =
-    false && // TODO
     formik.values.amount < 7400 &&
     formik.values.subscription === "oneTime" &&
     !formik.values.membership;

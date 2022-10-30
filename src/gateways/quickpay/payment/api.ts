@@ -7,6 +7,7 @@ import {
 import {
   DonationRecipient,
   DonationWithGatewayInfoQuickpay,
+  PaymentMethod,
 } from "src/donation";
 
 /** Make a request to Quickpay API to get Quickpay ID for a one time payment */
@@ -67,6 +68,8 @@ export async function quickpayOneTimeUrl(
   donation: DonationWithGatewayInfoQuickpay,
   successUrl: string
 ): Promise<string> {
+  const isMobilePay = donation.method === PaymentMethod.MobilePay;
+
   const response = await request(
     "PUT",
     `payments/${donation.gateway_metadata.quickpay_id}/link`,
@@ -76,6 +79,8 @@ export async function quickpayOneTimeUrl(
       continue_url: successUrl,
       callback_url: process.env.QUICKPAY_CALLBACK_URL,
       auto_capture: true,
+      language: "da",
+      payment_methods: isMobilePay ? "mobilepay" : "",
     }
   );
 
@@ -95,6 +100,7 @@ export async function quickpaySubscriptionUrl(
       amount: donation.amount * 100,
       continue_url: successUrl,
       callback_url: process.env.QUICKPAY_CALLBACK_URL,
+      language: "da",
     }
   );
 
