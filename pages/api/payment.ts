@@ -1,11 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
+  BankTransferInfo,
+  DonationRecipient,
+  DonationToEmail,
+  parseDonationFrequency,
+  parseDonationRecipient,
   parsePaymentMethod,
-  PaymentGateway,
   PaymentMethod,
-  processBankTransferPayment,
-  processQuickpayPayment,
-  processScanpayPayment,
+  sendMembershipEmail,
+  sendPaymentEmail,
   SubmitData,
   validationSchema,
 } from "src";
@@ -46,9 +49,26 @@ export default async function handler(
       .shape(validationSchema)
       .validate(req.body);
 
+    const bankTransferId = "1234";
+    const donationToEmail: DonationToEmail = {
+      id: "some-donation-id",
+      email: submitData.email,
+      amount: submitData.amount,
+      recipient: parseDonationRecipient(submitData.recipient),
+      frequency: parseDonationFrequency(submitData.subscription),
+      tax_deductible: submitData.taxDeduction,
+      country: "Denmark",
+    };
+
     switch (parsePaymentMethod(submitData.method)) {
       case PaymentMethod.BankTransfer:
-        const bankTransferId = await processBankTransferPayment(submitData);
+        const bankTransferInfo: BankTransferInfo = {
+          amount: submitData.amount,
+          msg: bankTransferId,
+        };
+
+        await sendPaymentEmail(donationToEmail, bankTransferInfo);
+
         res.status(200).json({
           message: "OK",
           bank: {
@@ -60,30 +80,22 @@ export default async function handler(
 
       case PaymentMethod.CreditCard:
       case PaymentMethod.MobilePay:
-        switch (process.env.PAYMENT_GATEWAY) {
-          case PaymentGateway.Quickpay:
-            res.status(200).json({
-              message: "OK",
-              redirect: await processQuickpayPayment(submitData),
-            });
-            return;
+        const isMembership =
+          parseDonationRecipient(submitData.recipient) ===
+          DonationRecipient.GivEffektivt;
 
-          case PaymentGateway.Scanpay:
-            res.status(200).json({
-              message: "OK",
-              redirect: await processScanpayPayment(submitData, ip),
-            });
-            return;
-
-          default:
-            console.error(
-              `api/payment: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`
-            );
-            res.status(400).json({
-              message: `Unsupported payment method '${submitData.method}'`,
-            });
-            return;
+        if (isMembership) {
+          await sendMembershipEmail(donationToEmail);
+        } else {
+          await sendPaymentEmail(donationToEmail);
         }
+        res.status(200).json({
+          message: "OK",
+          redirect: isMembership
+            ? process.env.SUCCESS_URL_MEMBERSHIP_ONLY
+            : process.env.SUCCESS_URL,
+        });
+        return;
     }
   } catch (err) {
     console.error("api/payment:", err);
