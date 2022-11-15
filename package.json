@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@types/html-to-text": "^8.1.0",
+    "cors": "^2.8.5",
     "dkfds": "^7.5.3",
     "ejs": "^3.1.8",
     "formik": "^2.2.9",
@@ -33,6 +34,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^5.16.3",
     "@testing-library/react": "^12.1.4",
+    "@types/cors": "^2.8.12",
     "@types/jest": "^27.4.1",
     "@types/node": "^17.0.23",
     "@types/nodemailer": "^6.4.4",
