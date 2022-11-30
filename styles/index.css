@@ -83,6 +83,11 @@ code {
   background-color: #921223;
 }
 
+.button.button-primary.custom-button i {
+  filter: invert(100%);
+  margin-right: 5px;
+}
+
 .button-box {
   margin: 0 20px;
   display: flex;

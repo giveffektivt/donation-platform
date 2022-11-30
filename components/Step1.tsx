@@ -117,6 +117,7 @@ export const Step1 = () => {
 
       <Button type="submit">
         <div style={{ display: "flex", alignItems: "center" }}>
+          <i className="icon icon-arrow-forward"></i>
           <span>Næste</span>
         </div>
       </Button>
