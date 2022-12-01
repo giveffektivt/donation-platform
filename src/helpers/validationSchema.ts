@@ -3,14 +3,14 @@ import * as yup from "yup";
 export const validationSchema = {
   amount: yup
     .number()
-    .required("Skriv hvor meget du vil donere")
+    .required("Vælg hvor meget du vil donere")
     .min(1, "Mindst 1 kr.")
     .integer("Skriv et heltal")
     .typeError("Skriv et heltal"),
   recipient: yup.string().required("Vælg en modtager"),
   subscription: yup
     .string()
-    .required("Hvor ofte vil du donere?")
+    .required("Vælg en donationsfrekvens")
     .when("method", {
       is: "mobilePay",
       then: (schema) => schema.oneOf(["oneTime"]),
@@ -27,7 +27,7 @@ export const validationSchema = {
     .transform((value) => (!value ? undefined : value)),
   email: yup
     .string()
-    .required("Skriv din email-adresse")
+    .required("Skriv din email adresse")
     .max(320, "Højst 320 tegn")
     .matches(/@/, "Email-adressen er ikke gyldig"),
   method: yup
@@ -51,7 +51,7 @@ export const validationSchema = {
       is: true,
       then: (schema) =>
         schema.required(
-          "CPR-nr. eller CVR-nr. kræves for at få skattefradrag."
+          "Oplysninger kræves for at få skattefradrag"
         ),
 
       otherwise: (schema) => schema,

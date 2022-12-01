@@ -37,7 +37,7 @@ export const MembershipStep1 = () => {
       <Input
         label={
           <>
-            E-mail
+            Email
             <span className="weight-normal"> (til kvittering, ikke spam)</span>
           </>
         }
