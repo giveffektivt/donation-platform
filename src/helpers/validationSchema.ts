@@ -51,7 +51,7 @@ export const validationSchema = {
       is: true,
       then: (schema) =>
         schema.required(
-          "CPR-nr. eller CVR-nr. kræves for at få skattefradrag."
+          "Oplysninger kræves for at få skattefradrag"
         ),
 
       otherwise: (schema) => schema,
