@@ -70,6 +70,11 @@ code {
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6 1.41-1.42z'/%3E%3C/svg%3E") !important;
 }
 
+.form-group.form-nested {
+  border-left: 4px solid #D9D9D9;
+  padding-left: calc(16px - 4px);
+}
+
 .button.button-primary.custom-button {
   background-color: #921223;
   border-width: 0px;

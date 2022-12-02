@@ -111,6 +111,7 @@ export const Step1 = () => {
           }
           name="tin"
           type="text"
+          isNested="true"
           style={{ maxWidth: "14rem" }}
         />
       )}
