@@ -1,7 +1,7 @@
 import { useField } from "formik";
 import React from "react";
 
-export const CprInput = ({ label, helper, ...props }: any) => {
+export const CprInput = ({ label, helper, isNested, ...props }: any) => {
   const [field, meta] = useField(props);
   const [hasTypedDash, setHasTypedDash] = React.useState(false);
 
@@ -28,12 +28,16 @@ export const CprInput = ({ label, helper, ...props }: any) => {
 
   const newField = { ...field, onChange };
 
+  const formClass = isNested ? "form-nested" : "";
+  const formStyle = isNested ? { marginTop: "5px" } : {};
+
   return (
     <>
       <div
         className={`form-group ${
-          meta.touched && meta.error ? "form-error" : ""
+          meta.touched && meta.error ? "form-error" : formClass
         }`}
+        style={formStyle}
       >
         <label className="form-label" htmlFor={props.id || props.name}>
           {label}
