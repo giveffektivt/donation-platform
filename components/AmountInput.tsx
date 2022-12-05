@@ -67,16 +67,7 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             )}
           </div>
         ) : null}
-        <div
-          style={{
-            display: "flex",
-            alignContent: "center",
-            gap: "10px",
-            marginTop: "8px",
-            flexDirection: "row",
-            flexWrap: "wrap",
-          }}
-        >
+        <div className="amount-row">
           <input
             className="form-input"
             type="number"
@@ -85,7 +76,7 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             style={{ display: "none" }}
           />
           <input
-            className="form-input"
+            className="form-input amount"
             type="number"
             {...newVisibleField}
             {...visibleProps}
@@ -100,7 +91,9 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             }}
             secondary
             marginTop={"0"}
-            className={`${lastClicked === "200" ? "button-active" : ""}`}
+            className={`amount-button ${
+              lastClicked === "200" ? "button-active" : ""
+            }`}
           >
             200
           </Button>
@@ -114,7 +107,9 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             }}
             secondary
             marginTop={"0"}
-            className={`${lastClicked === "500" ? "button-active" : ""}`}
+            className={`amount-button ${
+              lastClicked === "500" ? "button-active" : ""
+            }`}
           >
             500
           </Button>
@@ -127,7 +122,9 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
               setLastClicked("1000");
             }}
             secondary
-            className={`${lastClicked === "1000" ? "button-active" : ""}`}
+            className={`amount-button ${
+              lastClicked === "1000" ? "button-active" : ""
+            }`}
             marginTop={"0"}
           >
             1.000

@@ -138,6 +138,20 @@ code {
   margin: 0 20px 0 0;
 }
 
+.amount-row {
+  display: flex;
+  align-content: center;
+  gap: 10px;
+  margin-top: 8px;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.amount {
+  max-width: 10rem;
+  margin-top: 0;
+}
+
 @media (max-width: 400px) {
   .flex-container {
     flex-direction: column;
@@ -179,5 +193,17 @@ code {
 @media (min-width: 400px) {
   .gap-5 {
     gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .amount-row {
+    gap: 7px;
+  }
+  .amount {
+    max-width: 8rem;
+  }
+  .amount-button {
+    padding: 8px calc(7px - 2px) calc(8px - 2px);
   }
 }

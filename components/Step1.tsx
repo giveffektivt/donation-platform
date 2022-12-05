@@ -36,7 +36,6 @@ export const Step1 = () => {
         name="amount"
         type="number"
         placeholder="Andet"
-        style={{ maxWidth: "10rem", marginTop: 0 }}
       />
 
       <Select
