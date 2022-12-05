@@ -1,13 +1,36 @@
 import { Button } from "components";
 import { useField } from "formik";
-import { useRef, useState } from "react";
+import { useState } from "react";
+import { useFormikContext } from "formik";
+import { useEffect } from "react";
 
 export const AmountInput = ({ label, helper, ...props }: any) => {
+  const formik = useFormikContext<any>();
+
   const [field, meta, helpers] = useField(props);
   const { setValue } = helpers;
-  const [visible, setVisible] = useState(false);
+
+  const visibleProps = { ...props, name: "visibleAmount" };
+  const [visibleField, _visibleMeta, visibleHelpers] = useField(visibleProps);
+  const { setValue: setVisibleValue } = visibleHelpers;
+  const newVisibleField = {
+    ...visibleField,
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(event.target.value);
+      setLastClicked("");
+      return visibleField.onChange(event);
+    },
+  };
+
   const [lastClicked, setLastClicked] = useState("");
-  const inputRef = useRef<HTMLInputElement>();
+
+  useEffect(() => {
+    setLastClicked(formik.values.amount.toString());
+    if ([200, 500, 1000].includes(formik.values.visibleAmount)) {
+      formik.values.visibleAmount = "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <>
@@ -54,15 +77,29 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             flexWrap: "wrap",
           }}
         >
+          <input
+            className="form-input"
+            type="number"
+            {...field}
+            {...props}
+            style={{ display: "none" }}
+          />
+          <input
+            className="form-input"
+            type="number"
+            {...newVisibleField}
+            {...visibleProps}
+          />
           <Button
             type="button"
             buttonMargin="0"
             onClick={() => {
+              setVisibleValue("");
               setValue(200);
-              setVisible(false);
               setLastClicked("200");
             }}
             secondary
+            marginTop={"0"}
             className={`${lastClicked === "200" ? "button-active" : ""}`}
           >
             200
@@ -71,8 +108,8 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             type="button"
             buttonMargin="0"
             onClick={() => {
+              setVisibleValue("");
               setValue(500);
-              setVisible(false);
               setLastClicked("500");
             }}
             secondary
@@ -81,13 +118,12 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
           >
             500
           </Button>
-
           <Button
             type="button"
             buttonMargin="0"
             onClick={() => {
+              setVisibleValue("");
               setValue(1000);
-              setVisible(false);
               setLastClicked("1000");
             }}
             secondary
@@ -96,32 +132,6 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
           >
             1.000
           </Button>
-          <Button
-            type="button"
-            buttonMargin="0"
-            onClick={() => {
-              setVisible(true);
-              setLastClicked("Other");
-              setValue(1);
-              setTimeout(() => {
-                inputRef.current && inputRef.current.focus();
-              }, 1);
-            }}
-            secondary
-            marginTop={"0"}
-            className={`${lastClicked === "Other" ? "button-active" : ""}`}
-          >
-            Andet
-          </Button>
-          <div style={{ display: `${visible ? "" : "none"}` }}>
-            <input
-              className="form-input"
-              type="number"
-              {...field}
-              {...props}
-              ref={inputRef}
-            />
-          </div>
         </div>
       </div>
     </>
