@@ -58,15 +58,19 @@ no-margin-top {
 .amount-row {
   display: flex;
   align-content: center;
-  gap: 10px;
+  gap: 7px;
   margin-top: 8px;
   flex-direction: row;
   flex-wrap: wrap;
 }
 
 .amount {
-  max-width: 10rem;
+  max-width: 8rem;
   margin-top: 0;
+}
+
+.amount-button {
+  padding: 8px calc(7px - 2px) calc(8px - 2px);
 }
 
 .button.button-primary.custom-button {
@@ -126,20 +130,17 @@ no-margin-top {
   gap: 2px;
 }
 
-@media (min-width: 400px) {
+@media (min-width: 480px) {
   .gap-5 {
     gap: 15px;
   }
-}
-
-@media (max-width: 480px) {
+  .amount-button {
+    padding: 8px calc(16px - 2px) calc(8px - 2px);
+  }
   .amount-row {
-    gap: 7px;
+    gap: 10px;
   }
   .amount {
-    max-width: 8rem;
-  }
-  .amount-button {
-    padding: 8px calc(7px - 2px) calc(8px - 2px);
+    max-width: 10rem;
   }
 }
