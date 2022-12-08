@@ -108,10 +108,10 @@ export const Step1 = () => {
       )}
 
       <Button type="submit">
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <i className="icon icon-arrow-forward"></i>
-          <span>Næste</span>
-        </div>
+        <svg className="icon-svg" aria-hidden="true">
+          <use xlinkHref="#arrow-forward"></use>
+        </svg>
+        Næste
       </Button>
     </>
   );

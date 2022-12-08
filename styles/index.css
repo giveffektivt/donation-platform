@@ -76,9 +76,10 @@ no-margin-top {
 .button.button-primary.custom-button {
   background-color: #921223;
   border-width: 0px;
-  padding: 12px 3px;
+  padding: 12px 23px;
   font-size: 17px;
   max-width: fit-content;
+  max-height: fit-content;
 }
 
 .button.button-primary.custom-button:hover {
@@ -88,12 +89,6 @@ no-margin-top {
 .button.button-primary.custom-button i {
   filter: invert(100%);
   margin-right: 5px;
-}
-
-.button-box {
-  margin: 0 20px;
-  display: flex;
-  align-items: center;
 }
 
 .form-select {

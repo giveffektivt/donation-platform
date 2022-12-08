@@ -12,10 +12,10 @@
   "dependencies": {
     "@types/html-to-text": "^8.1.0",
     "cors": "^2.8.5",
-    "dkfds": "^7.5.3",
+    "dkfds": "^8.2.0",
     "ejs": "^3.1.8",
     "formik": "^2.2.9",
-    "html-to-text": "^8.2.0",
+    "html-to-text": "^9.0.2",
     "juice": "^8.0.0",
     "lodash": "^4.17.21",
     "minimist": "1.2.7",
