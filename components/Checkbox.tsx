@@ -6,7 +6,6 @@ type CheckboxProps = {
   helper?: JSX.Element | string;
   checkboxLabel?: JSX.Element | string;
   disabled?: boolean;
-  labelPadding?: boolean;
 };
 
 export function Checkbox({
@@ -14,7 +13,6 @@ export function Checkbox({
   helper,
   checkboxLabel,
   disabled = false,
-  labelPadding = true,
   ...props
 }: CheckboxProps): JSX.Element {
   const [field, meta] = useField({
@@ -49,10 +47,7 @@ export function Checkbox({
               type="checkbox"
               className="form-checkbox checkbox-large"
             />
-            <label
-              htmlFor={props.name}
-              style={labelPadding ? {} : { paddingTop: 0 }}
-            >
+            <label htmlFor={props.name}>
               {checkboxLabel ? checkboxLabel : null}
             </label>
           </li>

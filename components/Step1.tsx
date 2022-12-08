@@ -46,11 +46,7 @@ export const Step1 = () => {
               href="https://giveffektivt.dk/bedste-organisationer/"
               target="_blank"
               rel="noreferrer"
-              style={{
-                display: "inline-block",
-                verticalAlign: "middle",
-                marginLeft: 5,
-              }}
+              className="icon-clickable"
             >
               <i className="icon icon-help"></i>
             </a>
@@ -84,11 +80,7 @@ export const Step1 = () => {
               href="https://giveffektivt.dk/fradrag/"
               target="_blank"
               rel="noreferrer"
-              style={{
-                display: "inline-block",
-                verticalAlign: "middle",
-                marginLeft: 5,
-              }}
+              className="icon-clickable"
             >
               <i className="icon icon-help"></i>
             </a>

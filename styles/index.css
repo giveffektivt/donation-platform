@@ -130,6 +130,21 @@ no-margin-top {
   gap: 2px;
 }
 
+.icon-clickable {
+  display: inline-flex;
+  vertical-align: sub;
+  margin-left: 5px;
+}
+
+.icon-clickable .icon {
+  height: 2rem;
+  width: 2rem;
+}
+
+.form-checkbox + label::before, .form-radio + label::before {
+  top: calc(50% - 17px);
+}
+
 @media (min-width: 480px) {
   .gap-5 {
     gap: 15px;
