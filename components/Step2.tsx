@@ -25,7 +25,7 @@ export const Step2 = () => {
         name="rulesAccepted"
         checkboxLabel={
           <>
-            <span>Jeg accepterer</span>{" "}
+            Jeg accepterer{" "}
             <a
               href="https://giveffektivt.dk/handelsbetingelser/"
               target={"_blank"}
