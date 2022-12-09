@@ -1,6 +1,9 @@
 import "dkfds/dist/css/dkfds.css";
 import type { AppProps } from "next/app";
 import "../styles/index.css";
+import { Poppins } from "@next/font/google";
+
+const poppins = Poppins({ weight: "400" });
 
 function DonationPlatform({ Component, pageProps }: AppProps) {
   return (
@@ -13,7 +16,9 @@ function DonationPlatform({ Component, pageProps }: AppProps) {
           </symbol>
         </svg>
       </div>
-      <Component {...pageProps} />
+      <main className={poppins.className}>
+        <Component {...pageProps} />
+      </main>
     </>
   );
 }
