@@ -11,7 +11,7 @@ export const Step2 = () => {
         label={
           <>
             Email
-            <span className="weight-normal"> (til kvittering, ikke spam)</span>
+            <span className="weight-normal"> (til kvittering)</span>
           </>
         }
         name="email"
@@ -33,6 +33,17 @@ export const Step2 = () => {
             >
               handelsbetingelserne
             </a>
+          </>
+        }
+      />
+
+      <Checkbox
+        name="subscribeMailingList"
+        className="form-group-no-margin"
+        checkboxLabel={
+          <>
+            <span className="unbreakable-line">Tilmeld mig nyghedsbrevet</span>{" "}
+            <span className="unbreakable-line">(4-6 emails om året)</span>
           </>
         }
       />
