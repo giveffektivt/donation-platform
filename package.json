@@ -10,6 +10,7 @@
     "create-index": "yarn cti -b -w -q \\\" ./components ./src"
   },
   "dependencies": {
+    "@next/font": "^13.0.6",
     "@types/html-to-text": "^8.1.0",
     "cors": "^2.8.5",
     "dkfds": "^8.2.0",
