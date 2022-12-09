@@ -69,15 +69,15 @@ export const PaymentMethodRadio = () => {
               </label>
               <div className="flx-center gap-5">
                 <Image
-                  width="70px"
-                  height="20px"
+                  width="70"
+                  height="20"
                   src={visa}
                   quality="100"
                   alt="Visa logo"
                 />
                 <Image
-                  width="50px"
-                  height="40px"
+                  width="50"
+                  height="40"
                   src={mastercard}
                   quality="100"
                   alt="Mastercard logo"
@@ -98,8 +98,8 @@ export const PaymentMethodRadio = () => {
               <div style={{ margin: "0 0px 0 auto" }}>
                 <Image
                   src={mobilepay}
-                  width="125px"
-                  height="40px"
+                  width="125"
+                  height="40"
                   quality="100"
                   alt="MobilePay logo"
                 />
@@ -123,8 +123,8 @@ export const PaymentMethodRadio = () => {
             <div className="flx-center gap-5">
               <Image
                 src={bank}
-                width="35px"
-                height="35px"
+                width="35"
+                height="35"
                 quality="100"
                 alt="Visa logo"
               />

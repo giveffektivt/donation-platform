@@ -83,7 +83,6 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
           />
           <Button
             type="button"
-            buttonMargin="0"
             onClick={(e) => {
               setVisibleValue("");
               setValue(200);
@@ -100,7 +99,6 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
           </Button>
           <Button
             type="button"
-            buttonMargin="0"
             onClick={(e) => {
               setVisibleValue("");
               setValue(500);
@@ -117,7 +115,6 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
           </Button>
           <Button
             type="button"
-            buttonMargin="0"
             onClick={(e) => {
               setVisibleValue("");
               setValue(1000);
