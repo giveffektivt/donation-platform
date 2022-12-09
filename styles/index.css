@@ -140,6 +140,14 @@ no-margin-top {
   top: calc(50% - 17px);
 }
 
+.form-radio.radio-large:checked+label:after {
+  top: calc(50% - 9px);
+}
+
+.form-checkbox.checkbox-large:checked + label:after {
+  top: calc(50% - 15px);
+}
+
 @media (min-width: 480px) {
   .gap-5 {
     gap: 15px;
