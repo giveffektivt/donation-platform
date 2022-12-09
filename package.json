@@ -51,9 +51,7 @@
     "vitest": "^0.25.6",
     "yarn-upgrade-all": "^0.7.1"
   },
-  "overrides": {
-    "html-to-text": {
-      "dom-serializer": "^2.0.0"
-    }
+  "resolutions": {
+    "dom-serializer": "^2.0.0"
   }
 }
