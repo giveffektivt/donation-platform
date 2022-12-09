@@ -3,8 +3,6 @@ import { Button } from "./Button";
 
 export const BankTransferStep = () => {
   const formik = useFormikContext<any>();
-  const totalAmount =
-    formik.values.amount + (formik.values.membership ? 50 : 0);
 
   return (
     <>
@@ -15,7 +13,7 @@ export const BankTransferStep = () => {
           <tr>
             <td width="40%">Beløb:</td>
             <td>
-              <b>{totalAmount} kr.</b>
+              <b>{formik.values.amount} kr.</b>
             </td>
           </tr>
           <tr>

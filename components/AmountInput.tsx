@@ -16,7 +16,7 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
   const newVisibleField = {
     ...visibleField,
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(event.target.value);
+      setValue(parseInt(event.target.value) || "");
       setLastClicked("");
       return visibleField.onChange(event);
     },
