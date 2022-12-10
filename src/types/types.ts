@@ -15,4 +15,5 @@ export type SubmitData = {
   taxDeduction: boolean;
   birthday?: Date;
   country?: string;
+  subscribeMailingList: boolean;
 };

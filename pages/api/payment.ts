@@ -46,6 +46,32 @@ export default async function handler(
       .shape(validationSchema)
       .validate(req.body);
 
+    if (submitData.subscribeMailingList) {
+      if (!process.env.MAILCHIMP_SUBSCRIBE_URL) {
+        throw new Error(`No Mailchimp subscribe URL defined`);
+      }
+
+      const response = await fetch(process.env.MAILCHIMP_SUBSCRIBE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: getMailchimpAuthorizationHeader(),
+        },
+        body: JSON.stringify({
+          email_address: submitData.email,
+          status: "subscribed",
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          `Error subscribing ${submitData.email} to newsletter: ${
+            response.statusText
+          }: ${await response.text()}`
+        );
+      }
+    }
+
     switch (parsePaymentMethod(submitData.method)) {
       case PaymentMethod.BankTransfer:
         const bankTransferId = await processBankTransferPayment(submitData);
@@ -89,4 +115,15 @@ export default async function handler(
     console.error("api/payment:", err);
     res.status(500).json({ message: "Something went wrong" });
   }
+}
+
+function getMailchimpAuthorizationHeader() {
+  if (!process.env.MAILCHIMP_API_KEY) {
+    throw new Error(`No Mailchimp API key defined`);
+  }
+
+  const base64key = Buffer.from(
+    `key:${process.env.MAILCHIMP_API_KEY}`
+  ).toString("base64");
+  return `Basic ${base64key}`;
 }

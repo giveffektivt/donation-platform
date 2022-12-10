@@ -101,7 +101,6 @@ export const validationSchema = {
   rulesAccepted: yup
     .bool()
     .oneOf([true], "Handelsbetingelserne skal accepteres"),
-  taxDeduction: yup.bool(),
-  subscribeMailingList: yup
-    .bool(),
+  taxDeduction: yup.bool().required(),
+  subscribeMailingList: yup.bool().required(),
 };
