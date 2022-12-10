@@ -50,9 +50,7 @@ export const validationSchema = {
     .when("taxDeduction", {
       is: true,
       then: (schema) =>
-        schema.required(
-          "Oplysninger kræves for at få skattefradrag"
-        ),
+        schema.required("Oplysninger kræves for at få skattefradrag"),
 
       otherwise: (schema) => schema,
     })
@@ -102,5 +100,5 @@ export const validationSchema = {
     .bool()
     .oneOf([true], "Handelsbetingelserne skal accepteres"),
   taxDeduction: yup.bool().required(),
-  subscribeMailingList: yup.bool().required(),
+  subscribeToNewsletter: yup.bool().required(),
 };

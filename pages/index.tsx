@@ -19,7 +19,7 @@ const initialValues = {
   city: "",
   country: "Denmark",
   rulesAccepted: false,
-  subscribeMailingList: false,
+  subscribeToNewsletter: false,
   taxDeduction: false,
   bank: {},
 };
@@ -43,7 +43,7 @@ const Home: NextPage = () => {
             email: validationSchema.email,
             method: validationSchema.method,
             rulesAccepted: validationSchema.rulesAccepted,
-            subscribeMailingList: validationSchema.subscribeMailingList,
+            subscribeToNewsletter: validationSchema.subscribeToNewsletter,
           })}
         >
           <Step2 />

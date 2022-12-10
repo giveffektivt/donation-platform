@@ -38,7 +38,7 @@ export const Step2 = () => {
       />
 
       <Checkbox
-        name="subscribeMailingList"
+        name="subscribeToNewsletter"
         className="form-group-no-margin"
         checkboxLabel={
           <>

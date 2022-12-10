@@ -46,7 +46,7 @@ export default async function handler(
       .shape(validationSchema)
       .validate(req.body);
 
-    if (submitData.subscribeMailingList) {
+    if (submitData.subscribeToNewsletter) {
       if (!process.env.MAILCHIMP_SUBSCRIBE_URL) {
         throw new Error(`No Mailchimp subscribe URL defined`);
       }
