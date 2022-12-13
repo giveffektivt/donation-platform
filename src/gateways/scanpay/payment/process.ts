@@ -23,11 +23,14 @@ import {
 export async function processScanpayPayment(
   submitData: SubmitData,
   customerIp: string
-): Promise<string> {
+): Promise<[string, string]> {
   const [donor, donation, charge] = await dbExecuteInTransaction(
     async (db) => await insertScanpayData(db, submitData)
   );
-  return await generateRedirectUrl(donor, donation, charge, customerIp);
+  return [
+    await generateRedirectUrl(donor, donation, charge, customerIp),
+    donor.id,
+  ];
 }
 
 export async function insertScanpayData(

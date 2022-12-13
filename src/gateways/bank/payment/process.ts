@@ -18,12 +18,12 @@ import {
 
 export async function processBankTransferPayment(
   submitData: SubmitData
-): Promise<string> {
+): Promise<[string, string]> {
   const [donor, donation] = await dbExecuteInTransaction(
     async (db) => await insertBankTransferData(db, submitData)
   );
   await sendEmails(donor, donation);
-  return donation.gateway_metadata.bank_msg;
+  return [donation.gateway_metadata.bank_msg, donor.id];
 }
 
 export async function insertBankTransferData(
