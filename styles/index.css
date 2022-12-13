@@ -148,6 +148,14 @@ no-margin-top {
   top: calc(50% - 15px);
 }
 
+.form-group-no-margin {
+  margin-top: 0px;
+}
+
+.unbreakable-line {
+  display: inline-block;
+}
+
 @media (min-width: 480px) {
   .gap-5 {
     gap: 15px;

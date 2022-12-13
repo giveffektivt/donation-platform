@@ -6,6 +6,7 @@ type CheckboxProps = {
   helper?: JSX.Element | string;
   checkboxLabel?: JSX.Element | string;
   disabled?: boolean;
+  className?: string;
 };
 
 export function Checkbox({
@@ -13,6 +14,7 @@ export function Checkbox({
   helper,
   checkboxLabel,
   disabled = false,
+  className,
   ...props
 }: CheckboxProps): JSX.Element {
   const [field, meta] = useField({
@@ -23,7 +25,9 @@ export function Checkbox({
 
   return (
     <div
-      className={`form-group ${meta.touched && meta.error ? "form-error" : ""}`}
+      className={`form-group ${className || ""} ${
+        meta.touched && meta.error ? "form-error" : ""
+      }`}
     >
       <fieldset>
         {label ? <legend className="form-label">{label}</legend> : null}

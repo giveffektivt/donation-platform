@@ -6,6 +6,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   DonationWithGatewayInfoQuickpay,
+  Donor,
   DonorWithSensitiveInfo,
   insertCharge,
   insertDonationMembershipViaQuickpay,
@@ -24,11 +25,11 @@ import {
 
 export async function processQuickpayPayment(
   submitData: SubmitData
-): Promise<string> {
-  const [donation, charge] = await dbExecuteInTransaction(
+): Promise<[string, string]> {
+  const [donor, donation, charge] = await dbExecuteInTransaction(
     async (db) => await insertQuickpayDataWithQuickpayId(db, submitData)
   );
-  return await generateRedirectUrl(donation, charge);
+  return [await generateRedirectUrl(donation, charge), donor.id];
 }
 
 export async function insertQuickpayData(
@@ -77,8 +78,8 @@ export async function insertQuickpayData(
 async function insertQuickpayDataWithQuickpayId(
   db: PoolClient,
   submitData: SubmitData
-): Promise<[DonationWithGatewayInfoQuickpay, Charge | null]> {
-  const [_donor, donation, charge] = await insertQuickpayData(db, submitData);
+): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
+  const [donor, donation, charge] = await insertQuickpayData(db, submitData);
 
   donation.gateway_metadata.quickpay_id = await (donation && charge
     ? quickpayCreatePayment(charge.short_id, donation)
@@ -86,7 +87,7 @@ async function insertQuickpayDataWithQuickpayId(
 
   await setDonationQuickpayId(db, donation);
 
-  return [donation, charge];
+  return [donor, donation, charge];
 }
 
 async function generateRedirectUrl(
