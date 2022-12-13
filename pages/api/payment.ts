@@ -146,9 +146,7 @@ async function subscribeToNewsletter(submitData: SubmitData, donorId: string) {
 
   if (!response.ok) {
     console.error(
-      `Error subscribing ${donorId} to newsletter: ${
-        response.statusText
-      }: ${await response.text()}`
+      `Error subscribing ${donorId} to newsletter: ${response.statusText}`
     );
   }
 }
