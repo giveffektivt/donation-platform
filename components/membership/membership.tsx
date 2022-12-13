@@ -78,12 +78,14 @@ export const Membership = () => {
                 Læs mere her.
               </a>
             </div>
+
             <Input
               label="Fuldt navn"
               name="name"
               type="text"
               style={{ maxWidth: "32rem" }}
             />
+
             <CprInput
               label={
                 <>
@@ -98,6 +100,7 @@ export const Membership = () => {
               type="text"
               style={{ maxWidth: "14rem" }}
             />
+
             <Input
               label={
                 <>
@@ -119,12 +122,14 @@ export const Membership = () => {
               type="text"
               style={{ maxWidth: "32rem" }}
             />
+
             <Input
               label={<>Postnummer</>}
               name="zip"
               type="number"
               style={{ maxWidth: "7rem" }}
             />
+
             <Input
               label={<>By</>}
               name="city"
