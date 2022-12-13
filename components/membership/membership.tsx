@@ -1,5 +1,5 @@
 import { GEFrame } from "comps";
-import { MembershipStep1, MembershipStep2 } from "comps/membership";
+import { MembershipStep1 } from "comps/membership";
 import { Formik } from "formik";
 import { useState } from "react";
 import { DonationRecipient } from "src/donation/types";
@@ -16,9 +16,6 @@ const validateStep1 = {
   name: validationSchema.name,
   tin: validationSchema.tin,
   email: validationSchema.email,
-};
-
-const validateStep2 = {
   address: validationSchema.address,
   zip: validationSchema.zip,
   city: validationSchema.city,
@@ -46,20 +43,16 @@ export const Membership = () => {
 
   const [step, setStep] = useState(0);
 
-  // I have no idea what are the keys used to
-  const steps = [<MembershipStep1 key={0} />, <MembershipStep2 key={1} />];
+  const steps = [<MembershipStep1 key={0} />];
   const maxStep = steps.length;
 
-  const validations = [validateStep1, validateStep2];
+  const validations = [validateStep1];
 
   const handleSubmit = async (values: any, bag: any) => {
     try {
       bag.setTouched({});
       switch (step) {
         case 0:
-          setStep((step) => step + 1);
-          break;
-        case 1:
           await submitForm(values, bag);
           break;
       }
