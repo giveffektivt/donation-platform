@@ -49,12 +49,6 @@ no-margin-top {
   margin: 24px 18px 25px 18px;
 }
 
-.clearfix::after {
-  content: "";
-  clear: both;
-  display: table;
-}
-
 .amount-row {
   display: flex;
   align-content: center;

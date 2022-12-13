@@ -1,7 +1,5 @@
-import { GEFrame } from "comps";
-import { MembershipStep1, MembershipStep2 } from "comps/membership";
+import { Button, CprInput, GEFrame, Input } from "comps";
 import { Formik } from "formik";
-import { useState } from "react";
 import { DonationRecipient } from "src/donation/types";
 import { submitForm, validationSchema } from "src/helpers";
 import * as yup from "yup";
@@ -12,13 +10,10 @@ hvis problemet opstår igen. Hvis muligt, så fortæl gerne, hvordan \
 man kan fremprovokere fejlen.
 `;
 
-const validateStep1 = {
+const validation = {
   name: validationSchema.name,
   tin: validationSchema.tin,
   email: validationSchema.email,
-};
-
-const validateStep2 = {
   address: validationSchema.address,
   zip: validationSchema.zip,
   city: validationSchema.city,
@@ -44,25 +39,10 @@ export const Membership = () => {
     taxDeduction: false,
   };
 
-  const [step, setStep] = useState(0);
-
-  // I have no idea what are the keys used to
-  const steps = [<MembershipStep1 key={0} />, <MembershipStep2 key={1} />];
-  const maxStep = steps.length;
-
-  const validations = [validateStep1, validateStep2];
-
   const handleSubmit = async (values: any, bag: any) => {
     try {
       bag.setTouched({});
-      switch (step) {
-        case 0:
-          setStep((step) => step + 1);
-          break;
-        case 1:
-          await submitForm(values, bag);
-          break;
-      }
+      await submitForm(values, bag);
     } catch (err) {
       alert(errorMessage);
       console.error(err);
@@ -82,15 +62,87 @@ export const Membership = () => {
     <Formik
       onSubmit={handleSubmit}
       initialValues={initialValues}
-      validationSchema={yup.object().shape(validations[step])}
+      validationSchema={yup.object().shape(validation)}
     >
       {(props) => (
-        <GEFrame
-          text="Bliv medlem af Giv Effektivt"
-          maxStep={maxStep}
-          currentStep={step}
-        >
-          <form onSubmit={props.handleSubmit}>{steps[step]}</form>
+        <GEFrame text="Bliv medlem af Giv Effektivt">
+          <form onSubmit={props.handleSubmit}>
+            <div style={{ lineHeight: "1.5" }}>
+              Bliv medlem for 50 kr. om året og hjælp med at gøre donationer til
+              Giv Effektivt fradragsberettigede.{" "}
+              <a
+                target={"_blank"}
+                rel="noreferrer"
+                href="https://giveffektivt.dk/medlemskab/"
+              >
+                Læs mere her.
+              </a>
+            </div>
+
+            <Input
+              label="Fuldt navn"
+              name="name"
+              type="text"
+              style={{ maxWidth: "32rem" }}
+            />
+
+            <CprInput
+              label={
+                <>
+                  CPR-nr.
+                  <span className="weight-normal">
+                    {" "}
+                    (bruges kun når medlemslisten indrapporteres til SKAT)
+                  </span>
+                </>
+              }
+              name="tin"
+              type="text"
+              style={{ maxWidth: "14rem" }}
+            />
+
+            <Input
+              label={
+                <>
+                  Email
+                  <span className="weight-normal">
+                    {" "}
+                    (til kvittering, ikke spam)
+                  </span>
+                </>
+              }
+              name="email"
+              type="text"
+              style={{ maxWidth: "32rem" }}
+            />
+
+            <Input
+              label={<>Adresse</>}
+              name="address"
+              type="text"
+              style={{ maxWidth: "32rem" }}
+            />
+
+            <Input
+              label={<>Postnummer</>}
+              name="zip"
+              type="number"
+              style={{ maxWidth: "7rem" }}
+            />
+
+            <Input
+              label={<>By</>}
+              name="city"
+              type="text"
+              style={{ maxWidth: "16rem" }}
+            />
+
+            <Button type="submit">
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <span>Betal 50 kr.</span>
+              </div>
+            </Button>
+          </form>
         </GEFrame>
       )}
     </Formik>
