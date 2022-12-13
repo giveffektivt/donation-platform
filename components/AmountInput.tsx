@@ -1,4 +1,4 @@
-import { Button } from "components";
+import { AmountButton } from "components";
 import { useField } from "formik";
 import { useState } from "react";
 import { useFormikContext } from "formik";
@@ -81,54 +81,27 @@ export const AmountInput = ({ label, helper, ...props }: any) => {
             {...newVisibleField}
             {...visibleProps}
           />
-          <Button
-            type="button"
-            onClick={(e) => {
-              setVisibleValue("");
-              setValue(200);
-              setLastClicked("200");
-              e.currentTarget.blur();
-            }}
-            secondary
-            marginTop={"0"}
-            className={`amount-button ${
-              lastClicked === "200" ? "button-active" : ""
-            }`}
-          >
-            200
-          </Button>
-          <Button
-            type="button"
-            onClick={(e) => {
-              setVisibleValue("");
-              setValue(500);
-              setLastClicked("500");
-              e.currentTarget.blur();
-            }}
-            secondary
-            marginTop={"0"}
-            className={`amount-button ${
-              lastClicked === "500" ? "button-active" : ""
-            }`}
-          >
-            500
-          </Button>
-          <Button
-            type="button"
-            onClick={(e) => {
-              setVisibleValue("");
-              setValue(1000);
-              setLastClicked("1000");
-              e.currentTarget.blur();
-            }}
-            secondary
-            className={`amount-button ${
-              lastClicked === "1000" ? "button-active" : ""
-            }`}
-            marginTop={"0"}
-          >
-            1.000
-          </Button>
+          <AmountButton
+            amount="200"
+            lastClicked={lastClicked}
+            setLastClicked={setLastClicked}
+            setVisibleValue={setVisibleValue}
+            setValue={setValue}
+          />
+          <AmountButton
+            amount="500"
+            lastClicked={lastClicked}
+            setLastClicked={setLastClicked}
+            setVisibleValue={setVisibleValue}
+            setValue={setValue}
+          />
+          <AmountButton
+            amount="1000"
+            lastClicked={lastClicked}
+            setLastClicked={setLastClicked}
+            setVisibleValue={setVisibleValue}
+            setValue={setValue}
+          />
         </div>
       </div>
     </>
