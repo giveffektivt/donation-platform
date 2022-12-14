@@ -42,7 +42,7 @@ export const Step2 = () => {
         className="form-group-no-margin"
         checkboxLabel={
           <>
-            <span className="unbreakable-line">Tilmeld mig nyghedsbrevet</span>{" "}
+            <span className="unbreakable-line">Tilmeld mig nyhedsbrevet</span>{" "}
             <span className="unbreakable-line">(4-6 emails om året)</span>
           </>
         }
