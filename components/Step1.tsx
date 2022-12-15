@@ -2,7 +2,7 @@ import {
   AmountInput,
   Button,
   Checkbox,
-  CprInput,
+  CprCvrInput,
   FrequencyRadio,
   Select,
 } from "comps";
@@ -89,7 +89,7 @@ export const Step1 = () => {
       />
 
       {formik.values.taxDeduction && (
-        <CprInput
+        <CprCvrInput
           label={
             <>
               <span className={dimWhen(isCvr())}>CPR-nr.</span>{" "}

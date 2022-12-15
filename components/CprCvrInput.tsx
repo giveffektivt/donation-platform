@@ -1,7 +1,7 @@
 import { useField } from "formik";
 import React from "react";
 
-export const CprInput = ({ label, helper, isNested, ...props }: any) => {
+export const CprCvrInput = ({ label, helper, isNested, ...props }: any) => {
   const [field, meta] = useField(props);
   const [hasTypedDash, setHasTypedDash] = React.useState(false);
 

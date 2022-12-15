@@ -5,7 +5,7 @@ export * from "./BackButton";
 export * from "./BankTransferStep";
 export * from "./Button";
 export * from "./Checkbox";
-export * from "./CprInput";
+export * from "./CprCvrInput";
 export * from "./FrequencyRadio";
 export * from "./GEFrame";
 export * from "./Helper";
