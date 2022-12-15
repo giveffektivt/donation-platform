@@ -67,18 +67,6 @@ export const Membership = () => {
       {(props) => (
         <GEFrame text="Bliv medlem af Giv Effektivt">
           <form onSubmit={props.handleSubmit}>
-            <div style={{ lineHeight: "1.5" }}>
-              Bliv medlem for 50 kr. om året og hjælp med at gøre donationer til
-              Giv Effektivt fradragsberettigede.{" "}
-              <a
-                target={"_blank"}
-                rel="noreferrer"
-                href="https://giveffektivt.dk/medlemskab/"
-              >
-                Læs mere her.
-              </a>
-            </div>
-
             <Input
               label="Fuldt navn"
               name="name"
@@ -92,7 +80,7 @@ export const Membership = () => {
                   CPR-nr.
                   <span className="weight-normal">
                     {" "}
-                    (bruges kun når medlemslisten indrapporteres til SKAT)
+                    (bruges af Skatteforvaltningen)
                   </span>
                 </>
               }
@@ -105,10 +93,7 @@ export const Membership = () => {
               label={
                 <>
                   Email
-                  <span className="weight-normal">
-                    {" "}
-                    (til kvittering, ikke spam)
-                  </span>
+                  <span className="weight-normal"> (til kvittering)</span>
                 </>
               }
               name="email"
