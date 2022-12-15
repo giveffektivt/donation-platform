@@ -56,8 +56,7 @@ export const validationSchema = {
   cpr: yup
     .string()
     .required("CPR-nr. kræves for medlemskab.")
-    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX")
-    .transform((value) => (!value ? undefined : value)),
+    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX"),
   membership: yup.boolean().required(),
   address: yup
     .string()
