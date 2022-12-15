@@ -1,4 +1,5 @@
-import { Button, CprInput, GEFrame, Input } from "comps";
+import { Button, GEFrame, Input } from "comps";
+import { CprInput } from "./CprInput";
 import { Formik } from "formik";
 import { DonationRecipient } from "src/donation/types";
 import { submitForm, validationSchema } from "src/helpers";
@@ -12,7 +13,7 @@ man kan fremprovokere fejlen.
 
 const validation = {
   name: validationSchema.name,
-  tin: validationSchema.tin,
+  tin: validationSchema.cpr,
   email: validationSchema.email,
   address: validationSchema.address,
   zip: validationSchema.zip,

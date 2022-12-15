@@ -41,12 +41,6 @@ export const validationSchema = {
     .required("Vælg en betalingsmetode"),
   tin: yup
     .string()
-    .when("membership", {
-      is: true,
-      then: (schema) => schema.required("CPR-nr. kræves for medlemskab."),
-
-      otherwise: (schema) => schema,
-    })
     .when("taxDeduction", {
       is: true,
       then: (schema) =>
@@ -58,6 +52,16 @@ export const validationSchema = {
       /^(\d{6}-\d{4}|\d{8})?$/,
       "Angiv CPR-nr. som DDMMÅÅ-XXXX eller CVR-nr. som XXXXXXXX"
     )
+    .transform((value) => (!value ? undefined : value)),
+  cpr: yup
+    .string()
+    .when("membership", {
+      is: true,
+      then: (schema) => schema.required("CPR-nr. kræves for medlemskab."),
+
+      otherwise: (schema) => schema,
+    })
+    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX")
     .transform((value) => (!value ? undefined : value)),
   membership: yup.boolean().required(),
   address: yup
