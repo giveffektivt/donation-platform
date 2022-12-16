@@ -1,3 +1,4 @@
+import moment from "moment";
 import { PoolClient } from "pg";
 import {
   ChargeStatus,
@@ -5,6 +6,7 @@ import {
   setChargeStatus,
 } from "src/charge";
 import {
+  DonationFrequency,
   DonationRecipient,
   DonationWithGatewayInfoQuickpay,
   PaymentMethod,
@@ -92,6 +94,8 @@ export async function quickpaySubscriptionUrl(
   donation: DonationWithGatewayInfoQuickpay,
   successUrl: string
 ): Promise<string> {
+  const isMobilePay = donation.method === PaymentMethod.MobilePay;
+
   const response = await request(
     "PUT",
     `subscriptions/${donation.gateway_metadata.quickpay_id}/link`,
@@ -101,6 +105,7 @@ export async function quickpaySubscriptionUrl(
       continue_url: successUrl,
       callback_url: process.env.QUICKPAY_CALLBACK_URL,
       language: "da",
+      payment_methods: isMobilePay ? "mobilepay-subscriptions" : "",
     }
   );
 
@@ -120,6 +125,8 @@ export async function quickpayChargeSubscription(
     return;
   }
 
+  const isMobilePay = charge.method === PaymentMethod.MobilePay;
+
   let status = ChargeStatus.Waiting;
 
   try {
@@ -131,9 +138,13 @@ export async function quickpayChargeSubscription(
         amount: charge.amount * 100,
         order_id: charge.short_id,
         auto_capture: true,
+        auto_capture_at: isMobilePay
+          ? moment().add(49, "hour").toDate() // must be at least 2 days in the future for MobilePay Subscriptions
+          : undefined,
         text_on_statement: "giveffektivt.dk",
         description: `Giv Effektivt ${charge.short_id}`,
-      }
+      },
+      !isMobilePay // MobilePay Subscriptions sends empty response on success
     );
   } catch (err: any) {
     console.error(`Error while charging ID '${charge.id}':`, err);
@@ -147,7 +158,8 @@ async function request(
   method: "POST" | "PUT",
   endpoint: string,
   authorization: string,
-  body: any
+  body: any,
+  parseResponse = true
 ) {
   const response = await fetch(`https://api.quickpay.net/${endpoint}`, {
     method,
@@ -164,7 +176,9 @@ async function request(
     throw new Error(`${response.statusText}: ${await response.text()}`);
   }
 
-  return await response.json();
+  if (parseResponse) {
+    return await response.json();
+  }
 }
 
 function buildAuthorizationHeader(recipient: DonationRecipient) {

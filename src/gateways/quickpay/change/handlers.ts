@@ -4,6 +4,7 @@ import {
   insertInitialChargeQuickpay,
   QuickpayChange,
   setChargeWithGatewayResponseByShortId,
+  setDonationCancelledByQuickpayOrder,
 } from "src";
 
 async function handleSubscription(db: PoolClient, change: QuickpayChange) {
@@ -15,6 +16,12 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
     console.error(
       `Quickpay subscription ${change.order_id} was paid using test card, ignoring.`
     );
+    return;
+  }
+
+  if (change.state === "cancelled") {
+    console.log(`Cancelling Quickpay subscription ${change.order_id}`);
+    await setDonationCancelledByQuickpayOrder(db, change.order_id);
     return;
   }
 

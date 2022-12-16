@@ -304,6 +304,7 @@ CREATE VIEW giveffektivt.charges_to_charge AS
     d.amount,
     d.recipient,
     d.gateway,
+    d.method,
     c.gateway_metadata,
     d.gateway_metadata AS donation_gateway_metadata
    FROM ((giveffektivt.donor_with_contact_info dc
@@ -647,4 +648,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221008192012'),
     ('20221008192244'),
     ('20221026214644'),
-    ('20221203144140');
+    ('20221203144140'),
+    ('20221216134936');

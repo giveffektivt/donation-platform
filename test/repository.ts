@@ -3,6 +3,7 @@ import {
   Charge,
   ChargeWithGatewayInfo,
   Donation,
+  DonationWithGatewayInfoQuickpay,
   DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
 } from "../src";
@@ -42,10 +43,21 @@ export async function setDonationCancelled(
   ).rows[0];
 }
 
-export async function findDonation(
+export async function findDonationScanpay(
   client: PoolClient,
   donation: Partial<DonationWithGatewayInfoScanpay>
 ): Promise<DonationWithGatewayInfoScanpay> {
+  return (
+    await client.query(`select * from donation_with_gateway_info where id=$1`, [
+      donation.id,
+    ])
+  ).rows[0];
+}
+
+export async function findDonationQuickpay(
+  client: PoolClient,
+  donation: Partial<DonationWithGatewayInfoQuickpay>
+): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(`select * from donation_with_gateway_info where id=$1`, [
       donation.id,

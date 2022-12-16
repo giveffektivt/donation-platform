@@ -11,11 +11,7 @@ export const validationSchema = {
   subscription: yup
     .string()
     .required("Vælg hvor ofte du vil donere")
-    .when("method", {
-      is: "mobilePay",
-      then: (schema) => schema.oneOf(["oneTime"]),
-      otherwise: (schema) => schema.oneOf(["oneTime", "everyMonth"]),
-    }),
+    .oneOf(["oneTime", "everyMonth"]),
   name: yup
     .string()
     .when("membership", {

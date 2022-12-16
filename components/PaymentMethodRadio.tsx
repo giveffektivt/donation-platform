@@ -26,17 +26,15 @@ export const PaymentMethodRadio = () => {
     value: "bankTransfer",
   });
 
-  const shouldSuggestBankTransfer =
+  const shouldUseBankTransfer =
     formik.values.amount >= 5000 && formik.values.amount < 7400;
 
-  const canUseCreditCard = formik.values.amount < 7400;
-
   const canUseMobilePay =
-    formik.values.amount < 7400 &&
-    formik.values.subscription === "oneTime" &&
-    !formik.values.membership;
+    formik.values.subscription === "oneTime" || formik.values.amount === 3; // "Hidden" for testing purposes :)
 
-  if (formik.values.method === "" && !canUseCreditCard && !canUseMobilePay) {
+  const mustUseBankTransfer = formik.values.amount >= 7400;
+
+  if (formik.values.method === "" && mustUseBankTransfer) {
     formik.values.method = "bankTransfer";
   }
 
@@ -56,7 +54,7 @@ export const PaymentMethodRadio = () => {
         )}
 
         <ul className="nobullet-list">
-          {canUseCreditCard && (
+          {!mustUseBankTransfer && (
             <li className="flx-center gap-5">
               <input
                 className="form-radio radio-large"
@@ -86,7 +84,7 @@ export const PaymentMethodRadio = () => {
             </li>
           )}
 
-          {canUseMobilePay && (
+          {canUseMobilePay && !mustUseBankTransfer && (
             <li className="flx-center gap-5">
               <input
                 className="form-radio radio-large"
@@ -117,7 +115,7 @@ export const PaymentMethodRadio = () => {
             <label htmlFor={bankTransferField.value}>
               <span>
                 Bankoverførsel{" "}
-                {shouldSuggestBankTransfer && "(anbefalet for højt beløb)"}
+                {shouldUseBankTransfer && "(anbefalet for højt beløb)"}
               </span>
             </label>
             <div className="flx-center gap-5">

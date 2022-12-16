@@ -29,6 +29,16 @@ export async function setDonationEmailed(
   ]);
 }
 
+export async function setDonationCancelledByQuickpayOrder(
+  client: PoolClient,
+  quickpay_order: string
+) {
+  return await client.query(
+    `update donation_with_gateway_info set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
+    [quickpay_order]
+  );
+}
+
 export async function insertDonationViaScanpay(
   client: PoolClient,
   donation: Partial<Donation>

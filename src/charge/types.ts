@@ -3,6 +3,7 @@ import {
   DonationGatewayMetadataScanpay,
   DonationRecipient,
   PaymentGateway,
+  PaymentMethod,
 } from "src";
 
 export enum ChargeStatus {
@@ -33,6 +34,7 @@ export type ChargeToCharge = {
   amount: number;
   email: string;
   gateway: PaymentGateway;
+  method: PaymentMethod;
   recipient: DonationRecipient;
 };
 

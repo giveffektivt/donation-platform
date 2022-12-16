@@ -9,6 +9,7 @@ import {
   getChargesToCharge,
   insertDonationMembershipViaBankTransfer,
   insertDonationMembershipViaScanpay,
+  insertDonationViaQuickpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
@@ -53,7 +54,7 @@ test("Find created charges to charge", async () => {
     tax_deductible: true,
   });
 
-  const donation3 = await insertDonationViaScanpay(db, {
+  const donation3 = await insertDonationViaQuickpay(db, {
     donor_id: donor2.id,
     amount: 77,
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -104,30 +105,40 @@ test("Find created charges to charge", async () => {
       amount: donation1.amount,
       email: donor1.email,
       recipient: donation1.recipient,
+      gateway: donation1.gateway,
+      method: donation1.method,
     },
     {
       id: charge2.id,
       amount: donation1.amount,
       email: donor1.email,
       recipient: donation1.recipient,
+      gateway: donation1.gateway,
+      method: donation1.method,
     },
     {
       id: charge3.id,
       amount: donation2.amount,
       email: donor1.email,
       recipient: donation2.recipient,
+      gateway: donation2.gateway,
+      method: donation2.method,
     },
     {
       id: charge4.id,
       amount: donation3.amount,
       email: donor2.email,
       recipient: donation3.recipient,
+      gateway: donation3.gateway,
+      method: donation3.method,
     },
     {
       id: charge5.id,
       amount: donation4.amount,
       email: donor2.email,
       recipient: donation4.recipient,
+      gateway: donation4.gateway,
+      method: donation4.method,
     },
   ];
 
