@@ -55,8 +55,13 @@ export const validationSchema = {
     .transform((value) => (!value ? undefined : value)),
   cpr: yup
     .string()
-    .required("CPR-nr. kræves for medlemskab.")
-    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX"),
+    .when("membership", {
+      is: true,
+      then: (schema) => schema.required("CPR-nr. kræves for medlemskab."),
+      otherwise: (schema) => schema,
+    })
+    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX")
+    .transform((value) => (!value ? undefined : value)),
   membership: yup.boolean().required(),
   address: yup
     .string()
