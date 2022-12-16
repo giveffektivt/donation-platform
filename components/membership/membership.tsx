@@ -37,7 +37,10 @@ export const Membership = () => {
     amount: 1,
     recipient: DonationRecipient.GivEffektivt,
     subscription: "oneTime",
+    rulesAccepted: true,
     taxDeduction: false,
+    subscribeToNewsletter: false,
+    cpr: "000000-0000",
   };
 
   const handleSubmit = async (values: any, bag: any) => {
