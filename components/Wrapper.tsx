@@ -5,7 +5,7 @@ export const Wrapper = ({ children }: any) => {
 
   return (
     <>
-      <div className="wrapper">
+      <div className="wrapper donation-form">
         <div className="custom-header">
           Støt et effektivt velgørende formål
           {isTestEnv && " ***TEST ENVIRONMENT***"}
