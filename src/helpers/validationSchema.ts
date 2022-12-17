@@ -23,9 +23,9 @@ export const validationSchema = {
     .transform((value) => (!value ? undefined : value)),
   email: yup
     .string()
-    .required("Email adresse skal udfyldes")
+    .required("Email skal udfyldes")
     .max(320, "Højst 320 tegn")
-    .matches(/@/, "Email-adressen er ikke gyldig"),
+    .matches(/@/, "Email er ikke gyldig"),
   method: yup
     .string()
     .when("membership", {
