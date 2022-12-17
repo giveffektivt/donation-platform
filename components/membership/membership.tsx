@@ -1,5 +1,6 @@
 import { Button, GEFrame, Input } from "comps";
 import { CprInput } from "./CprInput";
+import { Address } from "./Address";
 import { Formik } from "formik";
 import { DonationRecipient } from "src/donation/types";
 import { submitForm, validationSchema } from "src/helpers";
@@ -75,7 +76,7 @@ export const Membership = () => {
               label="Fuldt navn"
               name="name"
               type="text"
-              style={{ maxWidth: "32rem" }}
+              className="full-width form-input"
             />
 
             <CprInput
@@ -90,7 +91,7 @@ export const Membership = () => {
               }
               name="tin"
               type="text"
-              style={{ maxWidth: "14rem" }}
+              className="full-width form-input"
             />
 
             <Input
@@ -102,29 +103,10 @@ export const Membership = () => {
               }
               name="email"
               type="text"
-              style={{ maxWidth: "32rem" }}
+              className="full-width form-input"
             />
 
-            <Input
-              label={<>Adresse</>}
-              name="address"
-              type="text"
-              style={{ maxWidth: "32rem" }}
-            />
-
-            <Input
-              label={<>Postnummer</>}
-              name="zip"
-              type="number"
-              style={{ maxWidth: "7rem" }}
-            />
-
-            <Input
-              label={<>By</>}
-              name="city"
-              type="text"
-              style={{ maxWidth: "16rem" }}
-            />
+            <Address />
 
             <Button type="submit">
               <div style={{ display: "flex", alignItems: "center" }}>

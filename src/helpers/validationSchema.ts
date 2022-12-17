@@ -16,16 +16,16 @@ export const validationSchema = {
     .string()
     .when("membership", {
       is: true,
-      then: (schema) => schema.required("Skriv dit navn"),
+      then: (schema) => schema.required("Fuldt navn skal udfyldes"),
       otherwise: (schema) => schema,
     })
     .max(320, "Højst 320 tegn")
     .transform((value) => (!value ? undefined : value)),
   email: yup
     .string()
-    .required("Skriv din email adresse")
+    .required("Email skal udfyldes")
     .max(320, "Højst 320 tegn")
-    .matches(/@/, "Email-adressen er ikke gyldig"),
+    .matches(/@/, "Email er ikke gyldig"),
   method: yup
     .string()
     .when("membership", {
@@ -53,7 +53,7 @@ export const validationSchema = {
     .string()
     .when("membership", {
       is: true,
-      then: (schema) => schema.required("CPR-nr. kræves for medlemskab."),
+      then: (schema) => schema.required("CPR-nr. skal udfyldes"),
       otherwise: (schema) => schema,
     })
     .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX")
@@ -74,7 +74,7 @@ export const validationSchema = {
       is: true,
       then: (schema) =>
         schema
-          .required("Postnummer skal udfyldes")
+          .required("Postnr. skal udfyldes")
           .test("type", "Skriv et tal", (val: string | undefined) => {
             return val ? /^[0-9]*$/.test(val) : false;
           })

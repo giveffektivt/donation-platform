@@ -11,7 +11,7 @@ export const GEFrame = ({ text, children }: GEFrameInterface): JSX.Element => {
   return (
     <div>
       <div className="wrapper2">
-        <div className="wrapper">
+        <div className="wrapper membership-form">
           <div className="custom-header">{text}</div>
           <div className="form-wrapper">{children}</div>
         </div>
