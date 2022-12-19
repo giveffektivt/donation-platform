@@ -107,7 +107,7 @@ export async function insertDonationMembershipViaQuickpay(
 
 export async function insertDonationViaBankTransfer(
   client: PoolClient,
-  donation: Partial<Donation>
+  donation: Partial<DonationWithGatewayInfoBankTransfer>
 ): Promise<DonationWithGatewayInfoBankTransfer> {
   return (
     await client.query(
@@ -122,29 +122,6 @@ export async function insertDonationViaBankTransfer(
         PaymentGateway.BankTransfer,
         PaymentMethod.BankTransfer,
         donation.tax_deductible,
-      ]
-    )
-  ).rows[0];
-}
-
-export async function insertDonationMembershipViaBankTransfer(
-  client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoBankTransfer>
-): Promise<DonationWithGatewayInfoBankTransfer> {
-  return (
-    await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
-       returning *`,
-      [
-        donation.donor_id,
-        50,
-        DonationRecipient.GivEffektivt,
-        DonationFrequency.Yearly,
-        PaymentGateway.BankTransfer,
-        PaymentMethod.BankTransfer,
-        false,
-        donation.gateway_metadata,
       ]
     )
   ).rows[0];

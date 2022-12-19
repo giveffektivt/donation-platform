@@ -5,7 +5,7 @@ import {
   dbRollbackTransaction,
   insertCharge,
   insertDonationMembershipViaQuickpay,
-  insertDonationMembershipViaScanpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   insertInitialChargeQuickpay,
   insertInitialChargeScanpay,
@@ -33,7 +33,7 @@ test("Insert charge for a donation", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -58,7 +58,7 @@ test("Insert initial charge for a donation via Scanpay only once", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -124,7 +124,7 @@ test("Update charge status", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -148,7 +148,7 @@ test("Update charge Scanpay idempotency key", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

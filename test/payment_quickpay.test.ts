@@ -6,7 +6,8 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
-  insertQuickpayData,
+  insertQuickpayDataDonation,
+  insertQuickpayDataMembership,
   PaymentGateway,
   PaymentMethod,
   setDonationQuickpayId,
@@ -27,30 +28,22 @@ afterEach(async () => {
 test("One-time donation using Quickpay", async () => {
   const db = await client;
 
-  await insertQuickpayData(db, {
+  await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "oneTime",
-    membership: false,
     method: "mobilePay",
     tin: undefined,
-    name: undefined,
-    address: undefined,
-    city: undefined,
-    zip: undefined,
     taxDeduction: false,
+    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      address: null,
-      city: null,
       tin: null,
-      name: null,
-      postcode: null,
     },
   ]);
 
@@ -81,30 +74,22 @@ test("One-time donation using Quickpay", async () => {
 test("Monthly donation using Quickpay", async () => {
   const db = await client;
 
-  await insertQuickpayData(db, {
+  await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
-    membership: false,
     method: "creditCard",
     tin: undefined,
-    name: undefined,
-    address: undefined,
-    city: undefined,
-    zip: undefined,
     taxDeduction: false,
+    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      address: null,
-      city: null,
       tin: null,
-      name: null,
-      postcode: null,
     },
   ]);
 
@@ -130,32 +115,24 @@ test("Monthly donation using Quickpay", async () => {
 test("Membership using Quickpay", async () => {
   const db = await client;
 
-  await insertQuickpayData(db, {
-    // Since it's a temporary solution,
-    // some of those fields will simply be unused for membership-only payments
-    amount: 10,
+  await insertQuickpayDataMembership(db, {
     email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "everyMonth",
-    membership: true,
-    method: "creditCard",
     tin: "111111-1111",
     name: "John Smith",
     address: "Some street",
     city: "Copenhagen",
     zip: "1234",
-    taxDeduction: true,
   });
 
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      address: "Some street",
-      city: "Copenhagen",
       tin: "111111-1111",
       name: "John Smith",
-      postcode: "1234",
+      address: "Some street",
+      city: "Copenhagen",
+      zip: "1234",
     },
   ]);
 
@@ -181,19 +158,15 @@ test("Membership using Quickpay", async () => {
 test("Add quickpay_id while preserving quickpay_order on the donation", async () => {
   const db = await client;
 
-  await insertQuickpayData(db, {
+  await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
-    membership: false,
     method: "creditCard",
     tin: "111111-1111",
-    name: "John Smith",
-    address: "Some street",
-    city: "Copenhagen",
-    zip: "1234",
     taxDeduction: true,
+    subscribeToNewsletter: false,
   });
 
   const insertedDonations = await findAllDonations(db);

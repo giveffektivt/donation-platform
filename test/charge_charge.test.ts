@@ -7,8 +7,8 @@ import {
   DonationFrequency,
   DonationRecipient,
   getChargesToCharge,
-  insertDonationMembershipViaBankTransfer,
-  insertDonationMembershipViaScanpay,
+  insertDonationMembershipViaQuickpay,
+  insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
@@ -40,9 +40,13 @@ test("Find created charges to charge", async () => {
   });
 
   // ...having two donations each (3 recurring and 1 one-time)
-  const donation1 = await insertDonationMembershipViaScanpay(db, {
+  const donation1 = await insertDonationViaScanpay(db, {
     donor_id: donor1.id,
+    amount: 100,
+    recipient: DonationRecipient.StorOgVelkendtEffekt,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: true,
   });
 
   const donation2 = await insertDonationViaScanpay(db, {
@@ -63,7 +67,7 @@ test("Find created charges to charge", async () => {
     tax_deductible: true,
   });
 
-  const donation4 = await insertDonationMembershipViaScanpay(db, {
+  const donation4 = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.MobilePay,
   });
@@ -155,7 +159,7 @@ test("Donation that has no charges should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const _donation = await insertDonationMembershipViaScanpay(db, {
+  const _donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -170,7 +174,7 @@ test("Donation that is cancelled should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -193,7 +197,7 @@ test("Bank transfer donation should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaBankTransfer(db, {
+  const donation = await insertDonationViaBankTransfer(db, {
     donor_id: donor.id,
     gateway_metadata: { bank_msg: "1234" },
   });
@@ -214,7 +218,7 @@ test("Old charges in created status should *still* be charged again (until we se
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -250,7 +254,7 @@ test("Charges with error status should not be charged again", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -271,7 +275,7 @@ test("Charges with created_at in the future should not be charged yet", async ()
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

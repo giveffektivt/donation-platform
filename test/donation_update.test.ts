@@ -4,8 +4,7 @@ import {
   dbRollbackTransaction,
   EmailedStatus,
   insertDonationMembershipViaQuickpay,
-  insertDonationMembershipViaScanpay,
-  insertDonationViaQuickpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
   setDonationCancelledByQuickpayOrder,
@@ -32,7 +31,7 @@ test("Update donation to mark it as emailed", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -41,7 +40,7 @@ test("Update donation to mark it as emailed", async () => {
 
   await setDonationEmailed(db, donation, EmailedStatus.Yes);
 
-  expect((await findDonationScanpay(db, donation)).emailed).toBe(
+  expect((await findDonationQuickpay(db, donation)).emailed).toBe(
     EmailedStatus.Yes
   );
 });
@@ -53,7 +52,7 @@ test("Update donation to add Scanpay ID", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
