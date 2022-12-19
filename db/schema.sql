@@ -310,7 +310,7 @@ CREATE VIEW giveffektivt.charges_to_charge AS
    FROM ((giveffektivt.donor_with_contact_info dc
      JOIN giveffektivt.donation_with_gateway_info d ON ((d.donor_id = dc.id)))
      JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
-  WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (c.status = 'created'::giveffektivt.charge_status));
+  WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (c.status = 'created'::giveffektivt.charge_status) AND (c.created_at <= now()));
 
 
 --
@@ -649,4 +649,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221008192244'),
     ('20221026214644'),
     ('20221203144140'),
-    ('20221216134936');
+    ('20221216134936'),
+    ('20221219103355');

@@ -263,3 +263,24 @@ test("Charges with error status should not be charged again", async () => {
 
   expect(await getChargesToCharge(db)).toMatchObject([]);
 });
+
+test("Charges with created_at in the future should not be charged yet", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationMembershipViaScanpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertCharge(db, {
+    created_at: moment().add(2, "day").toDate(),
+    donation_id: donation.id,
+    status: ChargeStatus.Created,
+  });
+
+  expect(await getChargesToCharge(db)).toMatchObject([]);
+});
