@@ -8,7 +8,6 @@ import {
   DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
   insertCharge,
-  insertDonationMembershipViaScanpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   parseDonationFrequency,
@@ -17,11 +16,11 @@ import {
   PaymentMethod,
   scanpayOneTimeUrl,
   scanpaySubscriptionUrl,
-  SubmitData,
+  SubmitDataDonation,
 } from "src";
 
-export async function processScanpayPayment(
-  submitData: SubmitData,
+export async function processScanpayDonation(
+  submitData: SubmitDataDonation,
   customerIp: string
 ): Promise<[string, string]> {
   const [donor, donation, charge] = await dbExecuteInTransaction(
@@ -35,34 +34,23 @@ export async function processScanpayPayment(
 
 export async function insertScanpayData(
   db: PoolClient,
-  submitData: SubmitData
+  submitData: SubmitDataDonation
 ): Promise<
   [DonorWithSensitiveInfo, DonationWithGatewayInfoScanpay, Charge | null]
 > {
   const donor = await insertDonorWithSensitiveInfo(db, {
-    name: submitData.name,
     email: submitData.email,
-    address: submitData.address,
-    postcode: submitData.zip,
-    city: submitData.city,
-    country: submitData.country,
     tin: submitData.tin,
-    birthday: submitData.birthday,
   });
 
-  const donation = submitData.membership
-    ? await insertDonationMembershipViaScanpay(db, {
-        donor_id: donor.id,
-        method: parsePaymentMethod(submitData.method),
-      })
-    : await insertDonationViaScanpay(db, {
-        donor_id: donor.id,
-        amount: submitData.amount,
-        recipient: parseDonationRecipient(submitData.recipient),
-        frequency: parseDonationFrequency(submitData.subscription),
-        method: parsePaymentMethod(submitData.method),
-        tax_deductible: submitData.taxDeduction,
-      });
+  const donation = await insertDonationViaScanpay(db, {
+    donor_id: donor.id,
+    amount: submitData.amount,
+    recipient: parseDonationRecipient(submitData.recipient),
+    frequency: parseDonationFrequency(submitData.subscription),
+    method: parsePaymentMethod(submitData.method),
+    tax_deductible: submitData.taxDeduction,
+  });
 
   // Only create charges at this moment for auto-captured one-time donations
   const charge =

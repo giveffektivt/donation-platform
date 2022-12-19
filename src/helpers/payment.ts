@@ -13,7 +13,7 @@ export const parsePaymentMethod = (method: string) => {
     case "bankTransfer":
       return PaymentMethod.BankTransfer;
     default:
-      throw new Error(`api/payment: Unrecognized payment method "${method}"`);
+      throw new Error(`api/donation: Unrecognized payment method "${method}"`);
   }
 };
 

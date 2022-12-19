@@ -3,11 +3,11 @@ import {
   parsePaymentMethod,
   PaymentGateway,
   PaymentMethod,
-  processBankTransferPayment,
-  processQuickpayPayment,
-  processScanpayPayment,
-  SubmitData,
-  validationSchema,
+  processBankTransferDonation,
+  processQuickpayDonation,
+  processScanpayDonation,
+  SubmitDataDonation,
+  validationSchemaDonation,
 } from "src";
 import * as yup from "yup";
 
@@ -25,10 +25,6 @@ const firstElementOrString = (x: any) => {
   }
 };
 
-/**
- * 1. Creates donor record and maybe donor subscription, charges, membership, payment or bank_transfer
- * 2. Requests link from payment gateway for credit card or MobilePay, otherwise returns bank transfer info
- */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
@@ -41,9 +37,9 @@ export default async function handler(
       req.socket.remoteAddress ||
       "no ip";
 
-    let submitData: SubmitData = await yup
+    let submitData: SubmitDataDonation = await yup
       .object()
-      .shape(validationSchema)
+      .shape(validationSchemaDonation)
       .validate(req.body);
 
     const [response, donorId] = await processPayment(submitData, ip);
@@ -54,7 +50,7 @@ export default async function handler(
 
     res.status(200).json(response);
   } catch (err) {
-    console.error("api/payment:", err);
+    console.error("api/donation:", err);
     res.status(500).json({ message: "Something went wrong" });
   }
 }
@@ -71,12 +67,12 @@ function getMailchimpAuthorizationHeader() {
 }
 
 async function processPayment(
-  submitData: SubmitData,
+  submitData: SubmitDataDonation,
   ip: string
 ): Promise<[Data, string]> {
   switch (parsePaymentMethod(submitData.method)) {
     case PaymentMethod.BankTransfer: {
-      const [bankTransferId, donorId] = await processBankTransferPayment(
+      const [bankTransferId, donorId] = await processBankTransferDonation(
         submitData
       );
       return [
@@ -95,7 +91,7 @@ async function processPayment(
     case PaymentMethod.MobilePay:
       switch (process.env.PAYMENT_GATEWAY) {
         case PaymentGateway.Quickpay: {
-          const [redirect, donorId] = await processQuickpayPayment(submitData);
+          const [redirect, donorId] = await processQuickpayDonation(submitData);
           return [
             {
               message: "OK",
@@ -106,7 +102,7 @@ async function processPayment(
         }
 
         case PaymentGateway.Scanpay: {
-          const [redirect, donorId] = await processScanpayPayment(
+          const [redirect, donorId] = await processScanpayDonation(
             submitData,
             ip
           );
@@ -121,13 +117,16 @@ async function processPayment(
 
         default:
           throw new Error(
-            `api/payment: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`
+            `api/donation: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`
           );
       }
   }
 }
 
-async function subscribeToNewsletter(submitData: SubmitData, donorId: string) {
+async function subscribeToNewsletter(
+  submitData: SubmitDataDonation,
+  donorId: string
+) {
   if (!process.env.MAILCHIMP_SUBSCRIBE_URL) {
     throw new Error(`No Mailchimp subscribe URL defined`);
   }

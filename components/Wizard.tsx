@@ -1,11 +1,11 @@
 import { BackButton, Wrapper } from "comps";
 import { Form, Formik } from "formik";
 import React, { useState } from "react";
+import { submitForm } from "src/helpers";
 
 type WizardProps = {
   children: any;
   initialValues: any;
-  onSubmit: (values: any, bag: any) => Promise<void>;
 };
 
 const errorMessage = `
@@ -14,7 +14,7 @@ hvis problemet opstår igen. Hvis muligt, så fortæl gerne, hvordan \
 man kan fremprovokere fejlen.
 `;
 
-export const Wizard = ({ children, initialValues, onSubmit }: WizardProps) => {
+export const Wizard = ({ children, initialValues }: WizardProps) => {
   const [stepNumber, setStepNumber] = useState(0);
   const steps: any = React.Children.toArray(children); // Each WizardStep becomes an element in an array of steps. WizardStep evaluates itself to its insides but can still have props
   const [snapshot, setSnapshot] = useState(initialValues);
@@ -45,7 +45,7 @@ export const Wizard = ({ children, initialValues, onSubmit }: WizardProps) => {
           next(values);
           break;
         case 1:
-          await onSubmit(values, bag);
+          await submitForm("donation", values, bag);
           if (values.method === "bankTransfer") {
             next(values);
           }

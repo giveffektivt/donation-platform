@@ -2,8 +2,7 @@ import { Button, GEFrame, Input } from "comps";
 import { CprInput } from "./CprInput";
 import { Address } from "./Address";
 import { Formik } from "formik";
-import { DonationRecipient } from "src/donation/types";
-import { submitForm, validationSchema } from "src/helpers";
+import { submitForm, validationSchemaMembership } from "src/helpers";
 import * as yup from "yup";
 
 const errorMessage = `
@@ -12,42 +11,20 @@ hvis problemet opstår igen. Hvis muligt, så fortæl gerne, hvordan \
 man kan fremprovokere fejlen.
 `;
 
-const validation = {
-  name: validationSchema.name,
-  tin: validationSchema.cpr,
-  email: validationSchema.email,
-  address: validationSchema.address,
-  zip: validationSchema.zip,
-  city: validationSchema.city,
-};
-
 export const Membership = () => {
   const initialValues = {
     name: "",
+    tin: "",
     email: "",
     address: "",
     zip: "",
     city: "",
-    country: "Denmark",
-    tin: "",
-    membership: true,
-    method: "creditCard",
-
-    // HACK: unused "required" fields,
-    // not to make all of those optional in validation schema if we are not going to keep this for long time
-    amount: 1,
-    recipient: DonationRecipient.GivEffektivt,
-    subscription: "oneTime",
-    rulesAccepted: true,
-    taxDeduction: false,
-    subscribeToNewsletter: false,
-    cpr: "000000-0000",
   };
 
   const handleSubmit = async (values: any, bag: any) => {
     try {
       bag.setTouched({});
-      await submitForm(values, bag);
+      await submitForm("membership", values, bag);
     } catch (err) {
       alert(errorMessage);
       console.error(err);
@@ -67,7 +44,7 @@ export const Membership = () => {
     <Formik
       onSubmit={handleSubmit}
       initialValues={initialValues}
-      validationSchema={yup.object().shape(validation)}
+      validationSchema={yup.object().shape(validationSchemaMembership)}
     >
       {(props) => (
         <GEFrame text="Bliv medlem af Giv Effektivt">

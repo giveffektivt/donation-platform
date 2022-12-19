@@ -83,28 +83,6 @@ export async function insertDonationViaQuickpay(
   ).rows[0];
 }
 
-export async function insertDonationMembershipViaScanpay(
-  client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanpay>
-): Promise<DonationWithGatewayInfoScanpay> {
-  return (
-    await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible)
-       values ($1, $2, $3, $4, $5, $6, $7)
-       returning *`,
-      [
-        donation.donor_id,
-        50,
-        DonationRecipient.GivEffektivt,
-        DonationFrequency.Yearly,
-        PaymentGateway.Scanpay,
-        donation.method,
-        false,
-      ]
-    )
-  ).rows[0];
-}
-
 export async function insertDonationMembershipViaQuickpay(
   client: PoolClient,
   donation: Partial<Donation>

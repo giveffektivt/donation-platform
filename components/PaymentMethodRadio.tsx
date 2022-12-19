@@ -1,13 +1,13 @@
 import { useField, useFormikContext } from "formik";
 import Image from "next/image";
-import { FormikData } from "src";
+import { SubmitDataDonation } from "src";
 import bank from "../public/bank.svg";
 import mastercard from "../public/mastercard.svg";
 import mobilepay from "../public/mobilepay.svg";
 import visa from "../public/visa.svg";
 
 export const PaymentMethodRadio = () => {
-  const formik = useFormikContext<FormikData>();
+  const formik = useFormikContext<SubmitDataDonation>();
   const name = "method";
 
   const [creditCardField, meta] = useField({
