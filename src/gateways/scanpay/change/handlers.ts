@@ -4,7 +4,7 @@ import {
   getDonationIdsByOldDonorId,
   insertInitialChargeScanpay,
   ScanpayChange,
-  setChargeWithGatewayResponseByShortId,
+  setChargeStatusByShortId,
   setDonationScanpayId,
 } from "src";
 
@@ -33,10 +33,9 @@ async function handleSubscriber(db: PoolClient, change: ScanpayChange) {
 
 /** Add gateway response to a charge */
 async function handleCharge(db: PoolClient, change: ScanpayChange) {
-  await setChargeWithGatewayResponseByShortId(db, {
+  await setChargeStatusByShortId(db, {
     status: getChargeStatusFromLatestAct(change),
     short_id: change.orderid,
-    gateway_response: change,
   });
 }
 

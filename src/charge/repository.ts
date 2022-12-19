@@ -3,13 +3,13 @@ import {
   Charge,
   ChargeToCharge,
   ChargeToChargeScanpay,
-  ChargeWithGatewayInfo,
+  ChargeWithGatewayMetadata,
 } from "src";
 
 export async function insertCharge(
   client: PoolClient,
   charge: Partial<Charge>
-): Promise<ChargeWithGatewayInfo> {
+): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
       `insert into charge_with_gateway_info (donation_id, status) values ($1, $2) returning *`,
@@ -21,7 +21,7 @@ export async function insertCharge(
 export async function insertInitialChargeScanpay(
   client: PoolClient,
   charge: Partial<Charge>
-): Promise<ChargeWithGatewayInfo> {
+): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
       `insert into charge_with_gateway_info (donation_id, status)
@@ -36,7 +36,7 @@ export async function insertInitialChargeScanpay(
 export async function insertInitialChargeQuickpay(
   client: PoolClient,
   quickpay_order: string
-): Promise<ChargeWithGatewayInfo> {
+): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
       `with d as (select id from donation_with_gateway_info where gateway_metadata ->> 'quickpay_order' = $1 limit 1)
@@ -87,12 +87,12 @@ export async function setChargeIdempotencyKey(
   );
 }
 
-export async function setChargeWithGatewayResponseByShortId(
+export async function setChargeStatusByShortId(
   client: PoolClient,
-  charge: Partial<ChargeWithGatewayInfo>
+  charge: Partial<ChargeWithGatewayMetadata>
 ) {
-  return await client.query(
-    `update charge_with_gateway_info set status=$1, gateway_response=$2 where short_id=$3`,
-    [charge.status, charge.gateway_response, charge.short_id]
-  );
+  return await client.query(`update charge set status=$1 where short_id=$2`, [
+    charge.status,
+    charge.short_id,
+  ]);
 }

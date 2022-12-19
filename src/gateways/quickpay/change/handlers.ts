@@ -3,7 +3,7 @@ import {
   ChargeStatus,
   insertInitialChargeQuickpay,
   QuickpayChange,
-  setChargeWithGatewayResponseByShortId,
+  setChargeStatusByShortId,
   setDonationCancelledByQuickpayOrder,
 } from "src";
 
@@ -36,10 +36,9 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
   const status = getChargeStatusFromOperations(change);
   if (status) {
     console.log(`Charge ${change.order_id} is now ${status} with Quickpay`);
-    await setChargeWithGatewayResponseByShortId(db, {
+    await setChargeStatusByShortId(db, {
       status,
       short_id: change.order_id,
-      gateway_response: { operations: change.operations },
     });
   }
 }

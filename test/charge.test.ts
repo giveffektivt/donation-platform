@@ -12,7 +12,6 @@ import {
   PaymentMethod,
   setChargeIdempotencyKey,
   setChargeStatus,
-  setChargeWithGatewayResponseByShortId,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllCharges, findCharge } from "./repository";
@@ -181,61 +180,5 @@ test("Update charge Scanpay idempotency key", async () => {
 
   expect((await findCharge(db, charge)).gateway_metadata).toEqual({
     idempotency_key: "5678",
-  });
-});
-
-test("Update charge gateway response", async () => {
-  const db = await client;
-
-  const donor = await insertDonorWithSensitiveInfo(db, {
-    email: "hello@example.com",
-  });
-
-  const donation = await insertDonationMembershipViaScanpay(db, {
-    donor_id: donor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  const charge = await insertCharge(db, {
-    donation_id: donation.id,
-    status: ChargeStatus.Created,
-  });
-
-  expect(charge.gateway_response).toEqual({});
-
-  await setChargeWithGatewayResponseByShortId(db, {
-    short_id: charge.short_id,
-    status: ChargeStatus.Charged,
-    gateway_response: {
-      somekey: "1234",
-      otherkey: 5678,
-    },
-  });
-
-  expect(await findCharge(db, charge)).toMatchObject({
-    donation_id: donation.id,
-    status: ChargeStatus.Charged,
-    gateway_response: {
-      somekey: "1234",
-      otherkey: 5678,
-    },
-  });
-
-  await setChargeWithGatewayResponseByShortId(db, {
-    short_id: charge.short_id,
-    status: ChargeStatus.Refunded,
-    gateway_response: {
-      somekey: "5678",
-      otherkey: 1234,
-    },
-  });
-
-  expect(await findCharge(db, charge)).toMatchObject({
-    donation_id: donation.id,
-    status: ChargeStatus.Refunded,
-    gateway_response: {
-      somekey: "5678",
-      otherkey: 1234,
-    },
   });
 });
