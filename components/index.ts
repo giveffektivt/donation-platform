@@ -1,6 +1,6 @@
 export * from "./membership";
-export * from "./AmountInput";
 export * from "./AmountButton";
+export * from "./AmountInput";
 export * from "./BackButton";
 export * from "./BankTransferStep";
 export * from "./Button";

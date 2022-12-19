@@ -173,7 +173,6 @@ CREATE TABLE giveffektivt._charge (
     short_id text DEFAULT giveffektivt.gen_short_id('_charge'::text, 'short_id'::text) NOT NULL,
     status giveffektivt.charge_status NOT NULL,
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
-    gateway_response jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
@@ -250,7 +249,6 @@ CREATE VIEW giveffektivt.charge_with_gateway_info AS
     _charge.short_id,
     _charge.status,
     _charge.gateway_metadata,
-    _charge.gateway_response,
     _charge.created_at,
     _charge.updated_at
    FROM giveffektivt._charge
@@ -410,6 +408,18 @@ CREATE VIEW giveffektivt.donor AS
 
 
 --
+-- Name: gateway_webhook; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.gateway_webhook (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    gateway giveffektivt.payment_gateway NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: kpi; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -523,6 +533,14 @@ ALTER TABLE ONLY giveffektivt._donation
 
 ALTER TABLE ONLY giveffektivt._donor
     ADD CONSTRAINT _donor_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gateway_webhook gateway_webhook_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.gateway_webhook
+    ADD CONSTRAINT gateway_webhook_pkey PRIMARY KEY (id);
 
 
 --
@@ -650,4 +668,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221026214644'),
     ('20221203144140'),
     ('20221216134936'),
-    ('20221219103355');
+    ('20221219103355'),
+    ('20221219110329');

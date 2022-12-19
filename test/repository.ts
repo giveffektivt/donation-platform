@@ -1,18 +1,22 @@
 import { PoolClient } from "pg";
 import {
   Charge,
-  ChargeWithGatewayInfo,
+  ChargeWithGatewayMetadata,
   Donation,
   DonationWithGatewayInfoQuickpay,
   DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
 } from "../src";
-import { DonationWithGatewayInfoAny, DonorWithOldId } from "./types";
+import {
+  DonationWithGatewayInfoAny,
+  DonorWithOldId,
+  GatewayWebhook,
+} from "./types";
 
 export async function insertCharge(
   client: PoolClient,
   charge: Partial<Charge>
-): Promise<ChargeWithGatewayInfo> {
+): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
       `insert into charge(created_at, donation_id, status) values ($1, $2, $3) returning *`,
@@ -24,7 +28,7 @@ export async function insertCharge(
 export async function findCharge(
   client: PoolClient,
   charge: Partial<Charge>
-): Promise<ChargeWithGatewayInfo> {
+): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(`select * from charge_with_gateway_info where id=$1`, [
       charge.id,
@@ -79,8 +83,14 @@ export async function findAllDonations(
 
 export async function findAllCharges(
   client: PoolClient
-): Promise<ChargeWithGatewayInfo[]> {
+): Promise<ChargeWithGatewayMetadata[]> {
   return (await client.query(`select * from charge_with_gateway_info`)).rows;
+}
+
+export async function findAllGatewayWebhooks(
+  client: PoolClient
+): Promise<GatewayWebhook[]> {
+  return (await client.query(`select * from gateway_webhook`)).rows;
 }
 
 export async function insertOldDonor(

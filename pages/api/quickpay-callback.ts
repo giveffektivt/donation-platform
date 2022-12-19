@@ -4,10 +4,12 @@ import getRawBody from "raw-body";
 import {
   charge,
   dbClient,
+  PaymentGateway,
   QuickpayChange,
   quickpayHandleChange,
   sendNewEmails,
 } from "src";
+import { insertGatewayWebhook } from "src/gateways/repository";
 
 type Data = {
   message: string;
@@ -49,6 +51,9 @@ export default async function handler(
       if (bodyHash !== donationHash && bodyHash !== membershipHash) {
         throw new Error("Quickpay callback has invalid signature");
       }
+
+      // Store gateway webhook payload
+      await insertGatewayWebhook(db, PaymentGateway.Quickpay, body);
 
       // Process the change
       await quickpayHandleChange(db, JSON.parse(body));

@@ -23,9 +23,8 @@ export type Charge = {
   updated_at: Date;
 };
 
-export type ChargeWithGatewayInfo = Charge & {
+export type ChargeWithGatewayMetadata = Charge & {
   gateway_metadata: any;
-  gateway_response: any;
 };
 
 export type ChargeToCharge = {
