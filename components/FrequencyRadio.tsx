@@ -1,17 +1,18 @@
 import { useField } from "formik";
+import { DonationFrequency } from "src/donation/types";
 
 export const FrequencyRadio = () => {
-  const name = "subscription";
+  const name = "frequency";
 
-  const [everyMonthField, meta] = useField({
+  const [monthlyField, meta] = useField({
     name: name,
     type: "radio",
-    value: "everyMonth",
+    value: DonationFrequency.Monthly,
   });
-  const [oneTimeField] = useField({
+  const [onceField] = useField({
     name: name,
     type: "radio",
-    value: "oneTime",
+    value: DonationFrequency.Once,
   });
 
   return (
@@ -32,11 +33,11 @@ export const FrequencyRadio = () => {
           <li>
             <input
               className="form-radio radio-large"
-              id={everyMonthField.value}
+              id={monthlyField.value}
               type="radio"
-              {...everyMonthField}
+              {...monthlyField}
             />
-            <label htmlFor={everyMonthField.value}>
+            <label htmlFor={monthlyField.value}>
               Hver måned (trækkes automatisk)
             </label>
           </li>
@@ -44,11 +45,11 @@ export const FrequencyRadio = () => {
           <li>
             <input
               className="form-radio radio-large"
-              id={oneTimeField.value}
+              id={onceField.value}
               type="radio"
-              {...oneTimeField}
+              {...onceField}
             />
-            <label htmlFor={oneTimeField.value}>Kun én gang</label>
+            <label htmlFor={onceField.value}>Kun én gang</label>
           </li>
         </ul>
       </fieldset>

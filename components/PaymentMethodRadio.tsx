@@ -1,6 +1,7 @@
 import { useField, useFormikContext } from "formik";
 import Image from "next/image";
 import { SubmitDataDonation } from "src";
+import { DonationFrequency, PaymentMethod } from "src/donation/types";
 import bank from "../public/bank.svg";
 import mastercard from "../public/mastercard.svg";
 import mobilepay from "../public/mobilepay.svg";
@@ -13,29 +14,30 @@ export const PaymentMethodRadio = () => {
   const [creditCardField, meta] = useField({
     name: name,
     type: "radio",
-    value: "creditCard",
+    value: PaymentMethod.CreditCard,
   });
   const [mobilePayField] = useField({
     name: name,
     type: "radio",
-    value: "mobilePay",
+    value: PaymentMethod.MobilePay,
   });
   const [bankTransferField] = useField({
     name: name,
     type: "radio",
-    value: "bankTransfer",
+    value: PaymentMethod.BankTransfer,
   });
 
   const shouldUseBankTransfer =
     formik.values.amount >= 5000 && formik.values.amount < 7400;
 
   const canUseMobilePay =
-    formik.values.frequency === "oneTime" || formik.values.amount === 3; // "Hidden" for testing purposes :)
+    formik.values.frequency === DonationFrequency.Once ||
+    formik.values.amount === 3; // "Hidden" for testing purposes :)
 
   const mustUseBankTransfer = formik.values.amount >= 7400;
 
-  if (formik.values.method === "" && mustUseBankTransfer) {
-    formik.values.method = "bankTransfer";
+  if (!formik.values.method && mustUseBankTransfer) {
+    formik.values.method = PaymentMethod.BankTransfer;
   }
 
   return (

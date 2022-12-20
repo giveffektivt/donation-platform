@@ -5,27 +5,19 @@ import {
 } from "src/donation/types";
 
 export const parsePaymentMethod = (method: string) => {
-  switch (method) {
-    case "mobilePay":
-      return PaymentMethod.MobilePay;
-    case "creditCard":
-      return PaymentMethod.CreditCard;
-    case "bankTransfer":
-      return PaymentMethod.BankTransfer;
-    default:
-      throw new Error(`api/donation: Unrecognized payment method "${method}"`);
+  const parsed = method as PaymentMethod;
+  if (Object.values(PaymentMethod).includes(parsed)) {
+    return parsed;
   }
+  throw new Error(`api/donation: Unrecognized payment method "${method}"`);
 };
 
 export const parseDonationFrequency = (frequency: string) => {
-  switch (frequency) {
-    case "everyMonth":
-      return DonationFrequency.Monthly;
-    case "oneTime":
-      return DonationFrequency.Once;
-    default:
-      throw new Error(`Unrecognized donation frequency: ${frequency}`);
+  const parsed = frequency as DonationFrequency;
+  if (Object.values(DonationFrequency).includes(parsed)) {
+    return parsed;
   }
+  throw new Error(`Unrecognized donation frequency: ${frequency}`);
 };
 
 export const parseDonationRecipient = (recipient: string) => {

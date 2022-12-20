@@ -9,7 +9,7 @@ const initialValues = {
   visibleAmount: "",
   recipient: DonationRecipient.GivEffektivtsAnbefaling,
   frequency: "",
-  taxDeduction: false,
+  taxDeductible: false,
   tin: "",
   email: "",
   method: "",
@@ -27,9 +27,7 @@ const Home: NextPage = () => {
   return (
     <>
       <Wizard initialValues={initialValues}>
-        <WizardStep
-          validationSchemaDonation={Yup.object().shape(validationStep1)}
-        >
+        <WizardStep validationSchema={Yup.object().shape(validationStep1)}>
           <Step1 />
         </WizardStep>
         <WizardStep validationSchema={Yup.object().shape(validationStep2)}>

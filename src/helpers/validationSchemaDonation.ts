@@ -1,3 +1,4 @@
+import { DonationFrequency, PaymentMethod } from "src/donation/types";
 import * as yup from "yup";
 
 export const validationSchemaDonation = {
@@ -11,7 +12,7 @@ export const validationSchemaDonation = {
   frequency: yup
     .string()
     .required("Vælg hvor ofte du vil donere")
-    .oneOf(["oneTime", "everyMonth"]),
+    .oneOf([DonationFrequency.Once, DonationFrequency.Monthly]),
   taxDeductible: yup.bool().required(),
   tin: yup
     .string()
@@ -34,7 +35,11 @@ export const validationSchemaDonation = {
     .matches(/@/, "Email er ikke gyldig"),
   method: yup
     .string()
-    .oneOf(["creditCard", "mobilePay", "bankTransfer"])
+    .oneOf([
+      PaymentMethod.CreditCard,
+      PaymentMethod.MobilePay,
+      PaymentMethod.BankTransfer,
+    ])
     .required("Vælg en betalingsmetode"),
   rulesAccepted: yup
     .bool()
