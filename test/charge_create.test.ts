@@ -7,7 +7,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   insertChargesForDonationsToCreateCharges,
-  insertDonationMembershipViaQuickpay,
+  insertMembershipViaQuickpay,
   insertDonationViaBankTransfer,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
@@ -39,7 +39,7 @@ test("Insert charges for donations that need new charges", async () => {
   });
 
   // ...having two donations each (3 recurring and 1 one-time)
-  const donation1 = await insertDonationMembershipViaQuickpay(db, {
+  const donation1 = await insertMembershipViaQuickpay(db, {
     donor_id: donor1.id,
     method: PaymentMethod.CreditCard,
   });
@@ -62,7 +62,7 @@ test("Insert charges for donations that need new charges", async () => {
     tax_deductible: true,
   });
 
-  const donation4 = await insertDonationMembershipViaQuickpay(db, {
+  const donation4 = await insertMembershipViaQuickpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.MobilePay,
   });
@@ -133,7 +133,7 @@ test("Donation that has no charges should not have new charges created", async (
     email: "hello@example.com",
   });
 
-  const _donation = await insertDonationMembershipViaQuickpay(db, {
+  const _donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -148,7 +148,7 @@ test("Donation that is cancelled should not have new charges created", async () 
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -196,7 +196,7 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

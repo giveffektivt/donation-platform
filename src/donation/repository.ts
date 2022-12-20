@@ -83,7 +83,7 @@ export async function insertDonationViaQuickpay(
   ).rows[0];
 }
 
-export async function insertDonationMembershipViaQuickpay(
+export async function insertMembershipViaQuickpay(
   client: PoolClient,
   donation: Partial<Donation>
 ): Promise<DonationWithGatewayInfoQuickpay> {

@@ -5,7 +5,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
-  insertDonationMembershipViaQuickpay,
+  insertMembershipViaQuickpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
@@ -33,7 +33,7 @@ test("Update donation to mark it as emailed", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -97,7 +97,7 @@ test("Cancel donation by its Quickpay order ID", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

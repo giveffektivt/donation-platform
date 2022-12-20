@@ -9,7 +9,7 @@ import {
   Donor,
   DonorWithSensitiveInfo,
   insertCharge,
-  insertDonationMembershipViaQuickpay,
+  insertMembershipViaQuickpay,
   insertDonationViaQuickpay,
   insertDonorWithSensitiveInfo,
   parseDonationFrequency,
@@ -99,7 +99,7 @@ export async function insertQuickpayDataMembership(
     tin: submitData.tin,
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

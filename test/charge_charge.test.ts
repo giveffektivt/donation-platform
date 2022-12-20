@@ -7,7 +7,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   getChargesToCharge,
-  insertDonationMembershipViaQuickpay,
+  insertMembershipViaQuickpay,
   insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
   insertDonationViaScanpay,
@@ -67,7 +67,7 @@ test("Find created charges to charge", async () => {
     tax_deductible: true,
   });
 
-  const donation4 = await insertDonationMembershipViaQuickpay(db, {
+  const donation4 = await insertMembershipViaQuickpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.MobilePay,
   });
@@ -159,7 +159,7 @@ test("Donation that has no charges should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const _donation = await insertDonationMembershipViaQuickpay(db, {
+  const _donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -174,7 +174,7 @@ test("Donation that is cancelled should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -222,7 +222,7 @@ test("Old charges in created status should *still* be charged again (until we se
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -258,7 +258,7 @@ test("Charges with error status should not be charged again", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -279,7 +279,7 @@ test("Charges with created_at in the future should not be charged yet", async ()
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

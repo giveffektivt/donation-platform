@@ -5,7 +5,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
-  insertDonationMembershipViaQuickpay,
+  insertMembershipViaQuickpay,
   insertDonationViaBankTransfer,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
@@ -31,7 +31,7 @@ test("Insert donation for Giv Effektivt membership using Quickpay", async () => 
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
