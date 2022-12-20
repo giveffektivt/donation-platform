@@ -17,7 +17,7 @@ export const Membership = () => {
     tin: "",
     email: "",
     address: "",
-    zip: "",
+    postcode: "",
     city: "",
   };
 

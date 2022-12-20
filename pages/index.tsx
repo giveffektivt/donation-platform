@@ -1,7 +1,7 @@
 import { BankTransferStep, Step1, Step2, Wizard, WizardStep } from "comps";
 import type { NextPage } from "next";
 import { DonationRecipient } from "src/donation/types";
-import { submitForm, validationSchemaDonation } from "src/helpers";
+import { validationSchemaDonation } from "src/helpers";
 import * as Yup from "yup";
 
 const initialValues = {
@@ -9,18 +9,12 @@ const initialValues = {
   visibleAmount: "",
   recipient: DonationRecipient.GivEffektivtsAnbefaling,
   subscription: "",
-  name: "",
+  taxDeduction: false,
+  tin: "",
   email: "",
   method: "",
-  tin: "",
-  membership: false,
-  address: "",
-  zip: "",
-  city: "",
-  country: "Denmark",
   rulesAccepted: false,
   subscribeToNewsletter: false,
-  taxDeduction: false,
   bank: {},
 };
 
@@ -31,8 +25,8 @@ const Home: NextPage = () => {
         <WizardStep
           validationSchemaDonation={Yup.object().shape({
             amount: validationSchemaDonation.amount,
-            subscription: validationSchemaDonation.subscription,
             recipient: validationSchemaDonation.recipient,
+            subscription: validationSchemaDonation.subscription,
             tin: validationSchemaDonation.tin,
           })}
         >

@@ -120,7 +120,7 @@ test("Membership using Quickpay", async () => {
     name: "John Smith",
     address: "Some street",
     city: "Copenhagen",
-    zip: "1234",
+    postcode: "1234",
   });
 
   const donors = await findAllDonors(db);

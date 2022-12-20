@@ -14,6 +14,6 @@ export type SubmitDataMembership = {
   tin: string;
   email: string;
   address: string;
-  zip: string;
+  postcode: string;
   city: string;
 };

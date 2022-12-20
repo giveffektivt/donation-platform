@@ -93,7 +93,7 @@ export async function insertQuickpayDataMembership(
     name: submitData.name,
     email: submitData.email,
     address: submitData.address,
-    postcode: submitData.zip,
+    postcode: submitData.postcode,
     city: submitData.city,
     country: "Denmark",
     tin: submitData.tin,

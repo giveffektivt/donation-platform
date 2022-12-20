@@ -2,7 +2,7 @@ import { useField } from "formik";
 
 export const Address = ({ label, helper, ...props }: any) => {
   const [fieldAddress, metaAddress] = useField({ name: "address" });
-  const [fieldZip, metaZip] = useField({ name: "zip" });
+  const [fieldPostcode, metaPostcode] = useField({ name: "postcode" });
   const [fieldCity, metaCity] = useField({ name: "city" });
 
   return (
@@ -30,14 +30,14 @@ export const Address = ({ label, helper, ...props }: any) => {
       </div>
 
       <div
-        className={`form-group zip-city ${
-          (metaZip.touched && metaZip.error) ||
+        className={`form-group postcode-city ${
+          (metaPostcode.touched && metaPostcode.error) ||
           (metaCity.touched && metaCity.error)
             ? "form-error"
             : ""
         }`}
       >
-        <label className="form-label" htmlFor="zip">
+        <label className="form-label" htmlFor="postcode">
           Postnr.
         </label>
 
@@ -46,10 +46,10 @@ export const Address = ({ label, helper, ...props }: any) => {
         </label>
 
         <div className="form-error-message">
-          {metaZip.touched && metaZip.error ? (
+          {metaPostcode.touched && metaPostcode.error ? (
             <>
               <span className="sr-only">Fejl:</span>
-              {metaZip.error}
+              {metaPostcode.error}
             </>
           ) : null}
         </div>
@@ -65,8 +65,8 @@ export const Address = ({ label, helper, ...props }: any) => {
 
         <input
           className="form-input full-width"
-          {...fieldZip}
-          name="zip"
+          {...fieldPostcode}
+          name="postcode"
           type="number"
         />
 

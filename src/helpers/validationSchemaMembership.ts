@@ -18,7 +18,7 @@ export const validationSchemaMembership = {
     .string()
     .required("Adresse skal udfyldes")
     .max(320, "Højst 320 tegn"),
-  zip: yup
+  postcode: yup
     .string()
     .required("Postnr. skal udfyldes")
     .test("type", "Skriv et tal", (val: string | undefined) => {
