@@ -30,10 +30,10 @@ test("One-time donation using Scanpay", async () => {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "oneTime",
+    frequency: "oneTime",
     method: "mobilePay",
     tin: undefined,
-    taxDeduction: false,
+    taxDeductible: false,
     subscribeToNewsletter: false,
   });
 
@@ -76,10 +76,10 @@ test("Monthly donation using Scanpay", async () => {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "everyMonth",
+    frequency: "everyMonth",
     method: "creditCard",
     tin: undefined,
-    taxDeduction: false,
+    taxDeductible: false,
     subscribeToNewsletter: false,
   });
 

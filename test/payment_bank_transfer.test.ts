@@ -29,10 +29,10 @@ test("One-time donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "oneTime",
+    frequency: "oneTime",
     method: "bankTransfer",
     tin: undefined,
-    taxDeduction: false,
+    taxDeductible: false,
     subscribeToNewsletter: false,
   });
 
@@ -71,10 +71,10 @@ test("Monthly donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "everyMonth",
+    frequency: "everyMonth",
     method: "bankTransfer",
     tin: undefined,
-    taxDeduction: false,
+    taxDeductible: false,
     subscribeToNewsletter: false,
   });
 

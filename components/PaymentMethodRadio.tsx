@@ -30,7 +30,7 @@ export const PaymentMethodRadio = () => {
     formik.values.amount >= 5000 && formik.values.amount < 7400;
 
   const canUseMobilePay =
-    formik.values.subscription === "oneTime" || formik.values.amount === 3; // "Hidden" for testing purposes :)
+    formik.values.frequency === "oneTime" || formik.values.amount === 3; // "Hidden" for testing purposes :)
 
   const mustUseBankTransfer = formik.values.amount >= 7400;
 

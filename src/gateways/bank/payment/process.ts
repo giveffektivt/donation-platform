@@ -40,8 +40,8 @@ export async function insertBankTransferData(
     donor_id: donor.id,
     amount: submitData.amount,
     recipient: parseDonationRecipient(submitData.recipient),
-    frequency: parseDonationFrequency(submitData.subscription),
-    tax_deductible: submitData.taxDeduction,
+    frequency: parseDonationFrequency(submitData.frequency),
+    tax_deductible: submitData.taxDeductible,
   });
 
   return [donor, donation];

@@ -1,8 +1,8 @@
 export type SubmitDataDonation = {
   amount: number;
   recipient: string;
-  subscription: string;
-  taxDeduction: boolean;
+  frequency: string;
+  taxDeductible: boolean;
   tin?: string;
   email: string;
   method: string;

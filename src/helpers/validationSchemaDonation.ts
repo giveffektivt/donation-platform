@@ -8,14 +8,14 @@ export const validationSchemaDonation = {
     .integer("Skriv et heltal")
     .typeError("Skriv et heltal"),
   recipient: yup.string().required("Vælg en modtager"),
-  subscription: yup
+  frequency: yup
     .string()
     .required("Vælg hvor ofte du vil donere")
     .oneOf(["oneTime", "everyMonth"]),
-  taxDeduction: yup.bool().required(),
+  taxDeductible: yup.bool().required(),
   tin: yup
     .string()
-    .when("taxDeduction", {
+    .when("taxDeductible", {
       is: true,
       then: (schema) =>
         schema.required("Oplysninger kræves for at få skattefradrag"),

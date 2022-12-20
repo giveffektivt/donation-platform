@@ -8,7 +8,7 @@ const initialValues = {
   amount: "",
   visibleAmount: "",
   recipient: DonationRecipient.GivEffektivtsAnbefaling,
-  subscription: "",
+  frequency: "",
   taxDeduction: false,
   tin: "",
   email: "",
@@ -18,29 +18,21 @@ const initialValues = {
   bank: {},
 };
 
+const { amount, recipient, frequency, taxDeductible, tin, ...validationStep2 } =
+  validationSchemaDonation;
+
+const validationStep1 = { amount, recipient, frequency, taxDeductible, tin };
+
 const Home: NextPage = () => {
   return (
     <>
       <Wizard initialValues={initialValues}>
         <WizardStep
-          validationSchemaDonation={Yup.object().shape({
-            amount: validationSchemaDonation.amount,
-            recipient: validationSchemaDonation.recipient,
-            subscription: validationSchemaDonation.subscription,
-            tin: validationSchemaDonation.tin,
-          })}
+          validationSchemaDonation={Yup.object().shape(validationStep1)}
         >
           <Step1 />
         </WizardStep>
-        <WizardStep
-          validationSchema={Yup.object().shape({
-            email: validationSchemaDonation.email,
-            method: validationSchemaDonation.method,
-            rulesAccepted: validationSchemaDonation.rulesAccepted,
-            subscribeToNewsletter:
-              validationSchemaDonation.subscribeToNewsletter,
-          })}
-        >
+        <WizardStep validationSchema={Yup.object().shape(validationStep2)}>
           <Step2 />
         </WizardStep>
         <WizardStep>
