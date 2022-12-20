@@ -1,6 +1,7 @@
 import { BackButton, Wrapper } from "comps";
 import { Form, Formik } from "formik";
 import React, { useState } from "react";
+import { PaymentMethod } from "src/donation/types";
 import { submitForm } from "src/helpers";
 
 type WizardProps = {
@@ -46,7 +47,7 @@ export const Wizard = ({ children, initialValues }: WizardProps) => {
           break;
         case 1:
           await submitForm("donation", values, bag);
-          if (values.method === "bankTransfer") {
+          if (values.method === PaymentMethod.BankTransfer) {
             next(values);
           }
           break;
