@@ -15,3 +15,9 @@ export type RecipientDistribution = {
   count: string;
   sum: number;
 };
+
+export type TimeDistribution = {
+  year: string;
+  month: string;
+  sum: number;
+};

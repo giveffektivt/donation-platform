@@ -480,8 +480,9 @@ CREATE VIEW giveffektivt.recipient_distribution AS
     sum(d.amount) AS sum
    FROM (giveffektivt.donation d
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE (c.status = 'charged'::giveffektivt.charge_status)
-  GROUP BY d.recipient;
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+  GROUP BY d.recipient
+  ORDER BY (sum(d.amount)) DESC;
 
 
 --
@@ -501,6 +502,24 @@ CREATE TABLE giveffektivt.scanpay_seq (
 CREATE TABLE giveffektivt.schema_migrations (
     version character varying(255) NOT NULL
 );
+
+
+--
+-- Name: time_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.time_distribution AS
+ SELECT to_char(a.year, 'yyyy'::text) AS year,
+    to_char(a.month, 'Mon'::text) AS month,
+    a.sum
+   FROM ( SELECT date_trunc('year'::text, c.created_at) AS year,
+            date_trunc('month'::text, c.created_at) AS month,
+            sum(d.amount) AS sum
+           FROM (giveffektivt.charge c
+             JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          GROUP BY (date_trunc('year'::text, c.created_at)), (date_trunc('month'::text, c.created_at))
+          ORDER BY (date_trunc('year'::text, c.created_at)) DESC, (date_trunc('month'::text, c.created_at)) DESC) a;
 
 
 --
@@ -669,4 +688,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221203144140'),
     ('20221216134936'),
     ('20221219103355'),
-    ('20221219110329');
+    ('20221219110329'),
+    ('20221220103725');

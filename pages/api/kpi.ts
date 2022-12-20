@@ -6,8 +6,10 @@ import {
   dbClient,
   getKpi,
   getRecipientDistribution,
+  getTimeDistribution,
   Kpi,
   RecipientDistribution,
+  TimeDistribution,
 } from "src";
 
 const cors = util.promisify(
@@ -19,7 +21,8 @@ const cors = util.promisify(
 
 type Data = {
   kpi: Kpi;
-  distribution: RecipientDistribution[];
+  by_cause: RecipientDistribution[];
+  by_time: TimeDistribution[];
 };
 
 export default async function handler(
@@ -30,11 +33,10 @@ export default async function handler(
 
   const db = await dbClient();
   try {
-    const kpi = await getKpi(db);
-    const distribution = await getRecipientDistribution(db);
     res.status(200).json({
-      kpi,
-      distribution,
+      kpi: await getKpi(db),
+      by_cause: await getRecipientDistribution(db),
+      by_time: await getTimeDistribution(db),
     });
   } catch (e) {
     console.error("api/kpi: ", e);
