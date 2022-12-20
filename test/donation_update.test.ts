@@ -2,6 +2,8 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
+  DonationFrequency,
+  DonationRecipient,
   EmailedStatus,
   insertDonationMembershipViaQuickpay,
   insertDonationViaScanpay,
@@ -54,10 +56,16 @@ test("Update donation to add Scanpay ID", async () => {
 
   const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: true,
   });
 
-  expect(donation.gateway_metadata).toEqual({});
+  expect((await findDonationScanpay(db, donation)).gateway_metadata).toEqual(
+    {}
+  );
 
   await setDonationScanpayId(db, {
     id: donation.id,

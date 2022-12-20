@@ -3,6 +3,8 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
+  DonationFrequency,
+  DonationRecipient,
   insertCharge,
   insertDonationMembershipViaQuickpay,
   insertDonationViaScanpay,
@@ -60,7 +62,11 @@ test("Insert initial charge for a donation via Scanpay only once", async () => {
 
   const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
   });
 
   const charge = await insertInitialChargeScanpay(db, {
@@ -150,7 +156,11 @@ test("Update charge Scanpay idempotency key", async () => {
 
   const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
+    tax_deductible: true,
   });
 
   const charge = await insertCharge(db, {

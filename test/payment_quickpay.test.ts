@@ -43,7 +43,6 @@ test("One-time donation using Quickpay", async () => {
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      tin: null,
     },
   ]);
 
@@ -80,7 +79,7 @@ test("Monthly donation using Quickpay", async () => {
     recipient: DonationRecipient.VitaminModMangelsygdomme,
     subscription: "everyMonth",
     method: "creditCard",
-    tin: undefined,
+    tin: "222222-2222",
     taxDeduction: false,
     subscribeToNewsletter: false,
   });
@@ -89,7 +88,7 @@ test("Monthly donation using Quickpay", async () => {
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      tin: null,
+      tin: "222222-2222",
     },
   ]);
 
@@ -132,7 +131,8 @@ test("Membership using Quickpay", async () => {
       name: "John Smith",
       address: "Some street",
       city: "Copenhagen",
-      zip: "1234",
+      postcode: "1234",
+      country: "Denmark",
     },
   ]);
 

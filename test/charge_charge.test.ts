@@ -200,6 +200,10 @@ test("Bank transfer donation should not be charged", async () => {
   const donation = await insertDonationViaBankTransfer(db, {
     donor_id: donor.id,
     gateway_metadata: { bank_msg: "1234" },
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Once,
+    tax_deductible: true,
   });
 
   await insertCharge(db, {

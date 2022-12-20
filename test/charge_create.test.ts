@@ -174,6 +174,10 @@ test("Bank transfer donation should not have new charges created", async () => {
   const donation = await insertDonationViaBankTransfer(db, {
     donor_id: donor.id,
     gateway_metadata: { bank_msg: "1234" },
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    tax_deductible: false,
   });
 
   await insertCharge(db, {
