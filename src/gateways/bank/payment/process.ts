@@ -66,7 +66,6 @@ async function sendEmails(
     recipient: donation.recipient,
     frequency: donation.frequency,
     tax_deductible: donation.tax_deductible,
-    country: donor.country,
   };
 
   const db = await dbClient();

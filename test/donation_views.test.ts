@@ -9,9 +9,10 @@ import {
   getDonationIdsByOldDonorId,
   getDonationsToEmail,
   insertCharge,
-  insertMembershipViaQuickpay,
+  insertDonationViaQuickpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
+  insertMembershipViaQuickpay,
   PaymentMethod,
   setDonationEmailed,
 } from "src";
@@ -34,12 +35,10 @@ test("Finds first successful donations to email", async () => {
   // Two donors
   const donor1 = await insertDonorWithSensitiveInfo(db, {
     email: "hello@example.com",
-    country: "Denmark",
   });
 
   const donor2 = await insertDonorWithSensitiveInfo(db, {
     email: "world@example.com",
-    country: "Denmark",
   });
 
   // ...having two and one donations correspondingly
@@ -59,7 +58,7 @@ test("Finds first successful donations to email", async () => {
 
   const donation3 = await insertMembershipViaQuickpay(db, {
     donor_id: donor2.id,
-    method: PaymentMethod.MobilePay,
+    method: PaymentMethod.CreditCard,
   });
 
   // ...each successfully charged (one even twice)
@@ -94,7 +93,6 @@ test("Finds first successful donations to email", async () => {
       recipient: DonationRecipient.GivEffektivt,
       frequency: DonationFrequency.Yearly,
       tax_deductible: false,
-      country: "Denmark",
     },
     {
       id: donation2.id,
@@ -103,7 +101,6 @@ test("Finds first successful donations to email", async () => {
       recipient: DonationRecipient.VitaminModMangelsygdomme,
       frequency: DonationFrequency.Monthly,
       tax_deductible: true,
-      country: "Denmark",
     },
     {
       id: donation3.id,
@@ -112,7 +109,6 @@ test("Finds first successful donations to email", async () => {
       recipient: DonationRecipient.GivEffektivt,
       frequency: DonationFrequency.Yearly,
       tax_deductible: false,
-      country: "Denmark",
     },
   ];
 
@@ -122,7 +118,50 @@ test("Finds first successful donations to email", async () => {
   expect(toEmail).toEqual(expected);
 });
 
-test("Should not email to a donation that wasn't charged", async () => {
+test("Should not email to a credit card one-time donation that wasn't charged yet", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 77,
+    recipient: DonationRecipient.GivEffektivtsAnbefaling,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should not email to a credit card one-time donation with a failed charge", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 77,
+    recipient: DonationRecipient.GivEffektivtsAnbefaling,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  await insertCharge(db, {
+    donation_id: donation.id,
+    status: ChargeStatus.Error,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should not email to a credit card recurring donation that wasn't charged yet", async () => {
   const db = await client;
 
   const donor = await insertDonorWithSensitiveInfo(db, {
@@ -137,6 +176,126 @@ test("Should not email to a donation that wasn't charged", async () => {
   await insertCharge(db, {
     donation_id: donation.id,
     status: ChargeStatus.Waiting,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should not email to a credit card recurring donation with a failed charge", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertCharge(db, {
+    donation_id: donation.id,
+    status: ChargeStatus.Error,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should not email to a MobilePay one-time donation that wasn't charged yet", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should not email to a MobilePay one-time donation with a failed charge", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+  });
+
+  await insertCharge(db, {
+    donation_id: donation.id,
+    status: ChargeStatus.Error,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([]);
+});
+
+test("Should email to a MobilePay recurring donation even if it wasn't charged yet - special case!", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+  });
+
+  await insertCharge(db, {
+    donation_id: donation.id,
+    status: ChargeStatus.Waiting,
+  });
+
+  expect(await getDonationsToEmail(db)).toEqual([
+    {
+      id: donation.id,
+      email: donor.email,
+      amount: 77,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      frequency: DonationFrequency.Monthly,
+      tax_deductible: true,
+    },
+  ]);
+});
+
+test("Should not email to a MobilePay recurring donation with a failed charge", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+  });
+
+  await insertCharge(db, {
+    donation_id: donation.id,
+    status: ChargeStatus.Error,
   });
 
   expect(await getDonationsToEmail(db)).toEqual([]);

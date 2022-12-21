@@ -80,7 +80,6 @@ export type DonationToEmail = {
   recipient: DonationRecipient;
   frequency: DonationFrequency;
   tax_deductible: boolean;
-  country: string;
 };
 
 export type BankTransferInfo = {
