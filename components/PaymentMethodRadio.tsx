@@ -1,7 +1,7 @@
 import { useField, useFormikContext } from "formik";
 import Image from "next/image";
 import { SubmitDataDonation } from "src";
-import { DonationFrequency, PaymentMethod } from "src/donation/types";
+import { PaymentMethod } from "src/donation/types";
 import bank from "../public/bank.svg";
 import mastercard from "../public/mastercard.svg";
 import mobilepay from "../public/mobilepay.svg";
@@ -29,10 +29,6 @@ export const PaymentMethodRadio = () => {
 
   const shouldUseBankTransfer =
     formik.values.amount >= 5000 && formik.values.amount < 7400;
-
-  const canUseMobilePay =
-    formik.values.frequency === DonationFrequency.Once ||
-    formik.values.amount === 3; // "Hidden" for testing purposes :)
 
   const mustUseBankTransfer = formik.values.amount >= 7400;
 
@@ -86,7 +82,7 @@ export const PaymentMethodRadio = () => {
             </li>
           )}
 
-          {canUseMobilePay && !mustUseBankTransfer && (
+          {!mustUseBankTransfer && (
             <li className="flx-center gap-5">
               <input
                 className="form-radio radio-large"
