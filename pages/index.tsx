@@ -1,51 +1,36 @@
 import { BankTransferStep, Step1, Step2, Wizard, WizardStep } from "comps";
 import type { NextPage } from "next";
 import { DonationRecipient } from "src/donation/types";
-import { submitForm, validationSchema } from "src/helpers";
+import { validationSchemaDonation } from "src/helpers";
 import * as Yup from "yup";
 
 const initialValues = {
   amount: "",
   visibleAmount: "",
   recipient: DonationRecipient.GivEffektivtsAnbefaling,
-  subscription: "",
-  name: "",
+  frequency: "",
+  taxDeductible: false,
+  tin: "",
   email: "",
   method: "",
-  tin: "",
-  membership: false,
-  address: "",
-  zip: "",
-  city: "",
-  country: "Denmark",
   rulesAccepted: false,
   subscribeToNewsletter: false,
-  taxDeduction: false,
   bank: {},
 };
+
+const { amount, recipient, frequency, taxDeductible, tin, ...validationStep2 } =
+  validationSchemaDonation;
+
+const validationStep1 = { amount, recipient, frequency, taxDeductible, tin };
 
 const Home: NextPage = () => {
   return (
     <>
-      <Wizard initialValues={initialValues} onSubmit={submitForm}>
-        <WizardStep
-          validationSchema={Yup.object().shape({
-            amount: validationSchema.amount,
-            subscription: validationSchema.subscription,
-            recipient: validationSchema.recipient,
-            tin: validationSchema.tin,
-          })}
-        >
+      <Wizard initialValues={initialValues}>
+        <WizardStep validationSchema={Yup.object().shape(validationStep1)}>
           <Step1 />
         </WizardStep>
-        <WizardStep
-          validationSchema={Yup.object().shape({
-            email: validationSchema.email,
-            method: validationSchema.method,
-            rulesAccepted: validationSchema.rulesAccepted,
-            subscribeToNewsletter: validationSchema.subscribeToNewsletter,
-          })}
-        >
+        <WizardStep validationSchema={Yup.object().shape(validationStep2)}>
           <Step2 />
         </WizardStep>
         <WizardStep>

@@ -1,9 +1,9 @@
 import { Button, Checkbox, Input, PaymentMethodRadio } from "comps";
 import { useFormikContext } from "formik";
-import { FormikData } from "src";
+import { SubmitDataDonation } from "src";
 
 export const Step2 = () => {
-  const formik = useFormikContext<FormikData>();
+  const formik = useFormikContext<SubmitDataDonation>();
 
   return (
     <>

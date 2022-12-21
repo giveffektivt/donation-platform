@@ -29,26 +29,18 @@ test("One-time donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "oneTime",
-    membership: false,
-    method: "bankTransfer",
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.BankTransfer,
     tin: undefined,
-    name: undefined,
-    address: undefined,
-    city: undefined,
-    zip: undefined,
-    taxDeduction: false,
+    taxDeductible: false,
+    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      address: null,
-      city: null,
       tin: null,
-      name: null,
-      postcode: null,
     },
   ]);
 
@@ -79,26 +71,18 @@ test("Monthly donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "everyMonth",
-    membership: false,
-    method: "bankTransfer",
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.BankTransfer,
     tin: undefined,
-    name: undefined,
-    address: undefined,
-    city: undefined,
-    zip: undefined,
-    taxDeduction: false,
+    taxDeductible: false,
+    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
       email: "hello@example.com",
-      address: null,
-      city: null,
       tin: null,
-      name: null,
-      postcode: null,
     },
   ]);
 
@@ -120,27 +104,4 @@ test("Monthly donation using bank transfer", async () => {
 
   const charges = await findAllCharges(db);
   expect(charges).toHaveLength(0);
-});
-
-test("Membership via bank transfer", async () => {
-  const db = await client;
-
-  const submitData = {
-    amount: 10,
-    email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
-    subscription: "everyMonth",
-    membership: true,
-    method: "bankTransfer",
-    tin: "111111-1111",
-    name: "John Smith",
-    address: "Some street",
-    city: "Copenhagen",
-    zip: "1234",
-    taxDeduction: true,
-  };
-
-  await expect(insertBankTransferData(db, submitData)).rejects.toThrow(
-    "Bank transfer is not supported for membership payments"
-  );
 });

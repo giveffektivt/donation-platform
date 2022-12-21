@@ -3,9 +3,11 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
+  DonationFrequency,
+  DonationRecipient,
   insertCharge,
-  insertDonationMembershipViaQuickpay,
-  insertDonationMembershipViaScanpay,
+  insertMembershipViaQuickpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   insertInitialChargeQuickpay,
   insertInitialChargeScanpay,
@@ -33,7 +35,7 @@ test("Insert charge for a donation", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -58,9 +60,13 @@ test("Insert initial charge for a donation via Scanpay only once", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
   });
 
   const charge = await insertInitialChargeScanpay(db, {
@@ -90,7 +96,7 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -124,7 +130,7 @@ test("Update charge status", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -148,9 +154,13 @@ test("Update charge Scanpay idempotency key", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
+    tax_deductible: true,
   });
 
   const charge = await insertCharge(db, {

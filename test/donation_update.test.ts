@@ -2,10 +2,11 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
+  DonationFrequency,
+  DonationRecipient,
   EmailedStatus,
-  insertDonationMembershipViaQuickpay,
-  insertDonationMembershipViaScanpay,
-  insertDonationViaQuickpay,
+  insertMembershipViaQuickpay,
+  insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
   setDonationCancelledByQuickpayOrder,
@@ -32,7 +33,7 @@ test("Update donation to mark it as emailed", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -41,7 +42,7 @@ test("Update donation to mark it as emailed", async () => {
 
   await setDonationEmailed(db, donation, EmailedStatus.Yes);
 
-  expect((await findDonationScanpay(db, donation)).emailed).toBe(
+  expect((await findDonationQuickpay(db, donation)).emailed).toBe(
     EmailedStatus.Yes
   );
 });
@@ -53,12 +54,18 @@ test("Update donation to add Scanpay ID", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertDonationViaScanpay(db, {
     donor_id: donor.id,
+    amount: 88,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: true,
   });
 
-  expect(donation.gateway_metadata).toEqual({});
+  expect((await findDonationScanpay(db, donation)).gateway_metadata).toEqual(
+    {}
+  );
 
   await setDonationScanpayId(db, {
     id: donation.id,
@@ -90,7 +97,7 @@ test("Cancel donation by its Quickpay order ID", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaQuickpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });

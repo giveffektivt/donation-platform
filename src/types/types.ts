@@ -1,19 +1,19 @@
-export type FormikData = SubmitData;
-
-export type SubmitData = {
+export type SubmitDataDonation = {
   amount: number;
   recipient: string;
-  subscription: string;
-  name?: string;
+  frequency: string;
+  taxDeductible: boolean;
+  tin?: string;
   email: string;
   method: string;
-  tin?: string;
-  membership: boolean;
-  city?: string;
-  zip?: string;
-  address?: string;
-  taxDeduction: boolean;
-  birthday?: Date;
-  country?: string;
   subscribeToNewsletter: boolean;
+};
+
+export type SubmitDataMembership = {
+  name: string;
+  tin: string;
+  email: string;
+  address: string;
+  postcode: string;
+  city: string;
 };

@@ -8,8 +8,12 @@ const options = (values: any) => {
   return options;
 };
 
-export const submitForm = async (values: any, bag: any): Promise<void> => {
-  const response = await fetch("/api/payment", options(values));
+export const submitForm = async (
+  path: string,
+  values: any,
+  bag: any
+): Promise<void> => {
+  const response = await fetch(`/api/${path}`, options(values));
 
   if (!response.ok) {
     throw new Error(response.statusText);

@@ -9,59 +9,67 @@ import {
   Donor,
   DonorWithSensitiveInfo,
   insertCharge,
-  insertDonationMembershipViaQuickpay,
+  insertMembershipViaQuickpay,
   insertDonationViaQuickpay,
   insertDonorWithSensitiveInfo,
   parseDonationFrequency,
   parseDonationRecipient,
   parsePaymentMethod,
+  PaymentMethod,
   quickpayCreatePayment,
   quickpayCreateSubscription,
   quickpayOneTimeUrl,
   quickpaySubscriptionUrl,
   setDonationQuickpayId,
-  SubmitData,
+  SubmitDataDonation,
+  SubmitDataMembership,
 } from "src";
 
-export async function processQuickpayPayment(
-  submitData: SubmitData
+export async function processQuickpayDonation(
+  submitData: SubmitDataDonation
 ): Promise<[string, string]> {
   const [donor, donation, charge] = await dbExecuteInTransaction(
-    async (db) => await insertQuickpayDataWithQuickpayId(db, submitData)
+    async (db) =>
+      await addQuickpayId(
+        db,
+        ...(await insertQuickpayDataDonation(db, submitData))
+      )
   );
   return [await generateRedirectUrl(donation, charge), donor.id];
 }
 
-export async function insertQuickpayData(
+export async function processQuickpayMembership(
+  submitData: SubmitDataMembership
+): Promise<[string, string]> {
+  const [donor, donation, charge] = await dbExecuteInTransaction(
+    async (db) =>
+      await addQuickpayId(
+        db,
+        ...(await insertQuickpayDataMembership(db, submitData))
+      )
+  );
+  return [await generateRedirectUrl(donation, charge), donor.id];
+}
+
+export async function insertQuickpayDataDonation(
   db: PoolClient,
-  submitData: SubmitData
+  submitData: SubmitDataDonation
 ): Promise<
   [DonorWithSensitiveInfo, DonationWithGatewayInfoQuickpay, Charge | null]
 > {
   const donor = await insertDonorWithSensitiveInfo(db, {
-    name: submitData.name,
     email: submitData.email,
-    address: submitData.address,
-    postcode: submitData.zip,
-    city: submitData.city,
-    country: submitData.country,
     tin: submitData.tin,
-    birthday: submitData.birthday,
   });
 
-  const donation = submitData.membership
-    ? await insertDonationMembershipViaQuickpay(db, {
-        donor_id: donor.id,
-        method: parsePaymentMethod(submitData.method),
-      })
-    : await insertDonationViaQuickpay(db, {
-        donor_id: donor.id,
-        amount: submitData.amount,
-        recipient: parseDonationRecipient(submitData.recipient),
-        frequency: parseDonationFrequency(submitData.subscription),
-        method: parsePaymentMethod(submitData.method),
-        tax_deductible: submitData.taxDeduction,
-      });
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: submitData.amount,
+    recipient: parseDonationRecipient(submitData.recipient),
+    frequency: parseDonationFrequency(submitData.frequency),
+    method: parsePaymentMethod(submitData.method),
+    tax_deductible: submitData.taxDeductible,
+  });
 
   // Only create charges at this moment for auto-captured one-time donations
   const charge =
@@ -75,12 +83,36 @@ export async function insertQuickpayData(
   return [donor, donation, charge];
 }
 
-async function insertQuickpayDataWithQuickpayId(
+export async function insertQuickpayDataMembership(
   db: PoolClient,
-  submitData: SubmitData
-): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
-  const [donor, donation, charge] = await insertQuickpayData(db, submitData);
+  submitData: SubmitDataMembership
+): Promise<
+  [DonorWithSensitiveInfo, DonationWithGatewayInfoQuickpay, Charge | null]
+> {
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    name: submitData.name,
+    email: submitData.email,
+    address: submitData.address,
+    postcode: submitData.postcode,
+    city: submitData.city,
+    country: "Denmark",
+    tin: submitData.tin,
+  });
 
+  const donation = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  return [donor, donation, null];
+}
+
+async function addQuickpayId(
+  db: PoolClient,
+  donor: Donor,
+  donation: DonationWithGatewayInfoQuickpay,
+  charge: Charge | null
+): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
   donation.gateway_metadata.quickpay_id = await (donation && charge
     ? quickpayCreatePayment(charge.short_id, donation)
     : quickpayCreateSubscription(donation));

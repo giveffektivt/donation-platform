@@ -1,4 +1,6 @@
 import { useFormikContext } from "formik";
+import { SubmitDataDonation } from "src/types";
+import { DonationFrequency } from "src/donation/types";
 
 export const BackButton = ({
   ...props
@@ -6,8 +8,8 @@ export const BackButton = ({
   onClick: () => void;
   stepNumber: number;
 }) => {
-  const { membership, subscription, recipient, amount, taxDeduction } =
-    useFormikContext<any>().values;
+  const { frequency, recipient, amount, taxDeductible } =
+    useFormikContext<SubmitDataDonation>().values;
   return (
     <>
       <div
@@ -25,26 +27,11 @@ export const BackButton = ({
           </span>
         </h5>
         <ul>
-          {subscription === "oneTime" ? (
-            <li>
-              {amount} kr. til {recipient}
-            </li>
-          ) : (
-            ""
-          )}
-          {subscription === "everyMonth" ? (
-            <li>
-              {amount} kr. til {recipient} (månedligt)
-            </li>
-          ) : (
-            ""
-          )}
-          {membership && props.stepNumber > 1 ? (
-            <li>50 kr. medlemskab (årligt)</li>
-          ) : (
-            ""
-          )}
-          {taxDeduction ? <li>Du har ønsket fradrag.</li> : ""}
+          <li>
+            {amount} kr. til {recipient}{" "}
+            {frequency === DonationFrequency.Monthly && "(månedligt)"}
+          </li>
+          {taxDeductible && <li>Du har ønsket fradrag</li>}
         </ul>
       </div>
     </>

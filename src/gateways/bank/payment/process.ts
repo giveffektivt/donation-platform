@@ -13,11 +13,11 @@ import {
   parseDonationRecipient,
   sendPaymentEmail,
   setDonationEmailed,
-  SubmitData,
+  SubmitDataDonation,
 } from "src";
 
-export async function processBankTransferPayment(
-  submitData: SubmitData
+export async function processBankTransferDonation(
+  submitData: SubmitDataDonation
 ): Promise<[string, string]> {
   const [donor, donation] = await dbExecuteInTransaction(
     async (db) => await insertBankTransferData(db, submitData)
@@ -28,29 +28,20 @@ export async function processBankTransferPayment(
 
 export async function insertBankTransferData(
   db: PoolClient,
-  submitData: SubmitData
+  submitData: SubmitDataDonation
 ): Promise<[DonorWithSensitiveInfo, DonationWithGatewayInfoBankTransfer]> {
-  if (submitData.membership) {
-    throw new Error("Bank transfer is not supported for membership payments");
-  }
-
   const donor = await insertDonorWithSensitiveInfo(db, {
-    name: submitData.name,
     email: submitData.email,
-    address: submitData.address,
-    postcode: submitData.zip,
-    city: submitData.city,
-    country: submitData.country,
+
     tin: submitData.tin,
-    birthday: submitData.birthday,
   });
 
   const donation = await insertDonationViaBankTransfer(db, {
     donor_id: donor.id,
     amount: submitData.amount,
     recipient: parseDonationRecipient(submitData.recipient),
-    frequency: parseDonationFrequency(submitData.subscription),
-    tax_deductible: submitData.taxDeduction,
+    frequency: parseDonationFrequency(submitData.frequency),
+    tax_deductible: submitData.taxDeductible,
   });
 
   return [donor, donation];

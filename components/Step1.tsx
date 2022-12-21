@@ -72,7 +72,7 @@ export const Step1 = () => {
 
       <FrequencyRadio />
       <Checkbox
-        name="taxDeduction"
+        name="taxDeductible"
         checkboxLabel={
           <>
             Jeg ønsker skattefradrag
@@ -88,7 +88,7 @@ export const Step1 = () => {
         }
       />
 
-      {formik.values.taxDeduction && (
+      {formik.values.taxDeductible && (
         <CprCvrInput
           label={
             <>

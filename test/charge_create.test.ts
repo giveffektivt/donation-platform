@@ -7,8 +7,8 @@ import {
   DonationFrequency,
   DonationRecipient,
   insertChargesForDonationsToCreateCharges,
-  insertDonationMembershipViaBankTransfer,
-  insertDonationMembershipViaScanpay,
+  insertMembershipViaQuickpay,
+  insertDonationViaBankTransfer,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   PaymentMethod,
@@ -39,7 +39,7 @@ test("Insert charges for donations that need new charges", async () => {
   });
 
   // ...having two donations each (3 recurring and 1 one-time)
-  const donation1 = await insertDonationMembershipViaScanpay(db, {
+  const donation1 = await insertMembershipViaQuickpay(db, {
     donor_id: donor1.id,
     method: PaymentMethod.CreditCard,
   });
@@ -62,7 +62,7 @@ test("Insert charges for donations that need new charges", async () => {
     tax_deductible: true,
   });
 
-  const donation4 = await insertDonationMembershipViaScanpay(db, {
+  const donation4 = await insertMembershipViaQuickpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.MobilePay,
   });
@@ -133,7 +133,7 @@ test("Donation that has no charges should not have new charges created", async (
     email: "hello@example.com",
   });
 
-  const _donation = await insertDonationMembershipViaScanpay(db, {
+  const _donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -148,7 +148,7 @@ test("Donation that is cancelled should not have new charges created", async () 
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -171,9 +171,13 @@ test("Bank transfer donation should not have new charges created", async () => {
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaBankTransfer(db, {
+  const donation = await insertDonationViaBankTransfer(db, {
     donor_id: donor.id,
     gateway_metadata: { bank_msg: "1234" },
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    tax_deductible: false,
   });
 
   await insertCharge(db, {
@@ -192,7 +196,7 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     email: "hello@example.com",
   });
 
-  const donation = await insertDonationMembershipViaScanpay(db, {
+  const donation = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
