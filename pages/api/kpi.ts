@@ -4,6 +4,7 @@ import util from "util";
 
 import {
   dbClient,
+  dbRelease,
   getKpi,
   getRecipientDistribution,
   getTimeDistribution,
@@ -31,8 +32,11 @@ export default async function handler(
 ) {
   await cors(req, res);
 
-  const db = await dbClient();
+  let db = null;
+
   try {
+    db = await dbClient();
+
     res.status(200).json({
       kpi: await getKpi(db),
       by_cause: await getRecipientDistribution(db),
@@ -42,6 +46,6 @@ export default async function handler(
     console.error("api/kpi: ", e);
     res.status(500);
   } finally {
-    db.release();
+    dbRelease(db);
   }
 }

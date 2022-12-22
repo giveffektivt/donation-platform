@@ -4,6 +4,7 @@ import path from "path";
 import {
   BankTransferInfo,
   dbClient,
+  dbRelease,
   DonationRecipient,
   DonationToEmail,
   EmailedStatus,
@@ -15,8 +16,10 @@ import {
 } from "src";
 
 export async function sendNewEmails() {
-  const db = await dbClient();
+  let db = null;
+
   try {
+    db = await dbClient();
     const donationsToEmail = await getDonationsToEmail(db);
     if (donationsToEmail.length < 1) {
       return;
@@ -40,7 +43,7 @@ export async function sendNewEmails() {
       }
     }
   } finally {
-    db.release();
+    dbRelease(db);
   }
 }
 

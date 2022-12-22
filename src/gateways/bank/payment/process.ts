@@ -3,6 +3,7 @@ import {
   BankTransferInfo,
   dbClient,
   dbExecuteInTransaction,
+  dbRelease,
   DonationToEmail,
   DonationWithGatewayInfoBankTransfer,
   DonorWithSensitiveInfo,
@@ -68,19 +69,15 @@ async function sendEmails(
     tax_deductible: donation.tax_deductible,
   };
 
-  const db = await dbClient();
+  let db = null;
   try {
-    try {
-      await setDonationEmailed(db, donationToEmail, EmailedStatus.Attempted);
-      await sendPaymentEmail(donationToEmail, bankTransferInfo);
-      await setDonationEmailed(db, donationToEmail, EmailedStatus.Yes);
-    } catch (err) {
-      console.error(
-        `Error sending payment email for ID "${donation.id}":`,
-        err
-      );
-    }
+    db = await dbClient();
+    await setDonationEmailed(db, donationToEmail, EmailedStatus.Attempted);
+    await sendPaymentEmail(donationToEmail, bankTransferInfo);
+    await setDonationEmailed(db, donationToEmail, EmailedStatus.Yes);
+  } catch (err) {
+    console.error(`Error sending payment email for ID "${donation.id}":`, err);
   } finally {
-    db.release();
+    dbRelease(db);
   }
 }

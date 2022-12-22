@@ -12,6 +12,12 @@ export async function dbClient() {
   return await pool.connect();
 }
 
+export function dbRelease(client: PoolClient | null) {
+  if (client) {
+    client.release();
+  }
+}
+
 export async function dbBeginTransaction(client: PoolClient) {
   return await client.query("begin");
 }
@@ -37,6 +43,6 @@ export async function dbExecuteInTransaction<T>(
     await dbRollbackTransaction(db);
     throw err;
   } finally {
-    db.release();
+    dbRelease(db);
   }
 }

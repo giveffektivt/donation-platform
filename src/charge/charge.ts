@@ -2,6 +2,7 @@ import {
   ChargeToChargeQuickpay,
   ChargeToChargeScanpay,
   dbClient,
+  dbRelease,
   getChargesToCharge,
   PaymentGateway,
   quickpayChargeSubscription,
@@ -9,9 +10,11 @@ import {
 } from "src";
 
 export async function charge() {
-  const db = await dbClient();
+  let db = null;
 
   try {
+    db = await dbClient();
+
     for (let charge of await getChargesToCharge(db)) {
       try {
         switch (charge.gateway) {
@@ -35,6 +38,6 @@ export async function charge() {
       }
     }
   } finally {
-    db.release();
+    dbRelease(db);
   }
 }
