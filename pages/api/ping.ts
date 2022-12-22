@@ -1,13 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
-  charge,
   dbClient,
   dbRelease,
   getLatestScanpaySeq,
   handleChange,
   insertScanpaySeq,
   lockScanpaySeq,
-  sendNewEmails,
   unlockScanpaySeq,
 } from "src";
 
@@ -59,10 +57,6 @@ export default async function handler(
     if (dbSeq !== scanpaySeq) {
       await insertScanpaySeq(db, scanpaySeq);
     }
-
-    // Process new donations that just happened
-    await charge();
-    await sendNewEmails();
 
     res.status(200).json({ message: "OK" });
   } catch (err) {

@@ -1,14 +1,7 @@
 import crypto from "crypto";
 import type { NextApiRequest, NextApiResponse } from "next";
 import getRawBody from "raw-body";
-import {
-  charge,
-  dbClient,
-  dbRelease,
-  PaymentGateway,
-  quickpayHandleChange,
-  sendNewEmails,
-} from "src";
+import { dbClient, dbRelease, PaymentGateway, quickpayHandleChange } from "src";
 import { insertGatewayWebhook } from "src/gateways/repository";
 
 type Data = {
@@ -58,10 +51,6 @@ export default async function handler(
 
     // Process the change
     await quickpayHandleChange(db, JSON.parse(body));
-
-    // Process new donations that just happened
-    await charge();
-    await sendNewEmails();
 
     res.status(200).json({ message: "OK" });
   } catch (err) {
