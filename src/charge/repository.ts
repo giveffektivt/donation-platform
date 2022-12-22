@@ -64,7 +64,8 @@ export async function insertChargesForDonationsToCreateCharges(
 export async function getChargesToCharge(
   client: PoolClient
 ): Promise<ChargeToCharge[]> {
-  return (await client.query(`select * from charges_to_charge`)).rows;
+  return (await client.query(`select * from charges_to_charge for update`))
+    .rows;
 }
 
 export async function setChargeStatus(

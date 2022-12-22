@@ -14,6 +14,7 @@ declare global {
       SUCCESS_URL: string;
       SUCCESS_URL_MEMBERSHIP_ONLY: string;
       URL: string;
+      CRON_API_KEY: string;
     }
   }
 }

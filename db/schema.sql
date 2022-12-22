@@ -381,7 +381,7 @@ CREATE VIEW giveffektivt.donor_with_sensitive_info AS
 --
 
 CREATE VIEW giveffektivt.donations_to_email AS
- SELECT DISTINCT ON (d.id) d.id,
+ SELECT d.id,
     p.email,
     d.amount,
     d.recipient,
@@ -389,9 +389,13 @@ CREATE VIEW giveffektivt.donations_to_email AS
     d.tax_deductible
    FROM ((giveffektivt.donor_with_sensitive_info p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((d.emailed = 'no'::giveffektivt.emailed_status) AND ((c.status = 'charged'::giveffektivt.charge_status) OR ((d.method = 'MobilePay'::giveffektivt.payment_method) AND (d.frequency <> 'once'::giveffektivt.donation_frequency) AND (c.status <> 'error'::giveffektivt.charge_status))))
-  ORDER BY d.id, c.created_at DESC;
+     JOIN LATERAL ( SELECT charge.id,
+            charge.status
+           FROM giveffektivt.charge
+          WHERE (charge.donation_id = d.id)
+          ORDER BY charge.created_at DESC
+         LIMIT 1) c ON ((1 = 1)))
+  WHERE ((d.emailed = 'no'::giveffektivt.emailed_status) AND ((c.status = 'charged'::giveffektivt.charge_status) OR ((d.method = 'MobilePay'::giveffektivt.payment_method) AND (d.frequency <> 'once'::giveffektivt.donation_frequency) AND (c.status <> 'error'::giveffektivt.charge_status))));
 
 
 --
@@ -689,4 +693,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221219103355'),
     ('20221219110329'),
     ('20221220103725'),
-    ('20221221112039');
+    ('20221221112039'),
+    ('20221222112923');

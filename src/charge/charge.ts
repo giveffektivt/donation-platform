@@ -1,8 +1,7 @@
 import {
   ChargeToChargeQuickpay,
   ChargeToChargeScanpay,
-  dbClient,
-  dbRelease,
+  dbExecuteInTransaction,
   getChargesToCharge,
   PaymentGateway,
   quickpayChargeSubscription,
@@ -10,11 +9,7 @@ import {
 } from "src";
 
 export async function charge() {
-  let db = null;
-
-  try {
-    db = await dbClient();
-
+  dbExecuteInTransaction(async (db) => {
     for (let charge of await getChargesToCharge(db)) {
       try {
         switch (charge.gateway) {
@@ -37,7 +32,5 @@ export async function charge() {
         console.error(`Error charging ID '${charge.id}'`, err);
       }
     }
-  } finally {
-    dbRelease(db);
-  }
+  });
 }

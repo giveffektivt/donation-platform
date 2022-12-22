@@ -15,7 +15,8 @@ import {
 export async function getDonationsToEmail(
   client: PoolClient
 ): Promise<DonationToEmail[]> {
-  return (await client.query("select * from donations_to_email")).rows;
+  return (await client.query("select * from donations_to_email for update"))
+    .rows;
 }
 
 export async function setDonationEmailed(

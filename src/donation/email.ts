@@ -3,8 +3,7 @@ import juice from "juice";
 import path from "path";
 import {
   BankTransferInfo,
-  dbClient,
-  dbRelease,
+  dbExecuteInTransaction,
   DonationRecipient,
   DonationToEmail,
   EmailedStatus,
@@ -16,10 +15,7 @@ import {
 } from "src";
 
 export async function sendNewEmails() {
-  let db = null;
-
-  try {
-    db = await dbClient();
+  await dbExecuteInTransaction(async (db) => {
     const donationsToEmail = await getDonationsToEmail(db);
     if (donationsToEmail.length < 1) {
       return;
@@ -42,9 +38,7 @@ export async function sendNewEmails() {
         console.error(`Error sending email for ID "${donation.id}":`, err);
       }
     }
-  } finally {
-    dbRelease(db);
-  }
+  });
 }
 
 export async function sendMembershipEmail(
