@@ -58,7 +58,8 @@ test("One-time donation using bank transfer", async () => {
       tax_deductible: false,
     },
   ]);
-  expect(donations[0].gateway_metadata.bank_msg).toHaveLength(4);
+  expect(donations[0].gateway_metadata.bank_msg).toHaveLength(6);
+  expect(donations[0].gateway_metadata.bank_msg).toMatch(/^d-[a-z0-9]{4}$/);
 
   const charges = await findAllCharges(db);
   expect(charges).toHaveLength(0);
@@ -100,7 +101,8 @@ test("Monthly donation using bank transfer", async () => {
       tax_deductible: false,
     },
   ]);
-  expect(donations[0].gateway_metadata.bank_msg).toHaveLength(4);
+  expect(donations[0].gateway_metadata.bank_msg).toHaveLength(6);
+  expect(donations[0].gateway_metadata.bank_msg).toMatch(/^d-[a-z0-9]{4}$/);
 
   const charges = await findAllCharges(db);
   expect(charges).toHaveLength(0);
