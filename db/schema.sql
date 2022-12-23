@@ -69,6 +69,30 @@ CREATE TYPE giveffektivt.emailed_status AS ENUM (
 
 
 --
+-- Name: gavebrev_status; Type: TYPE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TYPE giveffektivt.gavebrev_status AS ENUM (
+    'created',
+    'rejected',
+    'active',
+    'cancelled',
+    'completed',
+    'error'
+);
+
+
+--
+-- Name: gavebrev_type; Type: TYPE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TYPE giveffektivt.gavebrev_type AS ENUM (
+    'percentage',
+    'amount'
+);
+
+
+--
 -- Name: payment_gateway; Type: TYPE; Schema: giveffektivt; Owner: -
 --
 
@@ -169,7 +193,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE giveffektivt._charge (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    donation_id uuid,
+    donation_id uuid NOT NULL,
     short_id text DEFAULT giveffektivt.gen_short_id('_charge'::text, 'short_id'::text) NOT NULL,
     status giveffektivt.charge_status NOT NULL,
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -186,7 +210,7 @@ CREATE TABLE giveffektivt._charge (
 
 CREATE TABLE giveffektivt._donation (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    donor_id uuid,
+    donor_id uuid NOT NULL,
     emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status NOT NULL,
     amount numeric NOT NULL,
     recipient giveffektivt.donation_recipient NOT NULL,
@@ -221,6 +245,25 @@ CREATE TABLE giveffektivt._donor (
     _old_id integer,
     country text,
     birthday date
+);
+
+
+--
+-- Name: _gavebrev; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt._gavebrev (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    donor_id uuid NOT NULL,
+    status giveffektivt.gavebrev_status NOT NULL,
+    type giveffektivt.gavebrev_type NOT NULL,
+    amount numeric NOT NULL,
+    minimal_income numeric,
+    cancelled boolean DEFAULT false NOT NULL,
+    started_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
 );
 
 
@@ -423,6 +466,25 @@ CREATE TABLE giveffektivt.gateway_webhook (
 
 
 --
+-- Name: gavebrev; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.gavebrev AS
+ SELECT _gavebrev.id,
+    _gavebrev.donor_id,
+    _gavebrev.status,
+    _gavebrev.type,
+    _gavebrev.amount,
+    _gavebrev.minimal_income,
+    _gavebrev.cancelled,
+    _gavebrev.started_at,
+    _gavebrev.created_at,
+    _gavebrev.updated_at
+   FROM giveffektivt._gavebrev
+  WHERE (_gavebrev.deleted_at IS NULL);
+
+
+--
 -- Name: kpi; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -558,6 +620,14 @@ ALTER TABLE ONLY giveffektivt._donor
 
 
 --
+-- Name: _gavebrev _gavebrev_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._gavebrev
+    ADD CONSTRAINT _gavebrev_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: gateway_webhook gateway_webhook_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -629,6 +699,25 @@ CREATE RULE donor_soft_delete_cascade AS
 
 
 --
+-- Name: _donor donor_soft_delete_cascade_gavebrev; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE donor_soft_delete_cascade_gavebrev AS
+    ON UPDATE TO giveffektivt._donor
+   WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._gavebrev SET deleted_at = now()
+  WHERE ((_gavebrev.deleted_at IS NULL) AND (_gavebrev.donor_id = old.id));
+
+
+--
+-- Name: gavebrev gavebrev_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE gavebrev_soft_delete AS
+    ON DELETE TO giveffektivt.gavebrev DO INSTEAD  UPDATE giveffektivt._gavebrev SET deleted_at = now()
+  WHERE ((_gavebrev.deleted_at IS NULL) AND (_gavebrev.id = old.id));
+
+
+--
 -- Name: _charge charge_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
@@ -650,6 +739,13 @@ CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt._donor FOR E
 
 
 --
+-- Name: _gavebrev gavebrev_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER gavebrev_update_timestamp BEFORE UPDATE ON giveffektivt._gavebrev FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
 -- Name: _charge _charge_donation_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -663,6 +759,14 @@ ALTER TABLE ONLY giveffektivt._charge
 
 ALTER TABLE ONLY giveffektivt._donation
     ADD CONSTRAINT _donation_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
+
+
+--
+-- Name: _gavebrev _gavebrev_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._gavebrev
+    ADD CONSTRAINT _gavebrev_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
 
 
 --
@@ -694,4 +798,6 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221219110329'),
     ('20221220103725'),
     ('20221221112039'),
-    ('20221222112923');
+    ('20221222112923'),
+    ('20221223214535'),
+    ('20221223230405');

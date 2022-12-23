@@ -6,6 +6,7 @@ import {
   DonationWithGatewayInfoQuickpay,
   DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
+  Gavebrev,
 } from "../src";
 import {
   DonationWithGatewayInfoAny,
@@ -73,6 +74,12 @@ export async function findAllDonors(
   client: PoolClient
 ): Promise<DonorWithSensitiveInfo[]> {
   return (await client.query(`select * from donor_with_sensitive_info`)).rows;
+}
+
+export async function findAllGavebrevs(
+  client: PoolClient
+): Promise<Gavebrev[]> {
+  return (await client.query(`select * from gavebrev`)).rows;
 }
 
 export async function findAllDonations(

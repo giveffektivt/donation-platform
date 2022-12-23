@@ -4,6 +4,7 @@ export * from "./donation";
 export * from "./donor";
 export * from "./email";
 export * from "./gateways";
+export * from "./gavebrev";
 export * from "./helpers";
 export * from "./kpi";
 export * from "./types";
