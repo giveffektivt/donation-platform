@@ -116,5 +116,6 @@ grant select on gavebrev to reader;
 grant insert, update, delete on gavebrev to writer;
 
 -- access to short_id field on _charge to be able to insert with default value
--- grant select (short_id) on _gavebrev to writer;
+grant select (short_id) on _gavebrev to writer;
+
 -- migrate:down
