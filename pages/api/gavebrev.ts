@@ -9,6 +9,7 @@ import * as yup from "yup";
 type Data = {
   message: string;
   agreementId?: string;
+  errors?: object;
 };
 
 export default async function handler(
@@ -29,14 +30,24 @@ export default async function handler(
     if (
       req.headers.authorization !== `Bearer ${process.env.GAVEBREV_API_KEY}`
     ) {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    let submitData: SubmitDataGavebrev = await yup
-      .object()
-      .shape(validationSchemaGavebrev)
-      .validate(req.body);
+    let submitData: SubmitDataGavebrev | null = null;
+    try {
+      submitData = await yup
+        .object()
+        .shape(validationSchemaGavebrev)
+        .validate(req.body);
+    } catch (err) {
+      if (err instanceof yup.ValidationError) {
+        return res
+          .status(400)
+          .json({ message: "Validation failed", errors: err.errors });
+      } else {
+        throw err;
+      }
+    }
 
     const agreementId = await processGavebrev(submitData);
 
@@ -45,7 +56,7 @@ export default async function handler(
       agreementId,
     });
   } catch (err) {
-    console.error("api/donation:", err);
+    console.error("api/gavebrev:", err);
     res.status(500).json({ message: "Something went wrong" });
   }
 }
