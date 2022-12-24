@@ -2,7 +2,19 @@
 --
 -- 1. Add support for gavebrev.
 -- 2. Allow optional prefix for randomly generated short IDs, to distinguish regular and gavebrev bank transfers.
+-- 3. Add d- prefix to the existing bank transfers.
 --
+------------------------------------------------------------
+-- Add d- prefix to the existing bank transfers.
+update
+    donation_with_gateway_info
+set
+    gateway_metadata = jsonb_set(gateway_metadata::jsonb, '{bank_msg}', to_jsonb ('d-' || (gateway_metadata ->> 'bank_msg')))
+where
+    gateway_metadata ->> 'bank_msg' is not null;
+
+------------------------------------------------------------
+-- Recreate gen_short_id function to allow for the optional prefix
 alter table _charge
     alter column short_id drop default;
 
@@ -44,6 +56,8 @@ $$;
 alter table _charge
     alter column short_id set default gen_short_id ('_charge', 'short_id');
 
+------------------------------------------------------------
+-- Create gavebrev table and view
 create type gavebrev_type as enum (
     'percentage',
     'amount'
