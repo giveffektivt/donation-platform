@@ -17,3 +17,13 @@ export type SubmitDataMembership = {
   postcode: string;
   city: string;
 };
+
+export type SubmitDataGavebrev = {
+  name: string;
+  tin: string;
+  email: string;
+  startYear: number;
+  type: string;
+  amount: number;
+  minimalIncome?: number;
+};
