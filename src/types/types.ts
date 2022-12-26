@@ -23,7 +23,7 @@ export type SubmitDataGavebrev = {
   tin: string;
   email: string;
   startYear: number;
-  type: string;
-  amount: number;
+  amount?: number;
+  percentage?: number;
   minimalIncome?: number;
 };

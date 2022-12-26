@@ -37,7 +37,11 @@ export default async function handler(
     try {
       submitData = await yup
         .object()
-        .shape(validationSchemaGavebrev)
+        .shape(validationSchemaGavebrev, [
+          ["percentageOrAmount", "percentage"],
+          ["percentageOrAmount", "amount"],
+          ["percentage", "amount"],
+        ])
         .validate(req.body);
     } catch (err) {
       if (err instanceof yup.ValidationError) {

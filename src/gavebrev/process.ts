@@ -2,9 +2,9 @@ import { PoolClient } from "pg";
 import {
   dbExecuteInTransaction,
   Gavebrev,
+  GavebrevType,
   insertDonorWithSensitiveInfo,
   insertGavebrev,
-  parseGavebrevType,
   SubmitDataGavebrev,
 } from "src";
 
@@ -29,8 +29,8 @@ export async function insertGavebrevData(
 
   const gavebrev = await insertGavebrev(db, {
     donor_id: donor.id,
-    type: parseGavebrevType(submitData.type),
-    amount: submitData.amount,
+    type: submitData.percentage ? GavebrevType.Percentage : GavebrevType.Amount,
+    amount: submitData.percentage || submitData.amount,
     minimal_income: submitData.minimalIncome,
     started_at: new Date(Date.UTC(submitData.startYear, 0, 1)),
   });

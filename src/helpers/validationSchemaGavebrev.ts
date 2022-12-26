@@ -1,5 +1,4 @@
 import moment from "moment";
-import { GavebrevType } from "src/gavebrev/types";
 import * as yup from "yup";
 
 export const validationSchemaGavebrev = {
@@ -22,15 +21,28 @@ export const validationSchemaGavebrev = {
     .min(moment().year(), "Start år kan ikke være i fortiden")
     .integer("Skriv et heltal")
     .typeError("Skriv et heltal"),
-  type: yup
-    .string()
-    .required("Gavebrev type skal udfyldes")
-    .oneOf([GavebrevType.Percentage, GavebrevType.Amount]),
-  amount: yup
+  percentage: yup
     .number()
-    .required("Gavebrev størrelse skal udfyldes")
-    .min(1, "Mindst 1 kr. eller 1%")
+    .min(1, "Mindst 1%")
+    .max(100, "Mest 100%")
     .integer("Skriv et heltal")
     .typeError("Skriv et heltal"),
+  amount: yup
+    .number()
+    .min(1, "Mindst 1 kr.")
+    .integer("Skriv et heltal")
+    .typeError("Skriv et heltal"),
+  eitherPercentageOrAmount: yup.bool().when(["percentage", "amount"], {
+    is: (percentage: number, amount: number) => !percentage && !amount,
+    then: (schema) =>
+      schema.required("Enten `percentage` eller `amount` skal udfyldes"),
+    otherwise: (schema) => schema,
+  }),
+  onlyPercentageOrAmount: yup.bool().when(["percentage", "amount"], {
+    is: (percentage: number, amount: number) => percentage && amount,
+    then: (schema) =>
+      schema.required("Kun `percentage` eller `amount` skal udfyldes"),
+    otherwise: (schema) => schema,
+  }),
   minimalIncome: yup.number().min(0),
 };
