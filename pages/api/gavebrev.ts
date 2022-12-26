@@ -9,7 +9,6 @@ import * as yup from "yup";
 type Data = {
   message: string;
   agreementId?: string;
-  agreementIdQR?: string;
   errors?: object;
 };
 
@@ -55,12 +54,10 @@ export default async function handler(
     }
 
     const agreementId = await processGavebrev(submitData);
-    const agreementIdQR = `https://quickchart.io/qr?text=${agreementId}&dark=921233&margin=0&size=150&format=svg`;
 
     res.status(200).json({
       message: "OK",
       agreementId,
-      agreementIdQR,
     });
   } catch (err) {
     console.error("api/gavebrev:", err);
