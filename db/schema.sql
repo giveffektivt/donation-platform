@@ -122,17 +122,16 @@ $$;
 
 
 --
--- Name: gen_short_id(text, text, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: gen_short_id(text, text, integer, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.gen_short_id(table_name text, column_name text, prefix text DEFAULT ''::text) RETURNS text
+CREATE FUNCTION giveffektivt.gen_short_id(table_name text, column_name text, min_length integer DEFAULT 4, chars text DEFAULT '23456789abcdefghjkmnpqrstuvwxyz'::text) RETURNS text
     LANGUAGE plpgsql STRICT
     AS $_$
 declare
     random_id text;
     temp text;
-    current_len int4 := 4;
-    chars text := '23456789abcdefghjkmnpqrstuvwxyz';
+    current_len int4 := min_length;
     sql text;
     advisory_1 int4 := hashtext(format('%I:%I', table_name, column_name));
     advisory_2 int4;
@@ -140,7 +139,7 @@ declare
 begin
     sql := format('select %s from giveffektivt.%I where %s = $1', column_name, table_name, column_name);
     loop
-        random_id := prefix || gen_random_string (current_len, chars);
+        random_id := gen_random_string (current_len, chars);
         advisory_2 := hashtext(random_id);
         advisory_ok := pg_try_advisory_xact_lock(advisory_1, advisory_2);
         if advisory_ok then
@@ -242,7 +241,6 @@ CREATE TABLE giveffektivt._donor (
 CREATE TABLE giveffektivt._gavebrev (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     donor_id uuid NOT NULL,
-    short_id text DEFAULT giveffektivt.gen_short_id('_gavebrev'::text, 'short_id'::text, 'f-'::text) NOT NULL,
     type giveffektivt.gavebrev_type NOT NULL,
     amount numeric NOT NULL,
     minimal_income numeric,
@@ -459,7 +457,6 @@ CREATE TABLE giveffektivt.gateway_webhook (
 CREATE VIEW giveffektivt.gavebrev AS
  SELECT _gavebrev.id,
     _gavebrev.donor_id,
-    _gavebrev.short_id,
     _gavebrev.type,
     _gavebrev.amount,
     _gavebrev.minimal_income,
@@ -612,14 +609,6 @@ ALTER TABLE ONLY giveffektivt._donor
 
 ALTER TABLE ONLY giveffektivt._gavebrev
     ADD CONSTRAINT _gavebrev_pkey PRIMARY KEY (id);
-
-
---
--- Name: _gavebrev _gavebrev_short_id_key; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt._gavebrev
-    ADD CONSTRAINT _gavebrev_short_id_key UNIQUE (short_id);
 
 
 --

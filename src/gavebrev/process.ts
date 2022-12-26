@@ -14,7 +14,7 @@ export async function processGavebrev(
   const gavebrev = await dbExecuteInTransaction(
     async (db) => await insertGavebrevData(db, submitData)
   );
-  return gavebrev.short_id;
+  return gavebrev.id;
 }
 
 export async function insertGavebrevData(

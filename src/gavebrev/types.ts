@@ -6,7 +6,6 @@ export enum GavebrevType {
 export type Gavebrev = {
   id: string;
   donor_id: string;
-  short_id: string;
   type: GavebrevType;
   amount: number;
   minimal_income: number;

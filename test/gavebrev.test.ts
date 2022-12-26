@@ -31,7 +31,6 @@ test("Create a Gavebrev of amount type without minimal income", async () => {
     tin: "111111-1111",
     email: "hello@example.com",
     startYear: 2030,
-    type: GavebrevType.Amount,
     amount: 100,
   });
 
@@ -54,8 +53,6 @@ test("Create a Gavebrev of amount type without minimal income", async () => {
       type: GavebrevType.Amount,
     },
   ]);
-  expect(gavebrevs[0].short_id).toHaveLength(6);
-  expect(gavebrevs[0].short_id).toMatch(/^f-[a-z0-9]{4}$/);
 
   const donations = await findAllDonations(db);
   expect(donations).toHaveLength(0);
@@ -72,8 +69,7 @@ test("Create a Gavebrev of percentage type with minimal income", async () => {
     tin: "111111-1111",
     email: "hello@example.com",
     startYear: 2030,
-    type: GavebrevType.Percentage,
-    amount: 10,
+    percentage: 10,
     minimalIncome: 200,
   });
 
