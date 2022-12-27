@@ -1,4 +1,5 @@
 import moment from "moment";
+import { GavebrevStatus } from "src/gavebrev/types";
 import * as yup from "yup";
 
 export const validationSchemaGavebrev = {
@@ -45,4 +46,12 @@ export const validationSchemaGavebrev = {
     otherwise: (schema) => schema,
   }),
   minimalIncome: yup.number().min(0),
+};
+
+export const validationSchemaGavebrevStatus = {
+  id: yup.string().required("ID skal udfyldes"),
+  status: yup
+    .string()
+    .required("Status skal udfyldes")
+    .oneOf([GavebrevStatus.Active, GavebrevStatus.Rejected]),
 };

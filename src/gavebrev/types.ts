@@ -1,3 +1,12 @@
+export enum GavebrevStatus {
+  Created = "created",
+  Rejected = "rejected",
+  Active = "active",
+  Cancelled = "cancelled",
+  Completed = "completed",
+  Error = "error",
+}
+
 export enum GavebrevType {
   Percentage = "percentage",
   Amount = "amount",
@@ -6,6 +15,7 @@ export enum GavebrevType {
 export type Gavebrev = {
   id: string;
   donor_id: string;
+  status: GavebrevStatus;
   type: GavebrevType;
   amount: number;
   minimal_income: number;

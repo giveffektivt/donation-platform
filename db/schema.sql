@@ -69,6 +69,20 @@ CREATE TYPE giveffektivt.emailed_status AS ENUM (
 
 
 --
+-- Name: gavebrev_status; Type: TYPE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TYPE giveffektivt.gavebrev_status AS ENUM (
+    'created',
+    'rejected',
+    'active',
+    'cancelled',
+    'completed',
+    'error'
+);
+
+
+--
 -- Name: gavebrev_type; Type: TYPE; Schema: giveffektivt; Owner: -
 --
 
@@ -241,6 +255,7 @@ CREATE TABLE giveffektivt._donor (
 CREATE TABLE giveffektivt._gavebrev (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     donor_id uuid NOT NULL,
+    status giveffektivt.gavebrev_status NOT NULL,
     type giveffektivt.gavebrev_type NOT NULL,
     amount numeric NOT NULL,
     minimal_income numeric,
@@ -457,6 +472,7 @@ CREATE TABLE giveffektivt.gateway_webhook (
 CREATE VIEW giveffektivt.gavebrev AS
  SELECT _gavebrev.id,
     _gavebrev.donor_id,
+    _gavebrev.status,
     _gavebrev.type,
     _gavebrev.amount,
     _gavebrev.minimal_income,

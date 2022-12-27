@@ -27,3 +27,8 @@ export type SubmitDataGavebrev = {
   percentage?: number;
   minimalIncome?: number;
 };
+
+export type SubmitDataGavebrevStatus = {
+  id: string;
+  status: string;
+};

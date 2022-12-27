@@ -3,6 +3,7 @@ import {
   DonationRecipient,
   PaymentMethod,
 } from "src/donation/types";
+import { GavebrevStatus } from "src/gavebrev/types";
 
 export const parsePaymentMethod = (value: string) => {
   const parsed = value as PaymentMethod;
@@ -26,4 +27,12 @@ export const parseDonationRecipient = (value: string) => {
     return parsed;
   }
   throw new Error(`Unrecognized donation recipient: ${value}`);
+};
+
+export const parseGavebrevStatus = (value: string) => {
+  const parsed = value as GavebrevStatus;
+  if (Object.values(GavebrevStatus).includes(parsed)) {
+    return parsed;
+  }
+  throw new Error(`Unrecognized gavebrev status: ${value}`);
 };

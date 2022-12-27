@@ -7,9 +7,19 @@ create type gavebrev_type as enum (
     'amount'
 );
 
+create type gavebrev_status as enum (
+    'created', -- the agreement is created and sent to the donor
+    'rejected', -- donor rejected signing the agreement
+    'active', -- donor signed the agreement and it's now active
+    'cancelled', -- the agreement was cancelled before its completion date
+    'completed', -- the agreement is completed (by current laws, after 10 years)
+    'error' -- something went wrong
+);
+
 create table _gavebrev (
     id uuid primary key default gen_random_uuid (),
     donor_id uuid references _donor (id) not null,
+    status gavebrev_status not null,
     type gavebrev_type not null,
     amount numeric not null, -- defined by 'type' as either an absolute amount in kr. or a percentage of the annual income
     minimal_income numeric, -- optional lower bound for the annual income, before which the agreement doesn't have effect in the given year
@@ -24,6 +34,7 @@ create view gavebrev as
 select
     id,
     donor_id,
+    status,
     type,
     amount,
     minimal_income,
