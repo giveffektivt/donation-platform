@@ -57,11 +57,7 @@ async function handleCreateGavebrev(
   try {
     submitData = await yup
       .object()
-      .shape(validationSchemaGavebrev, [
-        ["percentageOrAmount", "percentage"],
-        ["percentageOrAmount", "amount"],
-        ["percentage", "amount"],
-      ])
+      .shape(validationSchemaGavebrev)
       .validate(req.body);
   } catch (err) {
     if (err instanceof yup.ValidationError) {
