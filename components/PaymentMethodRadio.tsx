@@ -113,7 +113,7 @@ export const PaymentMethodRadio = () => {
             <label htmlFor={bankTransferField.value}>
               <span>
                 Bankoverførsel{" "}
-                {shouldUseBankTransfer && "(anbefalet for højt beløb)"}
+                {shouldUseBankTransfer && "(anbefalet for større beløb)"}
               </span>
             </label>
             <div className="flx-center gap-5">
