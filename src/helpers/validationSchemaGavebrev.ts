@@ -5,14 +5,18 @@ import * as yup from "yup";
 export const validationSchemaGavebrev = {
   name: yup
     .string()
+    .trim()
     .required("Fuldt navn skal udfyldes")
     .max(320, "Højst 320 tegn"),
   tin: yup
     .string()
+    .trim()
     .required("CPR-nr. skal udfyldes")
     .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX"),
   email: yup
     .string()
+    .trim()
+    .lowercase()
     .required("Email skal udfyldes")
     .max(320, "Højst 320 tegn")
     .matches(/@/, "Email er ikke gyldig"),
@@ -44,9 +48,10 @@ export const validationSchemaGavebrev = {
 };
 
 export const validationSchemaGavebrevStatus = {
-  id: yup.string().required("ID skal udfyldes"),
+  id: yup.string().trim().required("ID skal udfyldes"),
   status: yup
     .string()
+    .trim()
     .required("Status skal udfyldes")
     .oneOf([GavebrevStatus.Active, GavebrevStatus.Rejected]),
 };
