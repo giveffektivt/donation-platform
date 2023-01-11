@@ -121,8 +121,11 @@ no-margin-top {
 .custom-back-link {
   cursor: pointer;
   display: inline;
-  border-bottom: 1px solid #747474;
-  line-height: 2.4rem;
+  border-bottom: none;
+}
+
+.checkout-list li + li {
+  margin-top: 0;
 }
 
 .flx-center {
