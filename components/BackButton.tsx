@@ -12,21 +12,17 @@ export const BackButton = ({
     useFormikContext<SubmitDataDonation>().values;
   return (
     <>
-      <div
-        className="form-group"
-        style={{ backgroundColor: "#b9b9b9", padding: "2px 17px 2px 17px" }}
-      >
+      <div className="form-group">
         <h5 style={{ marginTop: "15px" }}>
-          Kurv{" "}
           <span
             onClick={props.onClick}
-            className="custom-back-link"
+            className="back-link custom-back-link small-text"
             style={{ fontWeight: "normal" }}
           >
-            (redigér)
+            Tilbage
           </span>
         </h5>
-        <ul>
+        <ul className="nobullet-list small-text checkout-list">
           <li>
             {amount} kr. til {recipient}{" "}
             {frequency === DonationFrequency.Monthly && "(månedligt)"}
