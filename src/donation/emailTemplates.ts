@@ -18,7 +18,7 @@ export function paymentReceipt(
        <li>Besked til modtager: <b>d-${bank.msg}</b></li>`
     : "";
 
-  const text = `<li>${amount} DKK til <a href="https://giveffektivt.dk/bedste-organisationer/" target="_blank">${
+  const text = `<li>${amount} DKK til <a href="https://giveffektivt.dk/anbefalinger/" target="_blank">${
     donationPurpose[recipient as DonationRecipient]
   }</a>.</li>
   ${

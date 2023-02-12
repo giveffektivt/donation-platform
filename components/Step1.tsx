@@ -43,7 +43,7 @@ export const Step1 = () => {
           <>
             Hvad vil du støtte?
             <a
-              href="https://giveffektivt.dk/bedste-organisationer/"
+              href="https://giveffektivt.dk/anbefalinger/"
               target="_blank"
               rel="noreferrer"
               className="icon-clickable"
