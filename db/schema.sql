@@ -75,9 +75,7 @@ CREATE TYPE giveffektivt.emailed_status AS ENUM (
 CREATE TYPE giveffektivt.gavebrev_status AS ENUM (
     'created',
     'rejected',
-    'active',
-    'cancelled',
-    'completed',
+    'signed',
     'error'
 );
 
@@ -259,8 +257,47 @@ CREATE TABLE giveffektivt._gavebrev (
     type giveffektivt.gavebrev_type NOT NULL,
     amount numeric NOT NULL,
     minimal_income numeric,
-    cancelled boolean DEFAULT false NOT NULL,
     started_at timestamp with time zone NOT NULL,
+    stopped_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
+);
+
+
+--
+-- Name: _gavebrev_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt._gavebrev_checkin (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    donor_id uuid NOT NULL,
+    year numeric NOT NULL,
+    income_inferred numeric,
+    income_preliminary numeric,
+    income_verified numeric,
+    maximize_tax_deduction boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
+);
+
+
+--
+-- Name: _skat; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt._skat (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    const numeric NOT NULL,
+    ge_cvr numeric NOT NULL,
+    donor_cpr text NOT NULL,
+    year numeric NOT NULL,
+    blank text NOT NULL,
+    total numeric NOT NULL,
+    ll8a_or_gavebrev text NOT NULL,
+    ge_notes text NOT NULL,
+    rettekode numeric NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone
@@ -333,15 +370,15 @@ CREATE VIEW giveffektivt.annual_email_report AS
             date_trunc('year'::text, (now() + '3 mons'::interval)) AS year_to
         ), data AS (
          SELECT p.tin,
-            lower(p.email) AS email,
+            p.email,
             d.tax_deductible,
             sum(d.amount) AS total
            FROM (((const
              CROSS JOIN giveffektivt.donor_with_sensitive_info p)
              LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
              LEFT JOIN giveffektivt.charge c_1 ON ((d.id = c_1.donation_id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND ((c_1.created_at >= const.year_from) AND (c_1.created_at <= const.year_to)))
-          GROUP BY p.tin, (lower(p.email)), d.tax_deductible
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+          GROUP BY p.tin, p.email, d.tax_deductible
         ), with_tax AS (
          SELECT data.tin,
             data.email,
@@ -376,6 +413,47 @@ CREATE VIEW giveffektivt.annual_email_report AS
 
 
 --
+-- Name: annual_tax_report_const; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_const AS
+ SELECT date_trunc('year'::text, (now() - '9 mons'::interval)) AS year_from,
+    date_trunc('year'::text, (now() + '3 mons'::interval)) AS year_to;
+
+
+--
+-- Name: annual_tax_report_current_payments; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
+ SELECT p.tin,
+    round(sum(d.amount)) AS total,
+    min(EXTRACT(year FROM c.created_at)) AS year
+   FROM (((giveffektivt.annual_tax_report_const
+     CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND d.tax_deductible)
+  GROUP BY p.tin;
+
+
+--
+-- Name: annual_tax_report_gavebrev_all_payments; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
+ SELECT p.tin,
+    EXTRACT(year FROM c.created_at) AS year,
+    round(sum(d.amount)) AS actual_total
+   FROM (((giveffektivt.annual_tax_report_const
+     CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at < annual_tax_report_const.year_to) AND d.tax_deductible)
+  GROUP BY p.tin, (EXTRACT(year FROM c.created_at));
+
+
+--
 -- Name: gavebrev; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -386,8 +464,8 @@ CREATE VIEW giveffektivt.gavebrev AS
     _gavebrev.type,
     _gavebrev.amount,
     _gavebrev.minimal_income,
-    _gavebrev.cancelled,
     _gavebrev.started_at,
+    _gavebrev.stopped_at,
     _gavebrev.created_at,
     _gavebrev.updated_at
    FROM giveffektivt._gavebrev
@@ -395,38 +473,209 @@ CREATE VIEW giveffektivt.gavebrev AS
 
 
 --
+-- Name: annual_tax_report_gavebrev_since; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_gavebrev_since AS
+ SELECT a.donor_id,
+    b.tin,
+    a.gavebrev_start
+   FROM (LATERAL ( SELECT gavebrev.donor_id,
+            min(EXTRACT(year FROM gavebrev.started_at)) AS gavebrev_start
+           FROM giveffektivt.annual_tax_report_const,
+            giveffektivt.gavebrev
+          WHERE (COALESCE(gavebrev.stopped_at, now()) > annual_tax_report_const.year_from)
+          GROUP BY gavebrev.donor_id) a
+     CROSS JOIN LATERAL ( SELECT p.tin
+           FROM giveffektivt.donor_with_sensitive_info p
+          WHERE (p.id = a.donor_id)
+         LIMIT 1) b);
+
+
+--
+-- Name: gavebrev_checkin; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.gavebrev_checkin AS
+ SELECT _gavebrev_checkin.id,
+    _gavebrev_checkin.donor_id,
+    _gavebrev_checkin.year,
+    _gavebrev_checkin.income_inferred,
+    _gavebrev_checkin.income_preliminary,
+    _gavebrev_checkin.income_verified,
+    _gavebrev_checkin.maximize_tax_deduction,
+    _gavebrev_checkin.created_at,
+    _gavebrev_checkin.updated_at
+   FROM giveffektivt._gavebrev_checkin
+  WHERE (_gavebrev_checkin.deleted_at IS NULL);
+
+
+--
+-- Name: annual_tax_report_gavebrev_checkins; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_gavebrev_checkins AS
+ SELECT g.tin,
+    y.y AS year,
+    COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric) AS income,
+    COALESCE(c.maximize_tax_deduction, false) AS maximize_tax_deduction
+   FROM (((giveffektivt.annual_tax_report_const
+     CROSS JOIN giveffektivt.annual_tax_report_gavebrev_since g)
+     CROSS JOIN LATERAL generate_series(g.gavebrev_start, (EXTRACT(year FROM annual_tax_report_const.year_to) - (1)::numeric)) y(y))
+     LEFT JOIN giveffektivt.gavebrev_checkin c ON (((c.year = y.y) AND (c.donor_id = g.donor_id))));
+
+
+--
+-- Name: annual_tax_report_gavebrev_expected_totals; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
+ SELECT c.tin,
+    c.year,
+    c.income,
+    c.maximize_tax_deduction,
+    round(sum(
+        CASE
+            WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
+            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, ((((c.income > COALESCE(g.minimal_income, (0)::numeric)))::integer)::numeric * g.amount))
+            ELSE NULL::numeric
+        END)) AS expected_total
+   FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
+     JOIN giveffektivt.donor_with_sensitive_info p ON ((p.tin = c.tin)))
+     JOIN giveffektivt.gavebrev g ON (((g.donor_id = p.id) AND (EXTRACT(year FROM g.started_at) <= c.year))))
+  GROUP BY c.tin, c.year, c.income, c.maximize_tax_deduction;
+
+
+--
+-- Name: max_tax_deduction; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.max_tax_deduction (
+    year numeric NOT NULL,
+    value numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: annual_tax_report_gavebrev_results; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_gavebrev_results AS
+ WITH RECURSIVE data AS (
+         SELECT DISTINCT ON (get.tin) get.tin,
+            get.year,
+            a.can_be_reported_this_year,
+            get.expected_total,
+            gap.actual_total,
+            c.non_gavebrev_total,
+            b.gavebrev_total AS result,
+            ((gap.actual_total - get.expected_total) - c.non_gavebrev_total) AS aconto_debt
+           FROM (((((giveffektivt.annual_tax_report_gavebrev_expected_totals get
+             JOIN giveffektivt.annual_tax_report_gavebrev_all_payments gap ON (((gap.tin = get.tin) AND (gap.year = get.year))))
+             LEFT JOIN giveffektivt.max_tax_deduction m ON ((m.year = get.year)))
+             CROSS JOIN LATERAL ( SELECT get.expected_total AS can_be_reported_this_year) a)
+             CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
+                    LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
+             CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
+        UNION ALL
+         SELECT get.tin,
+            get.year,
+            a.can_be_reported_this_year,
+            get.expected_total,
+            gap.actual_total,
+            c.non_gavebrev_total,
+            b.gavebrev_total AS result,
+            (((gap.actual_total - get.expected_total) - c.non_gavebrev_total) + LEAST((0)::numeric, data_1.aconto_debt)) AS aconto_debt
+           FROM ((((((giveffektivt.annual_tax_report_gavebrev_expected_totals get
+             JOIN data data_1 ON (((data_1.tin = get.tin) AND (data_1.year = (get.year - (1)::numeric)))))
+             JOIN giveffektivt.annual_tax_report_gavebrev_all_payments gap ON (((gap.tin = get.tin) AND (gap.year = get.year))))
+             LEFT JOIN giveffektivt.max_tax_deduction m ON ((m.year = get.year)))
+             CROSS JOIN LATERAL ( SELECT GREATEST((0)::numeric, (get.expected_total - data_1.aconto_debt)) AS can_be_reported_this_year) a)
+             CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
+                    LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
+             CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
+        )
+ SELECT data.tin,
+    data.year,
+    data.can_be_reported_this_year,
+    data.expected_total,
+    data.actual_total,
+    data.non_gavebrev_total,
+    data.result,
+    data.aconto_debt
+   FROM data;
+
+
+--
+-- Name: annual_tax_report_data; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_data AS
+ WITH with_gavebrev AS (
+         SELECT DISTINCT ON (gr.tin) 'L'::text AS ll8a_or_gavebrev,
+            gr.tin,
+            gr.result AS total,
+            gr.aconto_debt,
+            gr.year
+           FROM giveffektivt.annual_tax_report_gavebrev_results gr
+          ORDER BY gr.tin, gr.year DESC
+        ), gavebrev_current_non_gavebrev_total AS (
+         SELECT DISTINCT ON (gr.tin) gr.tin,
+            gr.year,
+            gr.non_gavebrev_total
+           FROM giveffektivt.annual_tax_report_gavebrev_results gr
+          ORDER BY gr.tin, gr.year DESC
+        ), without_gavebrev AS (
+         SELECT 'A'::text AS ll8a_or_gavebrev,
+            d.tin,
+            COALESCE(gr.non_gavebrev_total, d.total) AS total,
+            0 AS aconto_debt,
+            d.year
+           FROM (giveffektivt.annual_tax_report_current_payments d
+             LEFT JOIN gavebrev_current_non_gavebrev_total gr ON ((gr.tin = d.tin)))
+        ), data AS (
+         SELECT with_gavebrev.ll8a_or_gavebrev,
+            with_gavebrev.tin,
+            with_gavebrev.total,
+            with_gavebrev.aconto_debt,
+            with_gavebrev.year
+           FROM with_gavebrev
+        UNION
+         SELECT without_gavebrev.ll8a_or_gavebrev,
+            without_gavebrev.tin,
+            without_gavebrev.total,
+            without_gavebrev.aconto_debt,
+            without_gavebrev.year
+           FROM without_gavebrev
+        )
+ SELECT data.ll8a_or_gavebrev,
+    data.tin,
+    data.total,
+    data.aconto_debt,
+    data.year
+   FROM data
+  WHERE ((data.total > (0)::numeric) OR (data.aconto_debt > (0)::numeric))
+  ORDER BY data.tin, data.ll8a_or_gavebrev DESC;
+
+
+--
 -- Name: annual_tax_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
 CREATE VIEW giveffektivt.annual_tax_report AS
- WITH const AS (
-         SELECT date_trunc('year'::text, (now() - '9 mons'::interval)) AS year_from,
-            date_trunc('year'::text, (now() + '3 mons'::interval)) AS year_to
-        )
  SELECT 2262 AS const,
     42490903 AS ge_cvr,
-    replace(p.tin, '-'::text, ''::text) AS donor_cpr,
-    EXTRACT(year FROM min(c.created_at)) AS year,
+    replace(annual_tax_report_data.tin, '-'::text, ''::text) AS donor_cpr,
+    annual_tax_report_data.year,
     ''::text AS blank,
-    round(sum(d.amount)) AS total,
-        CASE
-            WHEN (min(g.amount) IS NOT NULL) THEN 'A'::text
-            ELSE 'L'::text
-        END AS ll8a_or_gavebrev,
+    annual_tax_report_data.total,
+    annual_tax_report_data.ll8a_or_gavebrev,
     ''::text AS ge_notes,
     0 AS rettekode
-   FROM ((((const
-     CROSS JOIN giveffektivt.donor_with_sensitive_info p)
-     LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-     LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-     LEFT JOIN giveffektivt.gavebrev g ON ((p.id = g.donor_id)))
-  WHERE (((g.started_at <= const.year_from) AND (NOT g.cancelled)) OR ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND ((c.created_at >= const.year_from) AND (c.created_at <= const.year_to)) AND d.tax_deductible))
-  GROUP BY p.tin
-  ORDER BY
-        CASE
-            WHEN (min(g.amount) IS NOT NULL) THEN 'A'::text
-            ELSE 'L'::text
-        END, (replace(p.tin, '-'::text, ''::text));
+   FROM giveffektivt.annual_tax_report_data
+  WHERE (annual_tax_report_data.total > (0)::numeric);
 
 
 --
@@ -572,6 +821,24 @@ CREATE TABLE giveffektivt.gateway_webhook (
 
 
 --
+-- Name: gavebrev_checkins_to_create; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
+ SELECT s.donor_id,
+    s.year,
+    s.income_inferred
+   FROM ( SELECT DISTINCT ON (c.donor_id) c.donor_id,
+            (c.year + (1)::numeric) AS year,
+            COALESCE(c.income_verified, COALESCE(c.income_preliminary, c.income_inferred)) AS income_inferred
+           FROM (giveffektivt.gavebrev_checkin c
+             JOIN giveffektivt.gavebrev g ON ((g.donor_id = c.donor_id)))
+          WHERE ((g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.stopped_at >= now()))
+          ORDER BY c.donor_id, c.year DESC) s
+  WHERE ((s.year)::double precision <= date_part('year'::text, now()));
+
+
+--
 -- Name: kpi; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -657,6 +924,27 @@ CREATE TABLE giveffektivt.schema_migrations (
 
 
 --
+-- Name: skat; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.skat AS
+ SELECT _skat.const,
+    _skat.ge_cvr,
+    _skat.donor_cpr,
+    _skat.year,
+    _skat.blank,
+    _skat.total,
+    _skat.ll8a_or_gavebrev,
+    _skat.ge_notes,
+    _skat.rettekode,
+    _skat.id,
+    _skat.created_at,
+    _skat.updated_at
+   FROM giveffektivt._skat
+  WHERE (_skat.deleted_at IS NULL);
+
+
+--
 -- Name: time_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -707,6 +995,14 @@ ALTER TABLE ONLY giveffektivt._donor
 
 
 --
+-- Name: _gavebrev_checkin _gavebrev_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._gavebrev_checkin
+    ADD CONSTRAINT _gavebrev_checkin_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: _gavebrev _gavebrev_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -715,11 +1011,27 @@ ALTER TABLE ONLY giveffektivt._gavebrev
 
 
 --
+-- Name: _skat _skat_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._skat
+    ADD CONSTRAINT _skat_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: gateway_webhook gateway_webhook_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
 ALTER TABLE ONLY giveffektivt.gateway_webhook
     ADD CONSTRAINT gateway_webhook_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: max_tax_deduction max_tax_deduction_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.max_tax_deduction
+    ADD CONSTRAINT max_tax_deduction_pkey PRIMARY KEY (year);
 
 
 --
@@ -796,12 +1108,40 @@ CREATE RULE donor_soft_delete_cascade_gavebrev AS
 
 
 --
+-- Name: _donor donor_soft_delete_cascade_gavebrev_checkin; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE donor_soft_delete_cascade_gavebrev_checkin AS
+    ON UPDATE TO giveffektivt._donor
+   WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._gavebrev_checkin SET deleted_at = now()
+  WHERE ((_gavebrev_checkin.deleted_at IS NULL) AND (_gavebrev_checkin.donor_id = old.id));
+
+
+--
+-- Name: gavebrev_checkin gavebrev_checkin_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE gavebrev_checkin_soft_delete AS
+    ON DELETE TO giveffektivt.gavebrev_checkin DO INSTEAD  UPDATE giveffektivt._gavebrev_checkin SET deleted_at = now()
+  WHERE ((_gavebrev_checkin.deleted_at IS NULL) AND (_gavebrev_checkin.id = old.id));
+
+
+--
 -- Name: gavebrev gavebrev_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
 --
 
 CREATE RULE gavebrev_soft_delete AS
     ON DELETE TO giveffektivt.gavebrev DO INSTEAD  UPDATE giveffektivt._gavebrev SET deleted_at = now()
   WHERE ((_gavebrev.deleted_at IS NULL) AND (_gavebrev.id = old.id));
+
+
+--
+-- Name: skat skat_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE skat_soft_delete AS
+    ON DELETE TO giveffektivt.skat DO INSTEAD  UPDATE giveffektivt._skat SET deleted_at = now()
+  WHERE ((_skat.deleted_at IS NULL) AND (_skat.id = old.id));
 
 
 --
@@ -826,10 +1166,31 @@ CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt._donor FOR E
 
 
 --
+-- Name: _gavebrev_checkin gavebrev_checkin_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER gavebrev_checkin_update_timestamp BEFORE UPDATE ON giveffektivt._gavebrev_checkin FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
 -- Name: _gavebrev gavebrev_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
 CREATE TRIGGER gavebrev_update_timestamp BEFORE UPDATE ON giveffektivt._gavebrev FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: max_tax_deduction max_tax_deduction_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER max_tax_deduction_update_timestamp BEFORE UPDATE ON giveffektivt.max_tax_deduction FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: _skat skat_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER skat_update_timestamp BEFORE UPDATE ON giveffektivt._skat FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
@@ -846,6 +1207,14 @@ ALTER TABLE ONLY giveffektivt._charge
 
 ALTER TABLE ONLY giveffektivt._donation
     ADD CONSTRAINT _donation_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
+
+
+--
+-- Name: _gavebrev_checkin _gavebrev_checkin_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._gavebrev_checkin
+    ADD CONSTRAINT _gavebrev_checkin_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
 
 
 --
@@ -887,5 +1256,8 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20221221112039'),
     ('20221222112923'),
     ('20221223214535'),
-    ('20221223230405'),
-    ('20230113004013');
+    ('20230402233801'),
+    ('20230402233802'),
+    ('20230402233803'),
+    ('20230402233804'),
+    ('20230402233805');

@@ -2,29 +2,27 @@
 --
 ------------------------------------------------------------
 -- Create gavebrev table and view
-create type gavebrev_type as enum (
+create type gavebrev_type as enum(
     'percentage',
     'amount'
 );
 
-create type gavebrev_status as enum (
+create type gavebrev_status as enum(
     'created', -- the agreement is created and sent to the donor
     'rejected', -- donor rejected signing the agreement
-    'active', -- donor signed the agreement and it's now active
-    'cancelled', -- the agreement was cancelled before its completion date
-    'completed', -- the agreement is completed (by current laws, after 10 years)
+    'signed', -- donor signed the agreement
     'error' -- something went wrong
 );
 
-create table _gavebrev (
-    id uuid primary key default gen_random_uuid (),
-    donor_id uuid references _donor (id) not null,
+create table _gavebrev(
+    id uuid primary key default gen_random_uuid(),
+    donor_id uuid references _donor(id) not null,
     status gavebrev_status not null,
     type gavebrev_type not null,
     amount numeric not null, -- defined by 'type' as either an absolute amount in kr. or a percentage of the annual income
     minimal_income numeric, -- optional lower bound for the annual income, before which the agreement doesn't have effect in the given year
-    cancelled boolean not null default (false), -- set manually: e.g. when donor asked to cancel the agreement
     started_at timestamptz not null, -- date (typically just year) when the agreement starts
+    stopped_at timestamptz not null, -- date (possibly just year) on which the agreement is considered expired or cancelled
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
     deleted_at timestamptz
@@ -38,8 +36,8 @@ select
     type,
     amount,
     minimal_income,
-    cancelled,
     started_at,
+    stopped_at,
     created_at,
     updated_at
 from
@@ -51,7 +49,7 @@ where
 -- Automatically maintain `updated_at`
 create trigger gavebrev_update_timestamp
     before update on _gavebrev for each row
-    execute procedure trigger_update_timestamp ();
+    execute procedure trigger_update_timestamp();
 
 ------------------------------------------------------------
 -- Soft-delete data using `deleted_at`

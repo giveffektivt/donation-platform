@@ -32,3 +32,7 @@ export type SubmitDataGavebrevStatus = {
   id: string;
   status: string;
 };
+
+export type SubmitDataGavebrevStop = {
+  id: string;
+};

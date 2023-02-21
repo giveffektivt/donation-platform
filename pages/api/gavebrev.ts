@@ -7,6 +7,9 @@ import {
   validationSchemaGavebrev,
   validationSchemaGavebrevStatus,
   listGavebrev,
+  SubmitDataGavebrevStop,
+  validationSchemaGavebrevStop,
+  stopGavebrev,
 } from "src";
 import * as yup from "yup";
 
@@ -25,15 +28,19 @@ export default async function handler(
   res: NextApiResponse<Data>
 ) {
   try {
+    if (!authorize(req, res)) {
+      return;
+    }
+
     switch (req.method) {
       case "GET":
-        return authorize(req, res) && (await handleListGavebrev(req, res));
+        return await handleListGavebrev(req, res);
       case "POST":
-        return authorize(req, res) && (await handleCreateGavebrev(req, res));
+        return await handleCreateGavebrev(req, res);
       case "PATCH":
-        return (
-          authorize(req, res) && (await handleUpdateStatusGavebrev(req, res))
-        );
+        return await handleUpdateStatusGavebrev(req, res);
+      case "DELETE":
+        return await handleStopGavebrev(req, res);
       default:
         res.setHeader("Allow", "GET, POST, PATCH");
         res.status(405).end("Method Not Allowed");
@@ -117,6 +124,34 @@ async function handleUpdateStatusGavebrev(
   }
 
   const found = await updateGavebrevStatus(submitData);
+  if (found) {
+    res.status(200).json({ message: "OK" });
+  } else {
+    res.status(404).json({ message: "Not found" });
+  }
+}
+
+async function handleStopGavebrev(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  let submitData: SubmitDataGavebrevStop | null = null;
+  try {
+    submitData = await yup
+      .object()
+      .shape(validationSchemaGavebrevStop)
+      .validate(req.body);
+  } catch (err) {
+    if (err instanceof yup.ValidationError) {
+      return res
+        .status(400)
+        .json({ message: "Validation failed", errors: err.errors });
+    } else {
+      throw err;
+    }
+  }
+
+  const found = await stopGavebrev(submitData);
   if (found) {
     res.status(200).json({ message: "OK" });
   } else {

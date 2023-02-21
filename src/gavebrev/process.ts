@@ -6,12 +6,14 @@ import {
   findAllGavebrev,
   Gavebrev,
   GavebrevType,
-  insertDonorWithSensitiveInfo,
+  insertGavebrevDonor,
   insertGavebrev,
   parseGavebrevStatus,
   setGavebrevStatus,
   SubmitDataGavebrev,
   SubmitDataGavebrevStatus,
+  setGavebrevStopped,
+  SubmitDataGavebrevStop,
 } from "src";
 
 export async function createGavebrev(
@@ -31,11 +33,19 @@ export async function updateGavebrevStatus(
   );
 }
 
+export async function stopGavebrev(
+  submitData: SubmitDataGavebrevStop
+): Promise<boolean> {
+  return await dbExecuteInTransaction(
+    async (db) => await doStopGavebrev(db, submitData)
+  );
+}
+
 export async function insertGavebrevData(
   db: PoolClient,
   submitData: SubmitDataGavebrev
 ): Promise<Gavebrev> {
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertGavebrevDonor(db, {
     name: submitData.name,
     email: submitData.email,
     tin: submitData.tin,
@@ -47,6 +57,7 @@ export async function insertGavebrevData(
     amount: submitData.percentage || submitData.amount,
     minimal_income: submitData.minimalIncome,
     started_at: new Date(Date.UTC(submitData.startYear, 0, 1)),
+    stopped_at: new Date(Date.UTC(submitData.startYear + 10, 0, 1)),
   });
 
   return gavebrev;
@@ -64,6 +75,13 @@ export async function doUpdateGavebrevStatus(
       parseGavebrevStatus(submitData.status)
     ))
   );
+}
+
+export async function doStopGavebrev(
+  db: PoolClient,
+  submitData: SubmitDataGavebrevStop
+): Promise<boolean> {
+  return 1 === (await setGavebrevStopped(db, submitData.id, new Date()));
 }
 
 export async function listGavebrev(): Promise<Gavebrev[]> {

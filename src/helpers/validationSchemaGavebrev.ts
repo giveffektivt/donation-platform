@@ -55,9 +55,12 @@ export const validationSchemaGavebrevStatus = {
     .required("Status skal udfyldes")
     .oneOf([
       GavebrevStatus.Created,
-      GavebrevStatus.Active,
+      GavebrevStatus.Signed,
       GavebrevStatus.Rejected,
-      GavebrevStatus.Cancelled,
       GavebrevStatus.Error,
     ]),
+};
+
+export const validationSchemaGavebrevStop = {
+  id: yup.string().trim().required("ID skal udfyldes"),
 };

@@ -1,9 +1,7 @@
 export enum GavebrevStatus {
   Created = "created",
   Rejected = "rejected",
-  Active = "active",
-  Cancelled = "cancelled",
-  Completed = "completed",
+  Signed = "signed",
   Error = "error",
 }
 
@@ -19,8 +17,20 @@ export type Gavebrev = {
   type: GavebrevType;
   amount: number;
   minimal_income: number;
-  cancelled: boolean;
   started_at: Date;
+  stopped_at: Date;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type GavebrevCheckin = {
+  id: string;
+  donor_id: string;
+  year: number;
+  income_inferred?: number;
+  income_preliminary?: number;
+  income_verified?: number;
+  maximize_tax_deduction: boolean;
   created_at: Date;
   updated_at: Date;
 };
