@@ -6,11 +6,16 @@ import {
   confirmGavebrev,
   validationSchemaGavebrev,
   validationSchemaGavebrevStatus,
+  listGavebrev,
 } from "src";
 import * as yup from "yup";
 
 type Data = {
   message: string;
+  data?: {
+    id: string;
+    status: string;
+  }[];
   agreementId?: string;
   errors?: object;
 };
@@ -21,12 +26,14 @@ export default async function handler(
 ) {
   try {
     switch (req.method) {
+      case "GET":
+        return authorize(req, res) && (await handleListGavebrev(req, res));
       case "POST":
         return authorize(req, res) && (await handleCreateGavebrev(req, res));
       case "PATCH":
         return authorize(req, res) && (await handleConfirmGavebrev(req, res));
       default:
-        res.setHeader("Allow", "POST, PATCH");
+        res.setHeader("Allow", "GET, POST, PATCH");
         res.status(405).end("Method Not Allowed");
         return;
     }
@@ -47,6 +54,16 @@ function authorize(req: NextApiRequest, res: NextApiResponse<Data>): boolean {
   }
 
   return true;
+}
+
+async function handleListGavebrev(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>
+) {
+  res.status(200).json({
+    message: "OK",
+    data: await listGavebrev(),
+  });
 }
 
 async function handleCreateGavebrev(

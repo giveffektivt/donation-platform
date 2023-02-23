@@ -32,3 +32,7 @@ export async function setCreatedGavebrevStatus(
     )
   ).rows.length;
 }
+
+export async function findAllGavebrev(client: PoolClient): Promise<Gavebrev[]> {
+  return (await client.query("select id, status from gavebrev")).rows;
+}

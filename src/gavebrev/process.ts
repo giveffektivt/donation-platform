@@ -1,6 +1,9 @@
 import { PoolClient } from "pg";
 import {
+  dbClient,
   dbExecuteInTransaction,
+  dbRelease,
+  findAllGavebrev,
   Gavebrev,
   GavebrevType,
   insertDonorWithSensitiveInfo,
@@ -61,4 +64,13 @@ export async function updateGavebrevStatus(
       parseGavebrevStatus(submitData.status)
     ))
   );
+}
+
+export async function listGavebrev(): Promise<Gavebrev[]> {
+  const db = await dbClient();
+  try {
+    return await findAllGavebrev(db);
+  } finally {
+    dbRelease(db);
+  }
 }
