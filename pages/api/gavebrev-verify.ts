@@ -1,3 +1,5 @@
+import Cors from "cors";
+import util from "util";
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   SubmitDataGavebrevIncome,
@@ -20,10 +22,19 @@ type Data = {
   errors?: object;
 };
 
+const cors = util.promisify(
+  Cors({
+    methods: ["GET", "PATCH"],
+    origin: "http://localhost:3000",
+  })
+);
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
+  await cors(req, res);
+
   try {
     switch (req.method) {
       case "GET":
