@@ -1,7 +1,7 @@
 export enum GavebrevStatus {
   Created = "created",
   Rejected = "rejected",
-  Active = "active",
+  Signed = "signed",
   Cancelled = "cancelled",
   Completed = "completed",
   Error = "error",

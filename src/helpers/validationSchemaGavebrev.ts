@@ -55,7 +55,7 @@ export const validationSchemaGavebrevStatus = {
     .required("Status skal udfyldes")
     .oneOf([
       GavebrevStatus.Created,
-      GavebrevStatus.Active,
+      GavebrevStatus.Signed,
       GavebrevStatus.Rejected,
       GavebrevStatus.Cancelled,
       GavebrevStatus.Error,
