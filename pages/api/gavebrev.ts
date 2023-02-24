@@ -3,7 +3,7 @@ import {
   createGavebrev,
   SubmitDataGavebrev,
   SubmitDataGavebrevStatus,
-  confirmGavebrev,
+  updateGavebrevStatus,
   validationSchemaGavebrev,
   validationSchemaGavebrevStatus,
   listGavebrev,
@@ -31,7 +31,9 @@ export default async function handler(
       case "POST":
         return authorize(req, res) && (await handleCreateGavebrev(req, res));
       case "PATCH":
-        return authorize(req, res) && (await handleConfirmGavebrev(req, res));
+        return (
+          authorize(req, res) && (await handleUpdateStatusGavebrev(req, res))
+        );
       default:
         res.setHeader("Allow", "GET, POST, PATCH");
         res.status(405).end("Method Not Allowed");
@@ -94,7 +96,7 @@ async function handleCreateGavebrev(
   });
 }
 
-async function handleConfirmGavebrev(
+async function handleUpdateStatusGavebrev(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
@@ -114,7 +116,7 @@ async function handleConfirmGavebrev(
     }
   }
 
-  const found = await confirmGavebrev(submitData);
+  const found = await updateGavebrevStatus(submitData);
   if (found) {
     res.status(200).json({ message: "OK" });
   } else {

@@ -53,5 +53,11 @@ export const validationSchemaGavebrevStatus = {
     .string()
     .trim()
     .required("Status skal udfyldes")
-    .oneOf([GavebrevStatus.Active, GavebrevStatus.Rejected]),
+    .oneOf([
+      GavebrevStatus.Created,
+      GavebrevStatus.Active,
+      GavebrevStatus.Rejected,
+      GavebrevStatus.Cancelled,
+      GavebrevStatus.Error,
+    ]),
 };

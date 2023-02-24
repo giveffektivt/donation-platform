@@ -9,7 +9,7 @@ import {
   insertDonorWithSensitiveInfo,
   insertGavebrev,
   parseGavebrevStatus,
-  setCreatedGavebrevStatus,
+  setGavebrevStatus,
   SubmitDataGavebrev,
   SubmitDataGavebrevStatus,
 } from "src";
@@ -23,11 +23,11 @@ export async function createGavebrev(
   return gavebrev.id;
 }
 
-export async function confirmGavebrev(
+export async function updateGavebrevStatus(
   submitData: SubmitDataGavebrevStatus
 ): Promise<boolean> {
   return await dbExecuteInTransaction(
-    async (db) => await updateGavebrevStatus(db, submitData)
+    async (db) => await doUpdateGavebrevStatus(db, submitData)
   );
 }
 
@@ -52,13 +52,13 @@ export async function insertGavebrevData(
   return gavebrev;
 }
 
-export async function updateGavebrevStatus(
+export async function doUpdateGavebrevStatus(
   db: PoolClient,
   submitData: SubmitDataGavebrevStatus
 ): Promise<boolean> {
   return (
     1 ===
-    (await setCreatedGavebrevStatus(
+    (await setGavebrevStatus(
       db,
       submitData.id,
       parseGavebrevStatus(submitData.status)

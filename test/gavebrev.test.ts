@@ -5,7 +5,6 @@ import {
   GavebrevStatus,
   GavebrevType,
   insertGavebrevData,
-  setCreatedGavebrevStatus,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import {
@@ -102,29 +101,4 @@ test("Create a Gavebrev of percentage type with minimal income", async () => {
 
   const charges = await findAllCharges(db);
   expect(charges).toHaveLength(0);
-});
-
-test("Should only be able to update gavebrev with status 'created'", async () => {
-  const db = await client;
-
-  await insertGavebrevData(db, {
-    name: "John Smith",
-    tin: "111111-1111",
-    email: "hello@example.com",
-    startYear: 2030,
-    amount: 100,
-  });
-
-  const gavebrevs = await findAllGavebrevs(db);
-  expect(gavebrevs).toMatchObject([{ status: GavebrevStatus.Created }]);
-
-  await setCreatedGavebrevStatus(db, gavebrevs[0].id, GavebrevStatus.Active);
-  expect(await findAllGavebrevs(db)).toMatchObject([
-    { status: GavebrevStatus.Active },
-  ]);
-
-  await setCreatedGavebrevStatus(db, gavebrevs[0].id, GavebrevStatus.Rejected);
-  expect(await findAllGavebrevs(db)).toMatchObject([
-    { status: GavebrevStatus.Active },
-  ]);
 });

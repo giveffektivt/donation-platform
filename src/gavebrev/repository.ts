@@ -20,14 +20,14 @@ export async function insertGavebrev(
   ).rows[0];
 }
 
-export async function setCreatedGavebrevStatus(
+export async function setGavebrevStatus(
   client: PoolClient,
   id: string,
   status: GavebrevStatus
 ): Promise<number> {
   return (
     await client.query(
-      "update gavebrev set status = $1 where id = $2 and status = 'created' returning 1",
+      "update gavebrev set status = $1 where id = $2 returning 1",
       [status, id]
     )
   ).rows.length;
