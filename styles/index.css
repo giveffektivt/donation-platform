@@ -128,7 +128,7 @@ body {
 
 .select-gavebrev {
   max-width: 100% !important;
-  animation-duration: 2s;
+  animation-duration: 0.9s;
   animation-timing-function: ease-in-out;
   animation-iteration-count: 1;
 }
