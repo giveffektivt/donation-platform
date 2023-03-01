@@ -55,12 +55,14 @@ const GavebrevStatus: NextPage = () => {
       {(props) => (
         <GEFrame text="Gavebrev status" className="gavebrev-status">
           <form onSubmit={props.handleSubmit}>
-            <Input
-              label="Adgangskode"
-              name="token"
-              type="password"
-              className="full-width form-input"
-            />
+            {data.length === 0 ? (
+              <Input
+                label="Adgangskode"
+                name="token"
+                type="password"
+                className="full-width form-input"
+              />
+            ) : null}
 
             {fetchError ? (
               <div className="margin-top">
