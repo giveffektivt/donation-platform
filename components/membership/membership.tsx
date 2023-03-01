@@ -47,7 +47,10 @@ export const Membership = () => {
       validationSchema={yup.object().shape(validationSchemaMembership)}
     >
       {(props) => (
-        <GEFrame text="Bliv medlem af Giv Effektivt">
+        <GEFrame
+          text="Bliv medlem af Giv Effektivt"
+          className="membership-form"
+        >
           <form onSubmit={props.handleSubmit}>
             <Input
               label="Fuldt navn"

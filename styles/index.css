@@ -12,8 +12,8 @@ body {
   justify-content: center;
 }
 
-no-margin-top {
-  margin-top: 0px;
+.margin-top {
+  margin-top: 24px;
 }
 
 .wrapper2 {
@@ -34,6 +34,14 @@ no-margin-top {
   margin: 0px 0 0px 0;
 }
 
+.gavebrev-status {
+  max-width: 588px;
+}
+
+.gavebrev-create {
+  max-width: 400px;
+}
+
 .membership-form {
   max-width: 400px;
 }
@@ -44,6 +52,15 @@ no-margin-top {
 
 .full-width {
   max-width: 100%;
+}
+
+.width-100 {
+  width: 100%;
+}
+
+.full-width-100 {
+  max-width: 100%;
+  width: 100%;
 }
 
 .postcode-city {
@@ -107,6 +124,45 @@ no-margin-top {
   max-width: fit-content !important;
   background-color: white;
   background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6-6-6 1.41-1.42z'/%3E%3C/svg%3E") !important;
+}
+
+.select-gavebrev {
+  max-width: 100% !important;
+  animation-duration: 0.9s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: 1;
+}
+
+.select-gavebrev-green {
+  animation-name: gavebrev-status-green;
+}
+
+@keyframes gavebrev-status-green {
+  0% {
+    background-color: white;
+  }
+  50% {
+    background-color: #d3fdb5;
+  }
+  100% {
+    background-color: white;
+  }
+}
+
+.select-gavebrev-red {
+  animation-name: gavebrev-status-red;
+}
+
+@keyframes gavebrev-status-red {
+  0% {
+    background-color: white;
+  }
+  50% {
+    background-color: #fdb5b5;
+  }
+  100% {
+    background-color: white;
+  }
 }
 
 .form-group.form-nested {

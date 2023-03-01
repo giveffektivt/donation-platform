@@ -1,6 +1,6 @@
 import { Button, CprInput, GEFrame, Input } from "comps";
 import { InvisibleInput } from "comps/gavebrev";
-import { Formik, useField } from "formik";
+import { Formik } from "formik";
 import { NextPage } from "next";
 import { validationSchemaGavebrev } from "src/helpers";
 import * as yup from "yup";
@@ -69,7 +69,7 @@ const gavebrev: NextPage = () => {
       validationSchema={yup.object().shape(validationSchemaGavebrev)}
     >
       {(props) => (
-        <GEFrame text="Opret Gavebrev">
+        <GEFrame text="Opret Gavebrev" className="gavebrev-create">
           <form onSubmit={props.handleSubmit}>
             <Input
               label="Adgangskode"
