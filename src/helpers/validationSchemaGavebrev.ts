@@ -61,3 +61,13 @@ export const validationSchemaGavebrevStatus = {
       GavebrevStatus.Error,
     ]),
 };
+
+export const validationSchemaGavebrevIncome = {
+  id: yup.string().trim().required("ID skal udfyldes"),
+  income: yup
+    .number()
+    .required("`income` skal udfyldes")
+    .min(1, "Mindst 1 kr.")
+    .integer("Skriv et heltal")
+    .typeError("Skriv et heltal"),
+};

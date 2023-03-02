@@ -32,3 +32,8 @@ export type SubmitDataGavebrevStatus = {
   id: string;
   status: string;
 };
+
+export type SubmitDataGavebrevIncome = {
+  id: string;
+  income: number;
+};
