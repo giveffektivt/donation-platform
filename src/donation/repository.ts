@@ -40,6 +40,17 @@ export async function setDonationCancelledByQuickpayOrder(
   );
 }
 
+export async function setDonationMethodByQuickpayOrder(
+  client: PoolClient,
+  quickpay_order: string,
+  method: PaymentMethod
+) {
+  return await client.query(
+    `update donation_with_gateway_info set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
+    [method, quickpay_order]
+  );
+}
+
 export async function insertDonationViaScanpay(
   client: PoolClient,
   donation: Partial<Donation>

@@ -2,9 +2,11 @@ import { PoolClient } from "pg";
 import {
   ChargeStatus,
   insertInitialChargeQuickpay,
+  PaymentMethod,
   QuickpayChange,
   setChargeStatusByShortId,
   setDonationCancelledByQuickpayOrder,
+  setDonationMethodByQuickpayOrder,
 } from "src";
 
 async function handleSubscription(db: PoolClient, change: QuickpayChange) {
@@ -23,6 +25,16 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
     console.log(`Cancelling Quickpay subscription ${change.order_id}`);
     await setDonationCancelledByQuickpayOrder(db, change.order_id);
     return;
+  }
+
+  if (change.acquirer === "mobilepaysubscriptions") {
+    // User has an option to change payment type to MobilePay on Quickpay's side.
+    // Ensure this is reflected in DB, as it is important for charging recurring MobilePay subscriptions.
+    await setDonationMethodByQuickpayOrder(
+      db,
+      change.order_id,
+      PaymentMethod.MobilePay
+    );
   }
 
   console.log(

@@ -12,6 +12,7 @@ import {
   setDonationCancelledByQuickpayOrder,
   setDonationEmailed,
   setDonationScanpayId,
+  setDonationMethodByQuickpayOrder,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findDonationQuickpay, findDonationScanpay } from "./repository";
@@ -113,4 +114,39 @@ test("Cancel donation by its Quickpay order ID", async () => {
     donation.gateway_metadata.quickpay_order
   );
   expect((await findDonationQuickpay(db, donation)).cancelled).toBe(true);
+});
+
+test("Update donation payment method by its Quickpay order ID", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  expect((await findDonationQuickpay(db, donation)).method).toBe(
+    PaymentMethod.CreditCard
+  );
+
+  await setDonationMethodByQuickpayOrder(
+    db,
+    "some-incorrect-order",
+    PaymentMethod.MobilePay
+  );
+  expect((await findDonationQuickpay(db, donation)).method).toBe(
+    PaymentMethod.CreditCard
+  );
+
+  await setDonationMethodByQuickpayOrder(
+    db,
+    donation.gateway_metadata.quickpay_order,
+    PaymentMethod.MobilePay
+  );
+  expect((await findDonationQuickpay(db, donation)).method).toBe(
+    PaymentMethod.MobilePay
+  );
 });
