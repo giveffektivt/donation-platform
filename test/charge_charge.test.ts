@@ -72,7 +72,7 @@ test("Find created charges to charge", async () => {
     method: PaymentMethod.MobilePay,
   });
 
-  const now = moment().set("date", 3);
+  const now = moment().set("date", 1);
 
   // ...each not charged yet
   const charge1 = await insertCharge(db, {
