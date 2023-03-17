@@ -144,8 +144,11 @@ async function subscribeToNewsletter(
   });
 
   if (!response.ok) {
-    console.error(
-      `Error subscribing ${donorId} to newsletter: ${response.statusText}`
-    );
+    const error = (await response.json()).title || "Unknown";
+    if (error !== "Member Exists") {
+      console.error(
+        `Error subscribing ${donorId} to newsletter: ${response.statusText} (${error})`
+      );
+    }
   }
 }
