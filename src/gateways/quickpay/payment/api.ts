@@ -139,7 +139,7 @@ export async function quickpayChargeSubscription(
         order_id: charge.short_id,
         auto_capture: true,
         auto_capture_at: isMobilePay
-          ? moment().add(49, "hour").toDate() // must be at least 2 days in the future for MobilePay Subscriptions
+          ? moment().add(3, "day").toDate() // must be at least 2 days in the future for MobilePay Subscriptions
           : undefined,
         text_on_statement: "giveffektivt.dk",
         description: `Giv Effektivt ${charge.short_id}`,
