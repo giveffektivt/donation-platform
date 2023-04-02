@@ -1,4 +1,4 @@
-import moment from "moment";
+import { setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
   dbBeginTransaction,
@@ -7,13 +7,14 @@ import {
   DonationFrequency,
   DonationRecipient,
   insertChargesForDonationsToCreateCharges,
-  insertMembershipViaQuickpay,
   insertDonationViaBankTransfer,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
+  insertMembershipViaQuickpay,
   PaymentMethod,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
+import { utc } from "./helpers";
 import { insertCharge, setDonationCancelled } from "./repository";
 
 const client = dbClient();
@@ -67,35 +68,35 @@ test("Insert charges for donations that need new charges", async () => {
     method: PaymentMethod.MobilePay,
   });
 
-  const now = moment().set("date", 1);
+  const now = setDate(new Date(), 1);
 
   // ...each successfully charged in the past
   await insertCharge(db, {
-    created_at: now.clone().add(-3, "year").toDate(),
+    created_at: utc(subYears(now, 3)),
     donation_id: donation1.id,
     status: ChargeStatus.Charged,
   });
 
   await insertCharge(db, {
-    created_at: now.clone().add(-2, "year").toDate(),
+    created_at: utc(subYears(now, 2)),
     donation_id: donation1.id,
     status: ChargeStatus.Charged,
   });
 
   await insertCharge(db, {
-    created_at: now.clone().add(-1, "month").toDate(),
+    created_at: utc(subMonths(now, 1)),
     donation_id: donation2.id,
     status: ChargeStatus.Charged,
   });
 
   await insertCharge(db, {
-    created_at: now.clone().add(-1, "month").toDate(),
+    created_at: utc(subMonths(now, 1)),
     donation_id: donation3.id,
     status: ChargeStatus.Charged,
   });
 
   await insertCharge(db, {
-    created_at: now.clone().add(-1, "year").toDate(),
+    created_at: utc(subYears(now, 1)),
     donation_id: donation4.id,
     status: ChargeStatus.Charged,
   });
@@ -105,17 +106,17 @@ test("Insert charges for donations that need new charges", async () => {
   const expected = [
     {
       donation_id: donation1.id,
-      created_at: now.clone().add(-1, "year").toDate(),
+      created_at: utc(subYears(now, 1)),
       status: ChargeStatus.Created,
     },
     {
       donation_id: donation3.id,
-      created_at: now.clone().toDate(),
+      created_at: utc(now),
       status: ChargeStatus.Created,
     },
     {
       donation_id: donation4.id,
-      created_at: now.clone().toDate(),
+      created_at: utc(now),
       status: ChargeStatus.Created,
     },
   ];
@@ -156,7 +157,7 @@ test("Donation that is cancelled should not have new charges created", async () 
   await setDonationCancelled(db, donation);
 
   await insertCharge(db, {
-    created_at: moment().add(-2, "year").toDate(),
+    created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Charged,
   });
@@ -181,7 +182,7 @@ test("Bank transfer donation should not have new charges created", async () => {
   });
 
   await insertCharge(db, {
-    created_at: moment().add(-2, "year").toDate(),
+    created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Charged,
   });
@@ -201,10 +202,10 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     method: PaymentMethod.CreditCard,
   });
 
-  const now = moment().set("date", 1);
+  const now = setDate(new Date(), 1);
 
   await insertCharge(db, {
-    created_at: now.clone().add(-2, "year").toDate(),
+    created_at: utc(subYears(now, 2)),
     donation_id: donation.id,
     status: ChargeStatus.Error,
   });
@@ -212,12 +213,10 @@ test("Active donation whose past charge was unsuccessful should *still* have new
   const expected = [
     {
       donation_id: donation.id,
-      created_at: now.clone().add(-1, "year").toDate(),
+      created_at: utc(subYears(now, 1)),
       status: ChargeStatus.Created,
     },
   ];
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(
-    expected
-  );
+  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(expected);
 });

@@ -1,4 +1,4 @@
-import moment from "moment";
+import { addDays, setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
   dbBeginTransaction,
@@ -7,14 +7,15 @@ import {
   DonationFrequency,
   DonationRecipient,
   getChargesToCharge,
-  insertMembershipViaQuickpay,
   insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
+  insertMembershipViaQuickpay,
   PaymentMethod,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
+import { utc } from "./helpers";
 import { insertCharge, setDonationCancelled } from "./repository";
 
 const client = dbClient();
@@ -72,31 +73,31 @@ test("Find created charges to charge", async () => {
     method: PaymentMethod.MobilePay,
   });
 
-  const now = moment().set("date", 1);
+  const now = setDate(new Date(), 1);
 
   // ...each not charged yet
   const charge1 = await insertCharge(db, {
-    created_at: now.clone().add(-3, "year").toDate(),
+    created_at: utc(subYears(now, 3)),
     donation_id: donation1.id,
     status: ChargeStatus.Created,
   });
   const charge2 = await insertCharge(db, {
-    created_at: now.clone().add(-2, "year").toDate(),
+    created_at: utc(subYears(now, 2)),
     donation_id: donation1.id,
     status: ChargeStatus.Created,
   });
   const charge3 = await insertCharge(db, {
-    created_at: now.clone().add(-1, "month").toDate(),
+    created_at: utc(subMonths(now, 1)),
     donation_id: donation2.id,
     status: ChargeStatus.Created,
   });
   const charge4 = await insertCharge(db, {
-    created_at: now.clone().add(-1, "month").toDate(),
+    created_at: utc(subMonths(now, 1)),
     donation_id: donation3.id,
     status: ChargeStatus.Created,
   });
   const charge5 = await insertCharge(db, {
-    created_at: now.clone().add(-1, "year").toDate(),
+    created_at: utc(subYears(now, 1)),
     donation_id: donation4.id,
     status: ChargeStatus.Created,
   });
@@ -182,7 +183,7 @@ test("Donation that is cancelled should not be charged", async () => {
   await setDonationCancelled(db, donation);
 
   await insertCharge(db, {
-    created_at: moment().add(-2, "year").toDate(),
+    created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });
@@ -207,7 +208,7 @@ test("Bank transfer donation should not be charged", async () => {
   });
 
   await insertCharge(db, {
-    created_at: moment().add(-2, "year").toDate(),
+    created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });
@@ -228,13 +229,13 @@ test("Old charges in created status should *still* be charged again (until we se
   });
 
   const oldCharge = await insertCharge(db, {
-    created_at: moment().add(-2, "year").toDate(),
+    created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });
 
   await insertCharge(db, {
-    created_at: moment().add(-1, "year").toDate(),
+    created_at: utc(subYears(new Date(), 1)),
     donation_id: donation.id,
     status: ChargeStatus.Charged,
   });
@@ -264,7 +265,7 @@ test("Charges with error status should not be charged again", async () => {
   });
 
   await insertCharge(db, {
-    created_at: moment().add(-2, "year").toDate(),
+    created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Error,
   });
@@ -285,7 +286,7 @@ test("Charges with created_at in the future should not be charged yet", async ()
   });
 
   await insertCharge(db, {
-    created_at: moment().add(2, "day").toDate(),
+    created_at: utc(addDays(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });

@@ -427,6 +427,11 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
+"@date-fns/utc@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@date-fns/utc/-/utc-1.0.0.tgz#c17c693a2a89ddc44acf951ceb2153881c0f78ce"
+  integrity sha512-NjV/AIlmOEhuuFJpQHOEeFl0mxVZIm77/JDSQqu/B43yL7gYDNUfH58I4sRkOCZty2gHoKQfmThtEY/DtTDhhQ==
+
 "@esbuild/android-arm64@0.16.9":
   version "0.16.9"
   resolved "https://registry.yarnpkg.com/@esbuild/android-arm64/-/android-arm64-0.16.9.tgz#474da719599f99d820ec010c92846a4f685fa28a"
@@ -1834,6 +1839,11 @@ data-uri-to-buffer@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/data-uri-to-buffer/-/data-uri-to-buffer-4.0.0.tgz#b5db46aea50f6176428ac05b73be39a57701a64b"
   integrity sha512-Vr3mLBA8qWmcuschSLAOogKgQ/Jwxulv3RNE4FXnYWRGujzrRWQI4m12fQqRkwX06C0KanhLr4hK+GydchZsaA==
+
+date-fns@^2.29.3:
+  version "2.29.3"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.29.3.tgz#27402d2fc67eb442b511b70bbdf98e6411cd68a8"
+  integrity sha512-dDCnyH2WnnKusqvZZ6+jA1O51Ibt8ZMRNkDZdyAyK4YfbDwa/cEmuztzG5pk6hqlp9aSBPYcjOlktquahGwGeA==
 
 dayjs@^1.10.7:
   version "1.11.5"
