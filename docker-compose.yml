@@ -4,12 +4,6 @@ volumes:
   postgres14:
 
 services:
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
-
   giveffektivt-db:
     build: db
     restart: always
