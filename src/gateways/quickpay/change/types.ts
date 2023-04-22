@@ -9,5 +9,6 @@ export type QuickpayChange = {
     id: number;
     type: string;
     qp_status_code: string;
+    aq_status_msg: string;
   }[];
 };

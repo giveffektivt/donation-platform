@@ -45,9 +45,10 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
 
 /** Add gateway response to a charge */
 async function handleCharge(db: PoolClient, change: QuickpayChange) {
-  const status = getChargeStatusFromOperations(change);
+  const [status, msg] = getChargeStatusFromOperations(change);
   if (status) {
-    console.log(`Charge ${change.order_id} is now ${status} with Quickpay`);
+    const log = status == ChargeStatus.Error ? console.error : console.log;
+    log(`Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`);
     await setChargeStatusByShortId(db, {
       status,
       short_id: change.order_id,
@@ -68,23 +69,25 @@ export async function quickpayHandleChange(
   }
 }
 
-const getChargeStatusFromOperations = (change: QuickpayChange) => {
-  if (change.operations.length < 1) {
-    return null;
+const getChargeStatusFromOperations = (
+  change: QuickpayChange
+): [ChargeStatus | null, string] => {
+  if (!(change.operations?.length > 0)) {
+    return [null, ""];
   }
 
   const latest = change.operations?.sort((a, b) => b.id - a.id)[0];
 
-  switch (latest.qp_status_code) {
+  switch (latest?.qp_status_code) {
     case "40000":
-      return ChargeStatus.Error;
+      return [ChargeStatus.Error, latest.aq_status_msg];
     case "20000":
       switch (latest.type) {
         case "capture":
-          return ChargeStatus.Charged;
+          return [ChargeStatus.Charged, latest.aq_status_msg];
         case "refund":
-          return ChargeStatus.Refunded;
+          return [ChargeStatus.Refunded, latest.aq_status_msg];
       }
   }
-  return null;
+  return [null, ""];
 };
