@@ -997,7 +997,7 @@ CREATE TABLE giveffektivt.scanpay_seq (
 --
 
 CREATE TABLE giveffektivt.schema_migrations (
-    version character varying(255) NOT NULL
+    version character varying(128) NOT NULL
 );
 
 
