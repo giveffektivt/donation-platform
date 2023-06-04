@@ -1,8 +1,7 @@
-import Cors from "cors";
 import type { NextApiRequest, NextApiResponse } from "next";
-import util from "util";
 
 import {
+  cors,
   dbClient,
   dbRelease,
   getKpi,
@@ -12,13 +11,6 @@ import {
   RecipientDistribution,
   TimeDistribution,
 } from "src";
-
-const cors = util.promisify(
-  Cors({
-    methods: ["GET"],
-    origin: "https://giveffektivt.dk",
-  })
-);
 
 type Data = {
   kpi: Kpi;
@@ -30,11 +22,11 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Data>
 ) {
-  await cors(req, res);
-
   let db = null;
 
   try {
+    await cors(req, res);
+
     db = await dbClient();
 
     res.status(200).json({

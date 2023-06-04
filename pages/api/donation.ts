@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
+  cors,
   parsePaymentMethod,
   PaymentGateway,
   PaymentMethod,
@@ -30,6 +31,8 @@ export default async function handler(
   res: NextApiResponse<Data>
 ) {
   try {
+    await cors(req, res);
+
     // Trust the usual proxy headers (assumes we are running on a reverse proxy that promises to overwrite these values).
     const ip: string =
       firstElementOrString(req.headers["x-real-ip"]) ||

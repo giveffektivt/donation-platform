@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
+  cors,
   processQuickpayMembership,
   SubmitDataMembership,
   validationSchemaMembership,
@@ -16,6 +17,8 @@ export default async function handler(
   res: NextApiResponse<Data>
 ) {
   try {
+    await cors(req, res);
+
     let submitData: SubmitDataMembership = await yup
       .object()
       .shape(validationSchemaMembership)
