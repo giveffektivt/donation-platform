@@ -33,7 +33,7 @@ export async function quickpayCreatePayment(
           vat_rate: 0,
         },
       ],
-      text_on_statement: "giveffektivt donation",
+      text_on_statement: "giveffektivt.dk",
     }
   );
 
@@ -50,10 +50,8 @@ export async function quickpayCreateSubscription(
       : "donation"
   }`;
 
-  const text_on_statement = `giveffektivt ${
-    donation.recipient === DonationRecipient.GivEffektivt
-      ? "medlem"
-      : "donation"
+  const text_on_statement = `giveffektivt.dk${
+    donation.recipient === DonationRecipient.GivEffektivt ? " medlem" : ""
   }`;
 
   const response = await request(
@@ -131,8 +129,8 @@ export async function quickpayChargeSubscription(
     return;
   }
 
-  const text_on_statement = `giveffektivt ${
-    charge.recipient === DonationRecipient.GivEffektivt ? "medlem" : "donation"
+  const text_on_statement = `giveffektivt.dk${
+    charge.recipient === DonationRecipient.GivEffektivt ? " medlem" : ""
   }`;
 
   const isMobilePay = charge.method === PaymentMethod.MobilePay;
