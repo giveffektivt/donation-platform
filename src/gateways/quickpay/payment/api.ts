@@ -33,7 +33,7 @@ export async function quickpayCreatePayment(
           vat_rate: 0,
         },
       ],
-      text_on_statement: "giveffektivt.dk",
+      text_on_statement: "giveffektivt donation",
     }
   );
 
@@ -50,6 +50,12 @@ export async function quickpayCreateSubscription(
       : "donation"
   }`;
 
+  const text_on_statement = `giveffektivt ${
+    donation.recipient === DonationRecipient.GivEffektivt
+      ? "medlem"
+      : "donation"
+  }`;
+
   const response = await request(
     "POST",
     "subscriptions",
@@ -58,7 +64,7 @@ export async function quickpayCreateSubscription(
       currency: "dkk",
       order_id: donation.gateway_metadata.quickpay_order,
       description,
-      text_on_statement: "giveffektivt.dk",
+      text_on_statement,
     }
   );
 
@@ -125,6 +131,10 @@ export async function quickpayChargeSubscription(
     return;
   }
 
+  const text_on_statement = `giveffektivt ${
+    charge.recipient === DonationRecipient.GivEffektivt ? "medlem" : "donation"
+  }`;
+
   const isMobilePay = charge.method === PaymentMethod.MobilePay;
 
   let status = ChargeStatus.Waiting;
@@ -141,7 +151,7 @@ export async function quickpayChargeSubscription(
         auto_capture_at: isMobilePay
           ? moment().add(3, "day").toDate() // must be at least 2 days in the future for MobilePay Subscriptions
           : undefined,
-        text_on_statement: "giveffektivt.dk",
+        text_on_statement,
         description: `Giv Effektivt ${charge.short_id}`,
       },
       !isMobilePay // MobilePay Subscriptions sends empty response on success
