@@ -62,10 +62,19 @@ const parseMethod = (value: string): string => {
     : "Credit card";
 };
 
+const findRecipientIndex = (
+  recipients: string[],
+  partialName: string
+): number => {
+  return recipients.findIndex((r) =>
+    r.toLowerCase().includes(partialName.toLowerCase())
+  );
+};
+
 const prepareDonationPayload = (store: any) => {
   return {
     amount: parseAmount(store.amount),
-    recipient: parseRecipient(store.recipients[store.recipientIndex]),
+    recipient: parseRecipient(store.recipient),
     frequency: parseFrequency(store.frequency),
     taxDeductible: store.taxDeductible,
     tin: store.taxDeductible ? store.tin : "",

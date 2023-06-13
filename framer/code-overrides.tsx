@@ -7,11 +7,10 @@ import { createStore } from "https://framer.com/m/framer/store.js@^1.0.0";
 const emptyStore = {
   amount: "",
   frequency: "Giv månedligt",
-  recipientIndex: 0,
   method: "",
   tin: "",
   email: "",
-  recipients: [],
+  recipient: "",
   rulesAccepted: false,
   subscribeToNewsletter: false,
   taxDeductible: false,
@@ -21,6 +20,7 @@ const emptyStore = {
   env: "prod",
   step: "Step 1",
   isLoading: false,
+  preselectedRecipient: "",
 };
 const useStore = createStore(emptyStore);
 
@@ -191,22 +191,68 @@ export const inputCprCvr = (Component: any): ComponentType => {
 export const selectRecipient = (Component: any): ComponentType => {
   return (props: any) => {
     const [store, setStore] = useStore();
+    const [index, setIndex] = useState(0);
 
-    useEffect(() => setStore({ recipients: props.options }), []);
+    useEffect(() => {
+      const idx =
+        store.preselectedRecipient !== ""
+          ? Math.max(
+              0,
+              findRecipientIndex(props.options, store.preselectedRecipient)
+            )
+          : index;
 
-    const onChange = (recipientIndex: number) =>
-      setStore({
-        recipientIndex,
-      });
+      setIndex(idx);
+      setStore({ recipient: props.options[idx], preselectedRecipient: "" });
+    }, [store.preselectedRecipient]);
 
-    return (
-      <Component
-        {...props}
-        value={store.recipientIndex + 1}
-        onChange={onChange}
-      />
-    );
+    const onChange = (idx: number) => {
+      setIndex(idx);
+      setStore({ recipient: props.options[idx] });
+    };
+
+    return <Component {...props} value={index + 1} onChange={onChange} />;
   };
+};
+
+export const withRecipient = (Component: any, init: any): ComponentType => {
+  return (props) => {
+    const [_, setStore] = useStore();
+    useEffect(() => init(setStore), []);
+    return <Component {...props} />;
+  };
+};
+
+export const withRecipientMyggenetModMalaria = (
+  Component: any
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Myggenet mod malaria" })
+  );
+};
+
+export const withRecipientMedicinModMalaria = (
+  Component: any
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Medicin mod malaria" })
+  );
+};
+
+export const withRecipientVitaminModMangelsygdomme = (
+  Component: any
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Vitamin mod mangelsygdomme" })
+  );
+};
+
+export const withRecipientVaccinerTilSpædbørn = (
+  Component: any
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Vacciner til spædbørn" })
+  );
 };
 
 // Show summary + bank
@@ -291,14 +337,14 @@ export const withVariantMethodPhone = (Component: any): ComponentType => {
 
 export const withVariantRecipientDesktop = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.recipients[store.recipientIndex]}`,
+    `Desktop/${store.recipient}`,
     `Desktop/None`,
   ]);
 };
 
 export const withVariantRecipientPhone = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.recipients[store.recipientIndex]}`,
+    `Phone/${store.recipient}`,
     `Phone/None`,
   ]);
 };
