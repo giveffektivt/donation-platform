@@ -80,7 +80,7 @@ export function paymentTemplate(text: string, bankInfo?: string) {
           }
 
           .header_container {
-              background-color: #881234;
+              background-color: black;
               color: white;
 
               padding: 30px;
@@ -147,7 +147,7 @@ export function paymentTemplate(text: string, bankInfo?: string) {
               padding: 20px;"
       >
   <!--[if mso]>
-  <table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0" style="background-color:  #881234";>
+  <table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0" style="background-color:  black";>
   <tr>
   <td>
   <![endif]-->
@@ -341,7 +341,7 @@ export function membershipTemplate(text: string) {
           }
 
           .header_container {
-              background-color: #881234;
+              background-color: black;
               color: white;
 
               padding: 30px;
