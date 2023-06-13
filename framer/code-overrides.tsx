@@ -109,13 +109,10 @@ export const toggleTaxDeductible = (Component: any): ComponentType => {
 
 const toggleField = (Component: any, field: string): ComponentType => {
   return (props: any) => {
-    const [_, setStore] = useStore();
+    const [store, setStore] = useStore();
 
     const onTap = () => {
-      // timeout is to make sure it renders before we check using this hack
-      setTimeout(() => {
-        setStore({ [field]: isCheckboxChecked(props.className) });
-      });
+      setStore({ [field]: !store[field] });
     };
 
     return <Component {...props} onTap={onTap} />;
@@ -407,8 +404,4 @@ export const showDebug = (Component: any): ComponentType => {
 
 const querySelector = (selector: string) => {
   return window?.document?.querySelector(selector);
-};
-
-const isCheckboxChecked = (className: string): boolean => {
-  return querySelector(`.${className} [data-framer-name*=checked i]`) != null;
 };
