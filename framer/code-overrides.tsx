@@ -93,6 +93,47 @@ export const submitBank = (Component: any): ComponentType => {
   };
 };
 
+const preselectRecipient = (
+  Component: any,
+  preselectedRecipient: string
+): ComponentType => {
+  return (props) => {
+    const [_, setStore] = useStore();
+    const onTap = () => setStore({ preselectedRecipient });
+    return <Component {...props} onTap={onTap} />;
+  };
+};
+
+export const preselectRecipientGivEffektivtsAnbefaling = (
+  Component: any
+): ComponentType => {
+  return preselectRecipient(Component, "Giv Effektivts anbefaling");
+};
+
+export const preselectRecipientMyggenetModMalaria = (
+  Component: any
+): ComponentType => {
+  return preselectRecipient(Component, "Myggenet mod malaria");
+};
+
+export const preselectRecipientMedicinModMalaria = (
+  Component: any
+): ComponentType => {
+  return preselectRecipient(Component, "Medicin mod malaria");
+};
+
+export const preselectRecipientVitaminModMangelsygdomme = (
+  Component: any
+): ComponentType => {
+  return preselectRecipient(Component, "Vitamin mod mangelsygdomme");
+};
+
+export const preselectRecipientVaccinerTilSpædbørn = (
+  Component: any
+): ComponentType => {
+  return preselectRecipient(Component, "Vacciner til spædbørn");
+};
+
 // Checkboxes
 
 export const toggleRulesAccepted = (Component: any): ComponentType => {
@@ -215,7 +256,7 @@ export const selectRecipient = (Component: any): ComponentType => {
   };
 };
 
-export const withRecipient = (Component: any, init: any): ComponentType => {
+const withRecipient = (Component: any, init: any): ComponentType => {
   return (props) => {
     const [_, setStore] = useStore();
     useEffect(() => init(setStore), []);
