@@ -3,14 +3,11 @@ import { PoolClient } from "pg";
 import {
   ChargeStatus,
   ChargeToChargeQuickpay,
-  setChargeStatus,
-} from "src/charge";
-import {
-  DonationFrequency,
   DonationRecipient,
   DonationWithGatewayInfoQuickpay,
   PaymentMethod,
-} from "src/donation";
+  setChargeStatus,
+} from "src";
 
 /** Make a request to Quickpay API to get Quickpay ID for a one time payment */
 export async function quickpayCreatePayment(

@@ -887,6 +887,51 @@ CREATE VIEW giveffektivt.donor AS
 
 
 --
+-- Name: failed_recurring_donations; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.failed_recurring_donations AS
+ WITH paid_before AS (
+         SELECT DISTINCT ON (d.id) d.id
+           FROM ((giveffektivt.donation_with_gateway_info d
+             JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+          WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
+          ORDER BY d.id
+        )
+ SELECT s.donor_id,
+    s.donor_name,
+    s.donor_email,
+    s.donation_id,
+    s.amount,
+    s.recipient,
+    s.frequency,
+    s.method,
+    s.tax_deductible,
+    s.status,
+    s.failed_at
+   FROM ( SELECT DISTINCT ON (d.id) p.id AS donor_id,
+            p.name AS donor_name,
+            p.email AS donor_email,
+            d.id AS donation_id,
+            d.amount,
+            d.recipient,
+            d.frequency,
+            d.method,
+            d.tax_deductible,
+            c.status,
+            c.created_at AS failed_at
+           FROM ((giveffektivt.donation_with_gateway_info d
+             JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+          WHERE (d.id IN ( SELECT paid_before.id
+                   FROM paid_before))
+          ORDER BY d.id, c.created_at DESC) s
+  WHERE (s.status = 'error'::giveffektivt.charge_status)
+  ORDER BY s.failed_at DESC;
+
+
+--
 -- Name: gateway_webhook; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
@@ -1381,4 +1426,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230402233803'),
     ('20230402233804'),
     ('20230402233805'),
-    ('20230514103740');
+    ('20230514103740'),
+    ('20230529101957');

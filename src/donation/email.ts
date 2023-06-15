@@ -7,10 +7,13 @@ import {
   DonationRecipient,
   DonationToEmail,
   EmailedStatus,
+  failedRecurringDonationTemplate,
+  FailedRecurringDonationToEmail,
   getDonationsToEmail,
   membershipReceipt,
   paymentReceipt,
-  sendEmail,
+  sendDonationEmail,
+  sendReceiptEmail,
   setDonationEmailed,
 } from "src";
 
@@ -83,7 +86,7 @@ export async function sendMembershipEmail(
     html,
   };
 
-  await sendEmail(letter);
+  await sendReceiptEmail(letter);
 }
 
 export async function sendPaymentEmail(
@@ -128,5 +131,23 @@ export async function sendPaymentEmail(
     html,
   };
 
-  await sendEmail(letter);
+  await sendReceiptEmail(letter);
+}
+
+export async function sendFailedRecurringDonationEmail(
+  info: FailedRecurringDonationToEmail
+) {
+  const text = failedRecurringDonationTemplate(info);
+  const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
+  const suffix =
+    info.recipient === DonationRecipient.GivEffektivt ? " (medlemskab)" : "";
+
+  const letter: any = {
+    from: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
+    to: `<${info.donor_email}>`,
+    subject: `${prefix}Betalingskort udløbet${suffix}`,
+    text,
+  };
+
+  await sendDonationEmail(letter);
 }

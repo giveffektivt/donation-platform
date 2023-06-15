@@ -2,7 +2,6 @@ import { PoolClient } from "pg";
 import {
   Charge,
   ChargeWithGatewayMetadata,
-  Donation,
   DonationWithGatewayInfoQuickpay,
   DonationWithGatewayInfoScanpay,
   DonorWithSensitiveInfo,
@@ -11,7 +10,7 @@ import {
 } from "../src";
 import { DonationWithGatewayInfoAny, DonorWithOldId, GatewayWebhook, TaxReportLine } from "./types";
 
-export async function insertCharge(client: PoolClient, charge: Partial<Charge>): Promise<ChargeWithGatewayMetadata> {
+export async function insertChargeWithCreatedAt(client: PoolClient, charge: Partial<Charge>): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(`insert into charge(created_at, donation_id, status) values ($1, $2, $3) returning *`, [
       charge.created_at,
@@ -23,10 +22,6 @@ export async function insertCharge(client: PoolClient, charge: Partial<Charge>):
 
 export async function findCharge(client: PoolClient, charge: Partial<Charge>): Promise<ChargeWithGatewayMetadata> {
   return (await client.query(`select * from charge_with_gateway_info where id=$1`, [charge.id])).rows[0];
-}
-
-export async function setDonationCancelled(client: PoolClient, donation: Partial<Donation>) {
-  return (await client.query(`update donation set cancelled=true where id=$1`, [donation.id])).rows[0];
 }
 
 export async function findDonationScanpay(
@@ -64,9 +59,7 @@ export async function findAllGatewayWebhooks(client: PoolClient): Promise<Gatewa
 }
 
 export async function insertOldDonor(client: PoolClient, donor: Partial<DonorWithOldId>): Promise<DonorWithOldId> {
-  return (
-    await client.query(`insert into _donor(email, _old_id) values ($1, $2) returning *`, [donor.email, donor._old_id])
-  ).rows[0];
+  return (await client.query(`insert into _donor(email, _old_id) values ($1, $2) returning *`, [donor.email, donor._old_id])).rows[0];
 }
 
 export async function findAnnualTaxReport(client: PoolClient): Promise<TaxReportLine[]> {
@@ -77,10 +70,7 @@ export async function findAnnualTaxReportOfficial(client: PoolClient): Promise<T
   return (await client.query(`select * from annual_tax_report`)).rows;
 }
 
-export async function insertGavebrevCheckin(
-  client: PoolClient,
-  gavebrevCheckin: Partial<GavebrevCheckin>
-): Promise<GavebrevCheckin> {
+export async function insertGavebrevCheckin(client: PoolClient, gavebrevCheckin: Partial<GavebrevCheckin>): Promise<GavebrevCheckin> {
   return (
     await client.query(
       `insert into gavebrev_checkin(donor_id, year, income_inferred, income_preliminary, income_verified, maximize_tax_deduction)

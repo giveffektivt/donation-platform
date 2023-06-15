@@ -1,13 +1,25 @@
 import nodemailer from "nodemailer";
 
-const client = nodemailer.createTransport({
+const receiptClient = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER_NAME,
-    pass: process.env.EMAIL_PASSWORD,
+    user: process.env.EMAIL_RECEIPT_USERNAME,
+    pass: process.env.EMAIL_RECEIPT_PASSWORD,
   },
 });
 
-export const sendEmail = async (letter: any) => {
-  await client.sendMail(letter);
+const donationClient = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_DONATION_USERNAME,
+    pass: process.env.EMAIL_DONATION_PASSWORD,
+  },
+});
+
+export const sendReceiptEmail = async (letter: any) => {
+  await receiptClient.sendMail(letter);
+};
+
+export const sendDonationEmail = async (letter: any) => {
+  await donationClient.sendMail(letter);
 };

@@ -18,7 +18,13 @@ import {
   setGavebrevStopped,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { findAnnualTaxReport, findAnnualTaxReportOfficial, insertCharge, insertGavebrevCheckin, insertMaxTaxDeduction } from "./repository";
+import {
+  findAnnualTaxReport,
+  findAnnualTaxReportOfficial,
+  insertChargeWithCreatedAt,
+  insertGavebrevCheckin,
+  insertMaxTaxDeduction,
+} from "./repository";
 
 const client = dbClient();
 
@@ -518,7 +524,7 @@ const donate = async (db: PoolClient, { tin, amount, tax_deductible = true, year
     tax_deductible,
   });
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: getDate(years_ago),
     donation_id: donation.id,
     status: ChargeStatus.Charged,

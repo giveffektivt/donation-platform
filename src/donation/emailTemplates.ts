@@ -4,6 +4,7 @@ import {
   donationPurpose,
   DonationRecipient,
   DonationToEmail,
+  FailedRecurringDonationToEmail,
 } from "src";
 
 export function paymentReceipt(
@@ -463,4 +464,31 @@ export function membershipTemplate(text: string) {
           </div>
       </body>
   </html>`;
+}
+
+export function failedRecurringDonationTemplate(
+  info: FailedRecurringDonationToEmail
+) {
+  const isMembership = info.recipient === DonationRecipient.GivEffektivt;
+
+  return `Hej ${info.donor_name || ""}
+
+Det betalingskort du bruger til ${
+    isMembership ? "dit årlige kontingent" : "dine månedlige donationer"
+  } til Giv Effektivt lader til at være udløbet eller på anden måde annulleret. Du kan opdatere dit betalingskort her, hvorefter din betaling vil blive gennemført og ${
+    isMembership ? "dit medlemskab" : "dine månedlige donationer"
+  } fortsætter som normalt: ${info.payment_link}
+
+Alternativt kan du altid oprette ${
+    isMembership ? "et nyt medlemskab" : "en ny donation"
+  } på ${
+    isMembership
+      ? "https://giveffektivt.dk/medlemskab"
+      : "https://giveffektivt.dk"
+  }
+
+Du kan besvare denne mail, hvis du har spørgsmål.
+
+Vh og tak for din støtte!
+Giv Effektivt`;
 }

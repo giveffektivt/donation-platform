@@ -82,6 +82,26 @@ export type DonationToEmail = {
   tax_deductible: boolean;
 };
 
+export type FailedRecurringDonation = {
+  donor_id: string;
+  donor_name: string;
+  donor_email: string;
+  donation_id: string;
+  amount: number;
+  recipient: DonationRecipient;
+  frequency: DonationFrequency;
+  tax_deductible: boolean;
+  method: PaymentMethod;
+  failed_at: Date;
+};
+
+export type FailedRecurringDonationToEmail = {
+  donor_name: string;
+  donor_email: string;
+  recipient: string;
+  payment_link: string;
+};
+
 export type BankTransferInfo = {
   amount: number;
   msg: string;

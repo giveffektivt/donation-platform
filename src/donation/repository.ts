@@ -8,6 +8,7 @@ import {
   DonationWithGatewayInfoQuickpay,
   DonationWithGatewayInfoScanpay,
   EmailedStatus,
+  FailedRecurringDonation,
   PaymentGateway,
   PaymentMethod,
 } from "src";
@@ -28,6 +29,13 @@ export async function setDonationEmailed(
     status,
     donation.id,
   ]);
+}
+
+export async function setDonationCancelledById(client: PoolClient, id: string) {
+  return await client.query(
+    `update donation set cancelled = true where id = $1`,
+    [id]
+  );
 }
 
 export async function setDonationCancelledByQuickpayOrder(
@@ -169,4 +177,10 @@ export async function getDonationIdsByOldDonorId(
       [old_donor_id]
     )
   ).rows.map((r) => r.donation_id);
+}
+
+export async function getFailedRecurringDonations(
+  client: PoolClient
+): Promise<FailedRecurringDonation[]> {
+  return (await client.query("select * from failed_recurring_donations")).rows;
 }

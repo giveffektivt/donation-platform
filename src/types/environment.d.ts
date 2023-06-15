@@ -16,6 +16,11 @@ declare global {
       URL: string;
       CRON_API_KEY: string;
       GAVEBREV_API_KEY: string;
+      FAILED_RECURRING_DONATIONS_API_KEY: string;
+      EMAIL_RECEIPT_USERNAME: string;
+      EMAIL_RECEIPT_PASSWORD: string;
+      EMAIL_DONATION_USERNAME: string;
+      EMAIL_DONATION_PASSWORD: string;
     }
   }
 }

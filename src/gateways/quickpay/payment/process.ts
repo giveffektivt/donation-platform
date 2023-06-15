@@ -23,6 +23,10 @@ import {
   setDonationQuickpayId,
   SubmitDataDonation,
   SubmitDataMembership,
+  FailedRecurringDonation,
+  setDonationCancelledById,
+  setDonationEmailed,
+  EmailedStatus,
 } from "src";
 
 export async function processQuickpayDonation(
@@ -49,6 +53,19 @@ export async function processQuickpayMembership(
       )
   );
   return [await generateRedirectUrl(donation, charge), donor.id];
+}
+
+export async function recreateQuickpayFailedRecurringDonation(
+  info: FailedRecurringDonation
+): Promise<string> {
+  const donation = await dbExecuteInTransaction(
+    async (db) =>
+      await addQuickpayIdForRecurringDonation(
+        db,
+        await recreateQuickpayRecurringDonation(db, info)
+      )
+  );
+  return await generateRedirectUrl(donation, null);
 }
 
 export async function insertQuickpayDataDonation(
@@ -107,6 +124,32 @@ export async function insertQuickpayDataMembership(
   return [donor, donation, null];
 }
 
+export async function recreateQuickpayRecurringDonation(
+  db: PoolClient,
+  info: FailedRecurringDonation
+): Promise<DonationWithGatewayInfoQuickpay> {
+  await setDonationCancelledById(db, info.donation_id);
+
+  const donation =
+    info.recipient === DonationRecipient.GivEffektivt
+      ? await insertMembershipViaQuickpay(db, {
+          donor_id: info.donor_id,
+          method: info.method,
+        })
+      : await insertDonationViaQuickpay(db, {
+          donor_id: info.donor_id,
+          amount: info.amount,
+          recipient: info.recipient,
+          frequency: info.frequency,
+          method: info.method,
+          tax_deductible: info.tax_deductible,
+        });
+
+  await setDonationEmailed(db, donation, EmailedStatus.Yes);
+
+  return donation;
+}
+
 async function addQuickpayId(
   db: PoolClient,
   donor: Donor,
@@ -120,6 +163,19 @@ async function addQuickpayId(
   await setDonationQuickpayId(db, donation);
 
   return [donor, donation, charge];
+}
+
+async function addQuickpayIdForRecurringDonation(
+  db: PoolClient,
+  donation: DonationWithGatewayInfoQuickpay
+): Promise<DonationWithGatewayInfoQuickpay> {
+  donation.gateway_metadata.quickpay_id = await quickpayCreateSubscription(
+    donation
+  );
+
+  await setDonationQuickpayId(db, donation);
+
+  return donation;
 }
 
 async function generateRedirectUrl(

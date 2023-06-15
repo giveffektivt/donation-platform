@@ -1,3 +1,4 @@
+import { setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
   dbBeginTransaction,
@@ -8,16 +9,20 @@ import {
   EmailedStatus,
   getDonationIdsByOldDonorId,
   getDonationsToEmail,
+  getFailedRecurringDonations,
   insertCharge,
+  insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
   insertDonationViaScanpay,
   insertDonorWithSensitiveInfo,
   insertMembershipViaQuickpay,
   PaymentMethod,
+  setDonationCancelledById,
   setDonationEmailed,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { insertOldDonor } from "./repository";
+import { utc } from "./helpers";
+import { insertChargeWithCreatedAt, insertOldDonor } from "./repository";
 
 const client = dbClient();
 
@@ -399,8 +404,214 @@ test("Should find donation ID by old donor ID", async () => {
     status: ChargeStatus.Charged,
   });
 
-  expect(await getDonationIdsByOldDonorId(db, oldDonor._old_id)).toEqual([
-    oldDonation1.id,
-    oldDonation2.id,
-  ]);
+  expect(await getDonationIdsByOldDonorId(db, oldDonor._old_id)).toEqual([oldDonation1.id, oldDonation2.id]);
+});
+
+test("Finds failed recurring donations to email", async () => {
+  const db = await client;
+
+  const now = setDate(new Date(), 1);
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+    name: "John Smith",
+  });
+
+  // Membership that was successful first time, but failed on a second charge
+  const donation1 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subYears(now, 3)),
+    donation_id: donation1.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subYears(now, 2)),
+    donation_id: donation1.id,
+    status: ChargeStatus.Error,
+  });
+
+  // Monthly donation that succeeded on a first two charges, but failed on the last charge
+  const donation2 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 11,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 3)),
+    donation_id: donation2.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 2)),
+    donation_id: donation2.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 1)),
+    donation_id: donation2.id,
+    status: ChargeStatus.Error,
+  });
+
+  // Membership that never got a charge
+  const donation3 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  // Membership that got stuck in 'waiting' charge
+  const donation4 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subYears(now, 3)),
+    donation_id: donation4.id,
+    status: ChargeStatus.Waiting,
+  });
+
+  // Membership that failed on the very first and only charge
+  const donation5 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subYears(now, 3)),
+    donation_id: donation5.id,
+    status: ChargeStatus.Error,
+  });
+
+  // Donation that succeeded on a first charge, failed on a second charge, and succeeded on the third charge
+  const donation6 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 11,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 3)),
+    donation_id: donation6.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 2)),
+    donation_id: donation6.id,
+    status: ChargeStatus.Error,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 1)),
+    donation_id: donation6.id,
+    status: ChargeStatus.Charged,
+  });
+
+  // Cancelled donation that succeeded on a first charge and failed on the second charge
+  const donation7 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 22,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+  });
+
+  await setDonationCancelledById(db, donation7.id);
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 2)),
+    donation_id: donation7.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 1)),
+    donation_id: donation7.id,
+    status: ChargeStatus.Error,
+  });
+
+  // One-time donation that failed to charge
+  const donation8 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 33,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 1)),
+    donation_id: donation8.id,
+    status: ChargeStatus.Error,
+  });
+
+  // Donation using bank transfer that succeeded on the first charge and failed on the second
+  const donation9 = await insertDonationViaBankTransfer(db, {
+    donor_id: donor.id,
+    amount: 44,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    tax_deductible: true,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 2)),
+    donation_id: donation9.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 1)),
+    donation_id: donation9.id,
+    status: ChargeStatus.Error,
+  });
+
+  // ...should result in 2 emails
+  const toEmail = await getFailedRecurringDonations(db);
+
+  const expected = [
+    {
+      donor_id: donor.id,
+      donor_name: donor.name,
+      donor_email: donor.email,
+      donation_id: donation1.id,
+      amount: donation1.amount,
+      recipient: donation1.recipient,
+      frequency: donation1.frequency,
+      tax_deductible: donation1.tax_deductible,
+      method: donation1.method,
+    },
+    {
+      donor_id: donor.id,
+      donor_name: donor.name,
+      donor_email: donor.email,
+      donation_id: donation2.id,
+      amount: donation2.amount,
+      recipient: donation2.recipient,
+      frequency: donation2.frequency,
+      tax_deductible: donation2.tax_deductible,
+      method: donation2.method,
+    },
+  ];
+
+  toEmail.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
+  expected.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
+
+  expect(toEmail).toMatchObject(expected);
 });

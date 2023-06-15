@@ -12,10 +12,11 @@ import {
   insertDonorWithSensitiveInfo,
   insertMembershipViaQuickpay,
   PaymentMethod,
+  setDonationCancelledById,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import { insertCharge, setDonationCancelled } from "./repository";
+import { insertChargeWithCreatedAt } from "./repository";
 
 const client = dbClient();
 
@@ -71,31 +72,31 @@ test("Insert charges for donations that need new charges", async () => {
   const now = setDate(new Date(), 1);
 
   // ...each successfully charged in the past
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
     donation_id: donation1.id,
     status: ChargeStatus.Charged,
   });
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 2)),
     donation_id: donation1.id,
     status: ChargeStatus.Charged,
   });
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subMonths(now, 1)),
     donation_id: donation2.id,
     status: ChargeStatus.Charged,
   });
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subMonths(now, 1)),
     donation_id: donation3.id,
     status: ChargeStatus.Charged,
   });
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 1)),
     donation_id: donation4.id,
     status: ChargeStatus.Charged,
@@ -154,9 +155,9 @@ test("Donation that is cancelled should not have new charges created", async () 
     method: PaymentMethod.CreditCard,
   });
 
-  await setDonationCancelled(db, donation);
+  await setDonationCancelledById(db, donation.id);
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Charged,
@@ -181,7 +182,7 @@ test("Bank transfer donation should not have new charges created", async () => {
     tax_deductible: false,
   });
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(new Date(), 2)),
     donation_id: donation.id,
     status: ChargeStatus.Charged,
@@ -204,7 +205,7 @@ test("Active donation whose past charge was unsuccessful should *still* have new
 
   const now = setDate(new Date(), 1);
 
-  await insertCharge(db, {
+  await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 2)),
     donation_id: donation.id,
     status: ChargeStatus.Error,
