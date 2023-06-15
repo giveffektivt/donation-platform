@@ -6,7 +6,7 @@ import {
 } from "src";
 
 export async function sendFailedRecurringDonationEmails(ids: string[]) {
-  dbExecuteInTransaction(async (db) => {
+  await dbExecuteInTransaction(async (db) => {
     for (let info of await getFailedRecurringDonations(db)) {
       if (!ids.includes(info.donor_id)) {
         continue;
