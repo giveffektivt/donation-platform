@@ -1,5 +1,7 @@
 import {
   dbExecuteInTransaction,
+  generateRenewPaymentUrl,
+  getDonationToUpdateQuickpayPaymentInfoById,
   getFailedRecurringDonations,
   recreateQuickpayFailedRecurringDonation,
   sendFailedRecurringDonationEmail,
@@ -29,5 +31,20 @@ export async function sendFailedRecurringDonationEmails(ids: string[]) {
         );
       }
     }
+  });
+}
+
+export async function getRenewPaymentLink(
+  donation_id: string
+): Promise<string | null> {
+  return await dbExecuteInTransaction(async (db) => {
+    const donation = await getDonationToUpdateQuickpayPaymentInfoById(
+      db,
+      donation_id
+    );
+    if (donation == null) {
+      return null;
+    }
+    return await generateRenewPaymentUrl(donation);
   });
 }

@@ -36,3 +36,7 @@ export type SubmitDataGavebrevStatus = {
 export type SubmitDataGavebrevStop = {
   id: string;
 };
+
+export type SubmitDataRenewPayment = {
+  id: string;
+};
