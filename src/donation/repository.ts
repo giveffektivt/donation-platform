@@ -184,3 +184,17 @@ export async function getFailedRecurringDonations(
 ): Promise<FailedRecurringDonation[]> {
   return (await client.query("select * from failed_recurring_donations")).rows;
 }
+
+export async function getDonationToUpdateQuickpayPaymentInfoById(
+  client: PoolClient,
+  id: string
+): Promise<DonationWithGatewayInfoQuickpay | null> {
+  return (
+    await client.query(
+      `select d.* from donation_with_gateway_info d
+       left join charge c on d.id = c.donation_id
+       where d.id = $1 and c.donation_id is null and d.gateway = 'Quickpay' and d.frequency != 'once' and not d.cancelled`,
+      [id]
+    )
+  ).rows[0];
+}

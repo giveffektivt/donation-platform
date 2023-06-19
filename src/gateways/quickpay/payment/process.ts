@@ -65,7 +65,16 @@ export async function recreateQuickpayFailedRecurringDonation(
         await recreateQuickpayRecurringDonation(db, info)
       )
   );
-  return await generateRedirectUrl(donation, null);
+  return await generateRenewUrl(donation);
+}
+
+export async function generateRenewPaymentUrl(
+  donation: DonationWithGatewayInfoQuickpay
+): Promise<string> {
+  return await quickpaySubscriptionUrl(
+    donation,
+    process.env.SUCCESS_URL_NEW_PAYMENT_INFO
+  );
 }
 
 export async function insertQuickpayDataDonation(
@@ -181,7 +190,7 @@ async function addQuickpayIdForRecurringDonation(
 async function generateRedirectUrl(
   donation: DonationWithGatewayInfoQuickpay,
   charge: Charge | null
-) {
+): Promise<string> {
   const successUrl =
     donation.recipient !== DonationRecipient.GivEffektivt
       ? process.env.SUCCESS_URL
@@ -192,4 +201,10 @@ async function generateRedirectUrl(
     : quickpaySubscriptionUrl(donation, successUrl));
 
   return url;
+}
+
+async function generateRenewUrl(
+  donation: DonationWithGatewayInfoQuickpay
+): Promise<string> {
+  return `${process.env.RENEW_PAYMENT_INFO_URL}?id=${donation.id}`;
 }

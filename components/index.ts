@@ -1,3 +1,4 @@
+export * from "./gavebrev";
 export * from "./membership";
 export * from "./AmountButton";
 export * from "./AmountInput";

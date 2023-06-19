@@ -13,6 +13,8 @@ declare global {
       SCANPAY_HOSTNAME: string;
       SUCCESS_URL: string;
       SUCCESS_URL_MEMBERSHIP_ONLY: string;
+      SUCCESS_URL_NEW_PAYMENT_INFO: string;
+      RENEW_PAYMENT_INFO_URL: string;
       URL: string;
       CRON_API_KEY: string;
       GAVEBREV_API_KEY: string;

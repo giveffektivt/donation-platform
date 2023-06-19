@@ -9,6 +9,7 @@ import {
   EmailedStatus,
   getDonationIdsByOldDonorId,
   getDonationsToEmail,
+  getDonationToUpdateQuickpayPaymentInfoById,
   getFailedRecurringDonations,
   insertCharge,
   insertDonationViaBankTransfer,
@@ -614,4 +615,95 @@ test("Finds failed recurring donations to email", async () => {
   expected.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
 
   expect(toEmail).toMatchObject(expected);
+});
+
+test("Finds donations that can get a link to renew payment", async () => {
+  const db = await client;
+
+  const now = setDate(new Date(), 1);
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+    name: "John Smith",
+  });
+
+  // Membership with no charges yet
+  const donation1 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  // Monthly donation with no charges yet
+  const donation2 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 11,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  // Membership that was charged before
+  const donation3 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subYears(now, 1)),
+    donation_id: donation3.id,
+    status: ChargeStatus.Charged,
+  });
+
+  // Recurring donation that has a charge associated (even if not successful)
+  const donation4 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 11,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subYears(now, 3)),
+    donation_id: donation4.id,
+    status: ChargeStatus.Waiting,
+  });
+
+  // Cancelled membership
+  const donation5 = await insertMembershipViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+  });
+
+  await setDonationCancelledById(db, donation5.id);
+
+  // One-time donation with no charge
+  const donation6 = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 11,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  // Bank-transfer donation
+  const donation7 = await insertDonationViaBankTransfer(db, {
+    donor_id: donor.id,
+    amount: 44,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    tax_deductible: true,
+  });
+
+  // ...should allow only the first two donations to renew payment
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation1.id)).toEqual(donation1);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation2.id)).toEqual(donation2);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation3.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation4.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation5.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation6.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation7.id)).toEqual(undefined);
 });
