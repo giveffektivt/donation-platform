@@ -21,6 +21,7 @@ declare global {
       EMAIL_RECEIPT_PASSWORD: string;
       EMAIL_DONATION_USERNAME: string;
       EMAIL_DONATION_PASSWORD: string;
+      DEV_WEBSITE_DOMAINS: string;
     }
   }
 }

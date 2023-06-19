@@ -5,7 +5,9 @@ export const cors = util.promisify(
   Cors({
     origin: [
       "https://giveffektivt.dk",
-      "https://glad-function-083442.framer.app",
+      ...(process.env.DEV_WEBSITE_DOMAINS
+        ? process.env.DEV_WEBSITE_DOMAINS.split(",")
+        : []),
     ],
   })
 );
