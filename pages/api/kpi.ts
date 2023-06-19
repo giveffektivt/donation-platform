@@ -28,12 +28,14 @@ export default async function handler(
     await cors(req, res);
 
     db = await dbClient();
-
-    res.status(200).json({
+    const result = {
       kpi: await getKpi(db),
       by_cause: await getRecipientDistribution(db),
       by_time: await getTimeDistribution(db),
-    });
+    };
+
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(result, null, 4));
   } catch (e) {
     console.error("api/kpi: ", e);
     res.status(500);
