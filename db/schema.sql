@@ -323,6 +323,20 @@ CREATE TABLE giveffektivt._skat_gaveskema (
 
 
 --
+-- Name: _transfer; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt._transfer (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    amount numeric NOT NULL,
+    recipient giveffektivt.donation_recipient NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
+);
+
+
+--
 -- Name: charge; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -962,37 +976,95 @@ CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
 
 
 --
+-- Name: transfer; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer AS
+ SELECT _transfer.id,
+    _transfer.amount,
+    _transfer.recipient,
+    _transfer.created_at,
+    _transfer.updated_at
+   FROM giveffektivt._transfer
+  WHERE (_transfer.deleted_at IS NULL);
+
+
+--
 -- Name: kpi; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
 CREATE VIEW giveffektivt.kpi AS
- WITH donations_total AS (
-         SELECT sum(d.amount) AS donations_total
+ WITH dkk_total AS (
+         SELECT sum(d.amount) AS dkk_total
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-        ), donations_recurring_per_year AS (
-         SELECT ((12)::numeric * sum(c1.amount)) AS donations_recurring_per_year
-           FROM ( SELECT DISTINCT ON (d.id) d.amount,
-                    c.status
+        ), dkk_pending_transfer AS (
+         SELECT (max(dkk_total_1.dkk_total) - COALESCE(sum(transfer.amount), (0)::numeric)) AS dkk_pending_transfer
+           FROM (dkk_total dkk_total_1
+             LEFT JOIN giveffektivt.transfer ON (true))
+        ), dkk_last_30_days AS (
+         SELECT sum(d.amount) AS dkk_last_30_days
+           FROM (giveffektivt.donation d
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= (date_trunc('day'::text, now()) - '30 days'::interval)))
+        ), dkk_recurring_next_year AS (
+         SELECT ((12)::numeric * sum(c1.amount)) AS dkk_recurring_next_year
+           FROM ( SELECT DISTINCT ON (d.id) d.amount
                    FROM (giveffektivt.donation d
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
-                  ORDER BY d.id, c.created_at DESC) c1
-          WHERE (c1.status = 'charged'::giveffektivt.charge_status)
-        ), members_dk AS (
-         SELECT (count(DISTINCT p.tin))::numeric AS members_dk
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))) c1
+        ), members_confirmed AS (
+         SELECT (count(DISTINCT p.tin))::numeric AS members_confirmed
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (p.country = 'Denmark'::text))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= date_trunc('year'::text, now())))
+        ), members_pending_renewal AS (
+         SELECT (count(*))::numeric AS members_pending_renewal
+           FROM ( SELECT DISTINCT ON (p.tin) p.tin,
+                    c.created_at
+                   FROM ((giveffektivt.donor_with_sensitive_info p
+                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled))
+                  ORDER BY p.tin, c.created_at DESC) a
+          WHERE (a.created_at < date_trunc('year'::text, now()))
+        ), monthly_donors AS (
+         SELECT (count(DISTINCT p.email))::numeric AS monthly_donors
+           FROM ((giveffektivt.donor_with_sensitive_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
+        ), monthly_added_value AS (
+         SELECT sum(
+                CASE
+                    WHEN (a.frequency = 'monthly'::giveffektivt.donation_frequency) THEN (a.amount * (12)::numeric)
+                    ELSE a.amount
+                END) AS monthly_added_value
+           FROM ( SELECT DISTINCT ON (p.id) d.amount,
+                    d.frequency
+                   FROM ((giveffektivt.donor p
+                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (p.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) a
         )
- SELECT members_dk.members_dk,
-    donations_total.donations_total,
-    donations_recurring_per_year.donations_recurring_per_year
-   FROM members_dk,
-    donations_total,
-    donations_recurring_per_year;
+ SELECT dkk_total.dkk_total,
+    dkk_pending_transfer.dkk_pending_transfer,
+    dkk_last_30_days.dkk_last_30_days,
+    dkk_recurring_next_year.dkk_recurring_next_year,
+    members_confirmed.members_confirmed,
+    members_pending_renewal.members_pending_renewal,
+    monthly_donors.monthly_donors,
+    monthly_added_value.monthly_added_value
+   FROM dkk_total,
+    dkk_pending_transfer,
+    dkk_last_30_days,
+    dkk_recurring_next_year,
+    members_confirmed,
+    members_pending_renewal,
+    monthly_donors,
+    monthly_added_value;
 
 
 --
@@ -1017,14 +1089,22 @@ CREATE VIEW giveffektivt.old_ids_map AS
 --
 
 CREATE VIEW giveffektivt.recipient_distribution AS
- SELECT d.recipient,
-    count(*) AS count,
-    sum(d.amount) AS sum
-   FROM (giveffektivt.donation d
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-  GROUP BY d.recipient
-  ORDER BY (sum(d.amount)) DESC;
+ SELECT COALESCE(d.recipient, t.recipient) AS recipient,
+    COALESCE(d.dkk_total, (0)::numeric) AS dkk_total,
+    (COALESCE(d.dkk_total, (0)::numeric) - COALESCE(t.dkk_total, (0)::numeric)) AS dkk_pending_transfer,
+    COALESCE(d.payments_total, (0)::numeric) AS payments_total
+   FROM (( SELECT d_1.recipient,
+            (count(*))::numeric AS payments_total,
+            sum(d_1.amount) AS dkk_total
+           FROM (giveffektivt.donation d_1
+             JOIN giveffektivt.charge c ON ((c.donation_id = d_1.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          GROUP BY d_1.recipient) d
+     FULL JOIN ( SELECT transfer.recipient,
+            sum(transfer.amount) AS dkk_total
+           FROM giveffektivt.transfer
+          GROUP BY transfer.recipient) t ON ((d.recipient = t.recipient)))
+  ORDER BY COALESCE(d.dkk_total, (0)::numeric) DESC;
 
 
 --
@@ -1092,10 +1172,12 @@ CREATE VIEW giveffektivt.skat_gaveskema AS
 CREATE VIEW giveffektivt.time_distribution AS
  SELECT to_char(a.year, 'yyyy'::text) AS year,
     to_char(a.month, 'Mon'::text) AS month,
-    a.sum
+    a.dkk_total,
+    a.payments_total
    FROM ( SELECT date_trunc('year'::text, c.created_at) AS year,
             date_trunc('month'::text, c.created_at) AS month,
-            sum(d.amount) AS sum
+            sum(d.amount) AS dkk_total,
+            (count(*))::numeric AS payments_total
            FROM (giveffektivt.charge c
              JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
@@ -1165,6 +1247,14 @@ ALTER TABLE ONLY giveffektivt._skat_gaveskema
 
 ALTER TABLE ONLY giveffektivt._skat
     ADD CONSTRAINT _skat_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: _transfer _transfer_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._transfer
+    ADD CONSTRAINT _transfer_pkey PRIMARY KEY (id);
 
 
 --
@@ -1303,6 +1393,15 @@ CREATE RULE skat_soft_delete AS
 
 
 --
+-- Name: transfer transfers_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE transfers_soft_delete AS
+    ON DELETE TO giveffektivt.transfer DO INSTEAD  UPDATE giveffektivt._transfer SET deleted_at = now()
+  WHERE ((_transfer.deleted_at IS NULL) AND (_transfer.id = old.id));
+
+
+--
 -- Name: _charge charge_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
@@ -1356,6 +1455,13 @@ CREATE TRIGGER skat_gaveskema_update_timestamp BEFORE UPDATE ON giveffektivt._sk
 --
 
 CREATE TRIGGER skat_update_timestamp BEFORE UPDATE ON giveffektivt._skat FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: _transfer transfers_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER transfers_update_timestamp BEFORE UPDATE ON giveffektivt._transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
@@ -1427,4 +1533,6 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230402233804'),
     ('20230402233805'),
     ('20230514103740'),
-    ('20230529101957');
+    ('20230529101957'),
+    ('20230619200209'),
+    ('20230619213220');
