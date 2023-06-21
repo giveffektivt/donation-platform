@@ -99,6 +99,7 @@ export type FailedRecurringDonationToEmail = {
   donor_name: string;
   donor_email: string;
   recipient: string;
+  amount: number;
   payment_link: string;
 };
 

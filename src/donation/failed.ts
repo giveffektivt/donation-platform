@@ -22,6 +22,7 @@ export async function sendFailedRecurringDonationEmails(ids: string[]) {
           donor_email: info.donor_email,
           donor_name: info.donor_name,
           recipient: info.recipient,
+          amount: info.amount,
           payment_link: await recreateQuickpayFailedRecurringDonation(info),
         });
       } catch (err) {

@@ -473,21 +473,29 @@ export function failedRecurringDonationTemplate(
 
   return `Hej ${info.donor_name || ""}
 
-Det betalingskort du bruger til ${
-    isMembership ? "dit årlige kontingent" : "dine månedlige donationer"
-  } til Giv Effektivt lader til at være udløbet eller på anden måde annulleret. Du kan opdatere dit betalingskort her, hvorefter din betaling vil blive gennemført og ${
-    isMembership ? "dit medlemskab" : "dine månedlige donationer"
-  } fortsætter som normalt: ${info.payment_link}
-
-Alternativt kan du altid oprette ${
-    isMembership ? "et nyt medlemskab" : "en ny donation"
-  } på ${
-    isMembership
-      ? "https://giveffektivt.dk/medlemskab"
-      : "https://giveffektivt.dk"
+Dit betalingskort er udløbet eller lukket. Du kan opdatere dit betalingskort her: ${
+    info.payment_link
   }
 
-Du kan besvare denne mail, hvis du har spørgsmål.
+Betalingskortet bruges til ${
+    isMembership ? "dit årlige medlemskontingent" : "din månedlige donation"
+  } på ${info.amount} kr. til Giv Effektivt${
+    isMembership ? ", som hjælper os med at forblive fradragsberettigede" : ""
+  }. Når du opdaterer kortinformationen, vil den manglende betaling blive gennemført og ${
+    isMembership
+      ? "medlemskabet fortsætter"
+      : "de månedlige donationer vil herefter fortsætte"
+  } som normalt.
+
+Hvis du intet foretager dig, stopper ${
+    isMembership ? "dit medlemskab" : "dine donationer"
+  } og du hører ikke mere fra os. ${
+    isMembership
+      ? "Du kan altid oprette et medlemskab på https://giveffektivt.dk/medlemskab"
+      : "Hvis du ønsker at oprette en ny donation, kan du som altid gøre det på https://giveffektivt.dk"
+  }
+
+Du er velkommen til at besvare denne mail, hvis du har spørgsmål.
 
 Vh og tak for din støtte!
 Giv Effektivt`;
