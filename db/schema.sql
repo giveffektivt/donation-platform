@@ -1054,6 +1054,30 @@ CREATE VIEW giveffektivt.kpi AS
 
 
 --
+-- Name: monthly_added_value; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.monthly_added_value AS
+ SELECT to_char(a.year, 'yyyy'::text) AS year,
+    to_char(a.month, 'Mon'::text) AS month,
+    sum(
+        CASE
+            WHEN (a.frequency = 'monthly'::giveffektivt.donation_frequency) THEN (a.amount * (12)::numeric)
+            ELSE a.amount
+        END) AS value
+   FROM ( SELECT DISTINCT ON (p.id) date_trunc('year'::text, p.created_at) AS year,
+            date_trunc('month'::text, p.created_at) AS month,
+            d.amount,
+            d.frequency
+           FROM ((giveffektivt.donor p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled))) a
+  GROUP BY a.year, a.month
+  ORDER BY a.year DESC, a.month DESC;
+
+
+--
 -- Name: old_ids_map; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1521,4 +1545,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230514103740'),
     ('20230529101957'),
     ('20230619200209'),
-    ('20230619213220');
+    ('20230619213220'),
+    ('20230626100725');

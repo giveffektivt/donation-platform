@@ -21,3 +21,9 @@ export type TimeDistribution = {
   month: string;
   sum: number;
 };
+
+export type MonthlyAddedValue = {
+  year: string;
+  month: string;
+  value: number;
+};

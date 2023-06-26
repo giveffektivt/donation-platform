@@ -5,9 +5,11 @@ import {
   dbClient,
   dbRelease,
   getKpi,
+  getMonthlyAddedValue,
   getRecipientDistribution,
   getTimeDistribution,
   Kpi,
+  MonthlyAddedValue,
   RecipientDistribution,
   TimeDistribution,
 } from "src";
@@ -16,6 +18,7 @@ type Data = {
   kpi: Kpi;
   by_cause: RecipientDistribution[];
   by_time: TimeDistribution[];
+  monthly_added_value: MonthlyAddedValue[];
 };
 
 export default async function handler(
@@ -32,6 +35,7 @@ export default async function handler(
       kpi: await getKpi(db),
       by_cause: await getRecipientDistribution(db),
       by_time: await getTimeDistribution(db),
+      monthly_added_value: await getMonthlyAddedValue(db),
     };
 
     res.setHeader("Content-Type", "application/json");
