@@ -93,27 +93,6 @@ monthly_donors as (
         and d.recipient != 'Giv Effektivt'
         and d.frequency = 'monthly'
         and not d.cancelled
-),
-monthly_added_value as (
-    select
-        sum(
-            case when frequency = 'monthly' then
-                amount * 12
-            else
-                amount
-            end)::numeric as monthly_added_value
-    from ( select distinct on (p.id)
-            amount,
-            frequency
-        from
-            donor p
-            inner join donation d on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and recipient != 'Giv Effektivt'
-            and not d.cancelled
-            and p.created_at >= date_trunc('month', now()) - interval '1 month') a
 )
 select
     *
@@ -124,8 +103,7 @@ from
     dkk_recurring_next_year,
     members_confirmed,
     members_pending_renewal,
-    monthly_donors,
-    monthly_added_value;
+    monthly_donors;
 
 create view recipient_distribution as
 select
