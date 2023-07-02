@@ -66,32 +66,15 @@ export const showInfo = (Component: any): ComponentType => {
   };
 };
 
-export const renewPaymentButtonDesktop = (Component: any): ComponentType => {
-  return renewPaymentButton(Component, "Desktop");
-};
-
-export const renewPaymentButtonPhone = (Component: any): ComponentType => {
-  return renewPaymentButton(Component, "Phone");
-};
-
-const renewPaymentButton = (
-  Component: any,
-  breakpoint: string
-): ComponentType => {
+export const renewPaymentButton = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-
-    const variant = `${breakpoint}/Solid${
-      store.url != null ? "" : " disabled"
-    }`;
 
     const onTap = () => {
       window.open(store.url, "_parent");
     };
 
-    return store.url != null ? (
-      <Component {...props} tap={onTap} variant={variant} />
-    ) : null;
+    return store.url != null ? <Component {...props} tap={onTap} /> : null;
   };
 };
 

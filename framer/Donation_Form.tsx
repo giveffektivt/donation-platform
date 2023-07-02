@@ -331,143 +331,67 @@ const withVariant = (Component: any, getVariant: any): ComponentType => {
   };
 };
 
-export const withVariantAmountDesktop = (Component: any): ComponentType => {
+export const withVariantAmount = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
     const frequency = parseFrequency(store.frequency);
-    return [
-      `Desktop/${frequency}/${store.amount}`,
-      `Desktop/${frequency}/None`,
-    ];
+    return [`${frequency}/${store.amount}`, `${frequency}/None`];
   });
 };
 
-export const withVariantAmountPhone = (Component: any): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => {
-    const frequency = parseFrequency(store.frequency);
-    return [`Phone/${frequency}/${store.amount}`, `Phone/${frequency}/None`];
-  });
-};
-
-export const withVariantFrequencyDesktop = (Component: any): ComponentType => {
+export const withVariantFrequency = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.frequency}`,
-    `Desktop/None`,
+    `${store.frequency}`,
   ]);
 };
 
-export const withVariantFrequencyPhone = (Component: any): ComponentType => {
+export const withVariantMethod = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.frequency}`,
-    `Phone/None`,
+    `${store.method}`,
+    `None`,
   ]);
 };
 
-export const withVariantMethodDesktop = (Component: any): ComponentType => {
+export const withVariantRecipient = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.method}`,
-    `Desktop/None`,
+    `${store.recipient}`,
   ]);
 };
 
-export const withVariantMethodPhone = (Component: any): ComponentType => {
+export const withVariantTaxDeductible = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.method}`,
-    `Phone/None`,
+    `${store.taxDeductible ? "Checked" : "Empty"}`,
+    `Empty`,
   ]);
 };
 
-export const withVariantRecipientDesktop = (Component: any): ComponentType => {
+export const withVariantRulesAccepted = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.recipient}`,
-    `Desktop/None`,
+    `${store.rulesAccepted ? "Checked" : "Empty"}`,
+    `Empty`,
   ]);
 };
 
-export const withVariantRecipientPhone = (Component: any): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.recipient}`,
-    `Phone/None`,
-  ]);
-};
-
-export const withVariantTaxDeductibleDesktop = (
+export const withVariantSubscribeToNewsletter = (
   Component: any
 ): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.taxDeductible ? "Checked" : "Empty"}`,
-    `Desktop/Empty`,
-  ]);
-};
-
-export const withVariantTaxDeductiblePhone = (
-  Component: any
-): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.taxDeductible ? "Checked" : "Empty"}`,
-    `Phone/Empty`,
-  ]);
-};
-
-export const withVariantRulesAcceptedDesktop = (
-  Component: any
-): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.rulesAccepted ? "Checked" : "Empty"}`,
-    `Desktop/Empty`,
-  ]);
-};
-
-export const withVariantRulesAcceptedPhone = (
-  Component: any
-): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.rulesAccepted ? "Checked" : "Empty"}`,
-    `Phone/Empty`,
-  ]);
-};
-
-export const withVariantSubscribeToNewsletterDesktop = (
-  Component: any
-): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => [
-    `Desktop/${store.subscribeToNewsletter ? "Checked" : "Empty"}`,
-    `Desktop/Empty`,
-  ]);
-};
-
-export const withVariantSubscribeToNewsletterPhone = (
-  Component: any
-): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => [
-    `Phone/${store.subscribeToNewsletter ? "Checked" : "Empty"}`,
-    `Phone/Empty`,
+    `${store.subscribeToNewsletter ? "Checked" : "Empty"}`,
+    `Empty`,
   ]);
 };
 
 export const withVariantStepDesktop = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
-    useEffect(() => setStore({ env: "prod" }), []);
+    const env = location?.host === "giveffektivt.dk" ? "prod" : "dev";
+    useEffect(() => setStore({ env }), []);
     return [`Desktop/${store.step}`, `Desktop/Step 1`];
   });
 };
 
 export const withVariantStepPhone = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
-    useEffect(() => setStore({ env: "prod" }), []);
-    return [`Phone/${store.step}`, `Phone/Step 1`];
-  });
-};
-
-export const withVariantStepDesktopDev = (Component: any): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => {
-    useEffect(() => setStore({ env: "dev" }), []);
-    return [`Desktop/${store.step}`, `Desktop/Step 1`];
-  });
-};
-
-export const withVariantStepPhoneDev = (Component: any): ComponentType => {
-  return withVariant(Component, (store: any, setStore: any) => {
-    useEffect(() => setStore({ env: "dev" }), []);
+    const env = location?.host === "giveffektivt.dk" ? "prod" : "dev";
+    useEffect(() => setStore({ env }), []);
     return [`Phone/${store.step}`, `Phone/Step 1`];
   });
 };
