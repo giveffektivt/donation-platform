@@ -179,7 +179,6 @@ export const Input: React.ComponentType = withCSS<Props>(
           backgroundColor,
           borderRadius,
           textAlign,
-          lineHeight,
           caretColor,
           margin: 0,
           display: "flex",
@@ -193,7 +192,10 @@ export const Input: React.ComponentType = withCSS<Props>(
           }`,
           ...inputStyle,
           ...style,
-          ...fontStyles,
+          fontFamily: "'Satoshi Regular', sans-serif",
+          fontWeight: "400",
+          letterSpacing: "0em",
+          lineHeight: "1.2em",
         }}
         type={type}
         inputMode={keyboard}
@@ -204,6 +206,15 @@ export const Input: React.ComponentType = withCSS<Props>(
     ".framer-default-input { --framer-default-input-border-width: 1px; --framer-default-input-border-color: #09f; --framer-default-input-placeholder-color: #aaa; }",
     ".framer-default-input:focus { box-shadow: inset 0 0 0 var(--framer-default-input-border-width) var(--framer-default-input-border-color) !important; }",
     ".framer-default-input::placeholder { color: var(--framer-default-input-placeholder-color) !important; }",
+
+    // Hide +/- buttons on input type number
+    ".framer-default-input::-webkit-outer-spin-button, .framer-default-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }",
+    ".framer-default-input[type=number] { appearance: textfield !important; }",
+
+    // Text style breakpoints
+    "@media (max-width: 767px) and (min-width: 0px) { .framer-default-input { --framer-font-size: 14px; } }",
+    "@media (max-width: 1299px) and (min-width: 768px) { .framer-default-input { --framer-font-size: 16px; } }",
+    ".framer-default-input { font-size: var(--framer-font-size, 20px); }",
   ]
 );
 
@@ -312,7 +323,7 @@ addPropertyControls(Input, {
     title: "Type",
     hidden: ({ multiLine }) => multiLine,
     defaultValue: "text",
-    options: ["text", "password", "email"],
+    options: ["text", "password", "email", "number"],
   },
   enableLimit: {
     title: "Limit",

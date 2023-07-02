@@ -194,6 +194,11 @@ export function Select(props) {
     <div style={containerStyles}>
       <style>
         {`
+                    @media (max-width: 767px) and (min-width: 0px) { .${className} { --framer-font-size: 14px; } }
+                    @media (max-width: 1299px) and (min-width: 768px) { .${className} { --framer-font-size: 16px; } }
+                    .${className} { font-size: var(--framer-font-size, 20px); }
+
+
                     .${className}:focus {
                         background-color: ${variants.focus.backgroundColor};
                         color: ${variants.focus.color};
@@ -212,16 +217,18 @@ export function Select(props) {
         autoFocus={focused && isInPreview}
         style={{
           ...(selectStyles as any),
-          ...fontStyles,
           width: "100%",
           height: "100%",
           borderRadius: radius,
-          fontSize,
           backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(
             `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                         <path d="M 0 9 L 4.5 4.5 L 0 0" transform="translate(5.75 3.75) rotate(90 2.25 4.5)" fill="transparent" stroke-width="2" stroke="${defaultIconColor}" stroke-linecap="round"></path>
                       </svg>`
           )}")`,
+          fontFamily: "'Satoshi Regular', sans-serif",
+          fontWeight: "400",
+          letterSpacing: "0em",
+          lineHeight: "1.2em",
           ...currentVariantStyle,
         }}
         value={currentValue}
