@@ -43,7 +43,7 @@ const setField = (Component: any, field: string): ComponentType => {
     const [_, setStore] = useStore();
 
     const onTap = () => {
-      const element = querySelector(`.${props.className}`);
+      const element = document.querySelector(`.${props.className}`);
       const value = element != null ? element.textContent : "";
       setStore({ [field]: value });
     };
@@ -382,16 +382,18 @@ export const withVariantSubscribeToNewsletter = (
 
 export const withVariantStepDesktop = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
-    const env = location?.host === "giveffektivt.dk" ? "prod" : "dev";
-    useEffect(() => setStore({ env }), []);
+    useEffect(() => {
+      setStore({ env: location.host === "giveffektivt.dk" ? "prod" : "dev" });
+    }, []);
     return [`Desktop/${store.step}`, `Desktop/Step 1`];
   });
 };
 
 export const withVariantStepPhone = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
-    const env = location?.host === "giveffektivt.dk" ? "prod" : "dev";
-    useEffect(() => setStore({ env }), []);
+    useEffect(() => {
+      setStore({ env: location.host === "giveffektivt.dk" ? "prod" : "dev" });
+    }, []);
     return [`Phone/${store.step}`, `Phone/Step 1`];
   });
 };
@@ -409,10 +411,4 @@ export const showDebug = (Component: any): ComponentType => {
       />
     );
   };
-};
-
-// Helpers
-
-const querySelector = (selector: string) => {
-  return window?.document?.querySelector(selector);
 };
