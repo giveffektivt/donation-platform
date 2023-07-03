@@ -20,10 +20,5 @@ export type TimeDistribution = {
   year: string;
   month: string;
   sum: number;
-};
-
-export type MonthlyAddedValue = {
-  year: string;
-  month: string;
-  value: number;
+  value_added: number;
 };

@@ -1054,30 +1054,6 @@ CREATE VIEW giveffektivt.kpi AS
 
 
 --
--- Name: monthly_added_value; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.monthly_added_value AS
- SELECT to_char(a.year, 'yyyy'::text) AS year,
-    to_char(a.month, 'Mon'::text) AS month,
-    sum(
-        CASE
-            WHEN (a.frequency = 'monthly'::giveffektivt.donation_frequency) THEN (a.amount * (12)::numeric)
-            ELSE a.amount
-        END) AS value
-   FROM ( SELECT DISTINCT ON (p.id) date_trunc('year'::text, p.created_at) AS year,
-            date_trunc('month'::text, p.created_at) AS month,
-            d.amount,
-            d.frequency
-           FROM ((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled))) a
-  GROUP BY a.year, a.month
-  ORDER BY a.year DESC, a.month DESC;
-
-
---
 -- Name: old_ids_map; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1180,11 +1156,8 @@ CREATE VIEW giveffektivt.skat_gaveskema AS
 --
 
 CREATE VIEW giveffektivt.time_distribution AS
- SELECT to_char(a.year, 'yyyy'::text) AS year,
-    to_char(a.month, 'Mon'::text) AS month,
-    a.dkk_total,
-    a.payments_total
-   FROM ( SELECT date_trunc('year'::text, c.created_at) AS year,
+ WITH successful_charges AS (
+         SELECT date_trunc('year'::text, c.created_at) AS year,
             date_trunc('month'::text, c.created_at) AS month,
             sum(d.amount) AS dkk_total,
             (count(*))::numeric AS payments_total
@@ -1192,7 +1165,33 @@ CREATE VIEW giveffektivt.time_distribution AS
              JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
           GROUP BY (date_trunc('year'::text, c.created_at)), (date_trunc('month'::text, c.created_at))
-          ORDER BY (date_trunc('year'::text, c.created_at)) DESC, (date_trunc('month'::text, c.created_at)) DESC) a;
+        ), value_added AS (
+         SELECT a_1.year,
+            a_1.month,
+            sum((a_1.amount * (
+                CASE
+                    WHEN (a_1.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 12
+                    ELSE 1
+                END)::numeric)) AS value_added
+           FROM ( SELECT DISTINCT ON (p.id) date_trunc('year'::text, p.created_at) AS year,
+                    date_trunc('month'::text, p.created_at) AS month,
+                    d.amount,
+                    d.frequency
+                   FROM ((giveffektivt.donor p
+                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled))) a_1
+          GROUP BY a_1.year, a_1.month
+        )
+ SELECT to_char(a.year, 'yyyy'::text) AS year,
+    to_char(a.month, 'Mon'::text) AS month,
+    COALESCE(sum(a.dkk_total), (0)::numeric) AS dkk_total,
+    COALESCE(sum(a.payments_total), (0)::numeric) AS payments_total,
+    COALESCE(sum(b.value_added), (0)::numeric) AS value_added
+   FROM (successful_charges a
+     FULL JOIN value_added b ON (((a.year = b.year) AND (a.month = b.month))))
+  GROUP BY a.year, a.month
+  ORDER BY a.year DESC, a.month DESC;
 
 
 --
@@ -1546,4 +1545,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230529101957'),
     ('20230619200209'),
     ('20230619213220'),
-    ('20230626100725');
+    ('20230626100725'),
+    ('20230703175813');
