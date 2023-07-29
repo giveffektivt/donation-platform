@@ -3,7 +3,7 @@ import type { AppProps } from "next/app";
 import "../styles/index.css";
 import { Poppins } from "@next/font/google";
 
-const poppins = Poppins({ weight: "400" });
+const poppins = Poppins({ weight: "400", subsets: ["latin-ext"] });
 
 function DonationPlatform({ Component, pageProps }: AppProps) {
   return (
