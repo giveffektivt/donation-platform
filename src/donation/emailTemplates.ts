@@ -9,7 +9,7 @@ import {
 
 export function paymentReceipt(
   donation: DonationToEmail,
-  bank?: BankTransferInfo
+  bank?: BankTransferInfo,
 ) {
   const { id, recipient, amount, frequency, tax_deductible } = donation;
 
@@ -39,7 +39,7 @@ export function paymentReceipt(
 
 export function membershipReceipt(
   donation: DonationToEmail,
-  bank?: BankTransferInfo
+  bank?: BankTransferInfo,
 ) {
   const { id, amount } = donation;
 
@@ -467,11 +467,12 @@ export function membershipTemplate(text: string) {
 }
 
 export function failedRecurringDonationTemplate(
-  info: FailedRecurringDonationToEmail
+  info: FailedRecurringDonationToEmail,
 ) {
   const isMembership = info.recipient === DonationRecipient.GivEffektivt;
+  const donorName = (info.donor_name || "").split(" ")[0];
 
-  return `Hej ${info.donor_name || ""}
+  return `Hej ${donorName}
 
 Dit betalingskort er udløbet eller lukket. Du kan opdatere dit betalingskort her: ${
     info.payment_link

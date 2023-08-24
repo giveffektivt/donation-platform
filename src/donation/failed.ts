@@ -15,9 +15,6 @@ export async function sendFailedRecurringDonationEmails(ids: string[]) {
       }
 
       try {
-        console.log(
-          `Sending new payment link for a failed recurring donation: ${info.donation_id}`
-        );
         await sendFailedRecurringDonationEmail({
           donor_email: info.donor_email,
           donor_name: info.donor_name,
@@ -25,10 +22,13 @@ export async function sendFailedRecurringDonationEmails(ids: string[]) {
           amount: info.amount,
           payment_link: await recreateQuickpayFailedRecurringDonation(info),
         });
+        console.log(
+          `Sent new payment link for a failed recurring donation: ${info.donation_id}`,
+        );
       } catch (err) {
         console.error(
           `Error sending new payment link for a failed recurring donation: ${info.donation_id}`,
-          err
+          err,
         );
       }
     }
@@ -36,12 +36,12 @@ export async function sendFailedRecurringDonationEmails(ids: string[]) {
 }
 
 export async function getRenewPaymentLink(
-  donation_id: string
+  donation_id: string,
 ): Promise<string | null> {
   return await dbExecuteInTransaction(async (db) => {
     const donation = await getDonationToUpdateQuickpayPaymentInfoById(
       db,
-      donation_id
+      donation_id,
     );
     if (donation == null) {
       return null;
