@@ -1013,7 +1013,7 @@ CREATE VIEW giveffektivt.kpi AS
            FROM ( SELECT DISTINCT ON (d.id) d.amount
                    FROM (giveffektivt.donation d
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))) c1
+                  WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))) c1
         ), members_confirmed AS (
          SELECT (count(DISTINCT p.tin))::numeric AS members_confirmed
            FROM ((giveffektivt.donor_with_sensitive_info p
@@ -1035,7 +1035,7 @@ CREATE VIEW giveffektivt.kpi AS
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
+          WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
         )
  SELECT dkk_total.dkk_total,
     dkk_pending_transfer.dkk_pending_transfer,
@@ -1546,4 +1546,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230619200209'),
     ('20230619213220'),
     ('20230626100725'),
-    ('20230703175813');
+    ('20230703175813'),
+    ('20230826132840');
