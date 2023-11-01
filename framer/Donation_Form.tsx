@@ -10,7 +10,7 @@ const emptyStore = {
   method: "",
   tin: "",
   email: "",
-  recipient: "",
+  recipient: "Giv Effektivts anbefaling",
   rulesAccepted: false,
   subscribeToNewsletter: false,
   taxDeductible: false,
@@ -95,41 +95,42 @@ export const submitBank = (Component: any): ComponentType => {
 
 const preselectRecipient = (
   Component: any,
-  preselectedRecipient: string
+  preselectedRecipient: string,
 ): ComponentType => {
   return (props) => {
-    const [_, setStore] = useStore();
-    const onTap = () => setStore({ preselectedRecipient });
-    return <Component {...props} onTap={onTap} />;
+    // const [_, setStore] = useStore()
+    // const onTap = () => setStore({ preselectedRecipient })
+    // return <Component {...props} onTap={onTap} />
+    return <Component {...props} />;
   };
 };
 
 export const preselectRecipientGivEffektivtsAnbefaling = (
-  Component: any
+  Component: any,
 ): ComponentType => {
   return preselectRecipient(Component, "Giv Effektivts anbefaling");
 };
 
 export const preselectRecipientMyggenetModMalaria = (
-  Component: any
+  Component: any,
 ): ComponentType => {
   return preselectRecipient(Component, "Myggenet mod malaria");
 };
 
 export const preselectRecipientMedicinModMalaria = (
-  Component: any
+  Component: any,
 ): ComponentType => {
   return preselectRecipient(Component, "Medicin mod malaria");
 };
 
 export const preselectRecipientVitaminModMangelsygdomme = (
-  Component: any
+  Component: any,
 ): ComponentType => {
   return preselectRecipient(Component, "Vitamin mod mangelsygdomme");
 };
 
 export const preselectRecipientVaccinerTilSpædbørn = (
-  Component: any
+  Component: any,
 ): ComponentType => {
   return preselectRecipient(Component, "Vacciner til spædbørn");
 };
@@ -239,12 +240,15 @@ export const selectRecipient = (Component: any): ComponentType => {
         store.preselectedRecipient !== ""
           ? Math.max(
               0,
-              findRecipientIndex(props.options, store.preselectedRecipient)
+              findRecipientIndex(props.options, store.preselectedRecipient),
             )
           : index;
 
       setIndex(idx);
-      setStore({ recipient: props.options[idx], preselectedRecipient: "" });
+      setStore({
+        recipient: props.options[idx],
+        preselectedRecipient: "",
+      });
     }, [store.preselectedRecipient]);
 
     const onChange = (idx: number) => {
@@ -265,34 +269,38 @@ const withRecipient = (Component: any, init: any): ComponentType => {
 };
 
 export const withRecipientMyggenetModMalaria = (
-  Component: any
+  Component: any,
 ): ComponentType => {
-  return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Myggenet mod malaria" })
+  return withRecipient(
+    Component,
+    (setStore) => {}, // setStore({ preselectedRecipient: "Myggenet mod malaria" })
   );
 };
 
 export const withRecipientMedicinModMalaria = (
-  Component: any
+  Component: any,
 ): ComponentType => {
-  return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Medicin mod malaria" })
+  return withRecipient(
+    Component,
+    (setStore) => {}, // setStore({ preselectedRecipient: "Medicin mod malaria" })
   );
 };
 
 export const withRecipientVitaminModMangelsygdomme = (
-  Component: any
+  Component: any,
 ): ComponentType => {
-  return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Vitamin mod mangelsygdomme" })
+  return withRecipient(
+    Component,
+    (setStore) => {}, // setStore({ preselectedRecipient: "Vitamin mod mangelsygdomme" })
   );
 };
 
 export const withRecipientVaccinerTilSpædbørn = (
-  Component: any
+  Component: any,
 ): ComponentType => {
-  return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Vacciner til spædbørn" })
+  return withRecipient(
+    Component,
+    (setStore) => {}, // setStore({ preselectedRecipient: "Vacciner til spædbørn" })
   );
 };
 
@@ -372,7 +380,7 @@ export const withVariantRulesAccepted = (Component: any): ComponentType => {
 };
 
 export const withVariantSubscribeToNewsletter = (
-  Component: any
+  Component: any,
 ): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `${store.subscribeToNewsletter ? "Checked" : "Empty"}`,
@@ -383,7 +391,9 @@ export const withVariantSubscribeToNewsletter = (
 export const withVariantStepDesktop = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
     useEffect(() => {
-      setStore({ env: location.host === "giveffektivt.dk" ? "prod" : "dev" });
+      setStore({
+        env: location.host === "giveffektivt.dk" ? "prod" : "dev",
+      });
     }, []);
     return [`Desktop/${store.step}`, `Desktop/Step 1`];
   });
@@ -392,7 +402,9 @@ export const withVariantStepDesktop = (Component: any): ComponentType => {
 export const withVariantStepPhone = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
     useEffect(() => {
-      setStore({ env: location.host === "giveffektivt.dk" ? "prod" : "dev" });
+      setStore({
+        env: location.host === "giveffektivt.dk" ? "prod" : "dev",
+      });
     }, []);
     return [`Phone/${store.step}`, `Phone/Step 1`];
   });

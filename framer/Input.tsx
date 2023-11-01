@@ -6,6 +6,7 @@ import {
   RenderTarget,
   withCSS,
 } from "framer";
+import styled from "styled-components";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   fontStack,
@@ -127,7 +128,7 @@ export const Input: React.ComponentType = withCSS<Props>(
         if (onChange) onChange(value);
         if (onValueChange) onValueChange(value);
       },
-      [onChange, multiLine]
+      [onChange, multiLine],
     );
 
     useOnEnter(() => {
@@ -215,7 +216,7 @@ export const Input: React.ComponentType = withCSS<Props>(
     "@media (max-width: 767px) and (min-width: 0px) { .framer-default-input { --framer-font-size: 14px; } }",
     "@media (max-width: 1299px) and (min-width: 768px) { .framer-default-input { --framer-font-size: 16px; } }",
     ".framer-default-input { font-size: var(--framer-font-size, 20px); }",
-  ]
+  ],
 );
 
 Input.defaultProps = {

@@ -25,7 +25,9 @@ export const loadUrl = (Component: any): ComponentType => {
 
         const response = await fetch(apiUrl("prod", "renew-payment"), {
           method: "POST",
-          headers: { "Content-type": "application/json;charset=UTF-8" },
+          headers: {
+            "Content-type": "application/json;charset=UTF-8",
+          },
           body: JSON.stringify({ id }),
         });
 

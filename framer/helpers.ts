@@ -64,10 +64,10 @@ const parseMethod = (value: string): string => {
 
 const findRecipientIndex = (
   recipients: string[],
-  partialName: string
+  partialName: string,
 ): number => {
   return recipients.findIndex((r) =>
-    r.toLowerCase().includes(partialName.toLowerCase())
+    r.toLowerCase().includes(partialName.toLowerCase()),
   );
 };
 
@@ -92,7 +92,7 @@ const submitDonation = async (store: any, setStore: any) => {
     const response = await submitForm(
       store.env,
       "donation",
-      prepareDonationPayload(store)
+      prepareDonationPayload(store),
     );
 
     if (response.redirect) {
@@ -127,7 +127,7 @@ type DonationResponse = {
 const submitForm = async (
   env: string,
   path: string,
-  payload: any
+  payload: any,
 ): Promise<DonationResponse> => {
   const response = await fetch(apiUrl(env, path), {
     method: "POST",

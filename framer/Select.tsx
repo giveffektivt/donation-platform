@@ -141,7 +141,7 @@ export function Select(props) {
       onSelectOption8,
       onSelectOption9,
       onSelectOption10,
-    ]
+    ],
   );
 
   const handleFocus = React.useCallback(() => {
@@ -164,7 +164,7 @@ export function Select(props) {
       caretColor: colorTokentoValue(defaultTextColor),
       color: colorTokentoValue(defaultTextColor),
       boxShadow: `inset 0 0 0 ${defaultBorderWidth}px ${colorTokentoValue(
-        defaultBorderColor
+        defaultBorderColor,
       )}`,
     },
     disabled: {
@@ -172,7 +172,7 @@ export function Select(props) {
       color: colorTokentoValue(disabledTextColor),
       caretColor: colorTokentoValue(disabledTextColor),
       boxShadow: `inset 0 0 0 ${disabledBorderWidth}px ${colorTokentoValue(
-        disabledBorderColor
+        disabledBorderColor,
       )}`,
       opacity: disabledOpacity / 100,
     },
@@ -181,7 +181,7 @@ export function Select(props) {
       color: colorTokentoValue(focusTextColor),
       caretColor: colorTokentoValue(focusTextColor),
       boxShadow: `inset 0 0 0 ${focusBorderWidth}px ${colorTokentoValue(
-        focusBorderColor
+        focusBorderColor,
       )}`,
     },
   };
@@ -223,7 +223,7 @@ export function Select(props) {
           backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(
             `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">
                         <path d="M 0 9 L 4.5 4.5 L 0 0" transform="translate(5.75 3.75) rotate(90 2.25 4.5)" fill="transparent" stroke-width="2" stroke="${defaultIconColor}" stroke-linecap="round"></path>
-                      </svg>`
+                      </svg>`,
           )}")`,
           fontFamily: "'Satoshi Regular', sans-serif",
           fontWeight: "400",

@@ -18,7 +18,10 @@ export const loadKpi = (Component: any): ComponentType => {
 
     useEffect(() => {
       const request = async () => {
-        const response = await fetch(`${apiProd}/api/kpi`, { method: "GET" });
+        const response = await fetch(`${apiProd}/api/kpi`, {
+          method: "GET",
+        });
+
         if (!response.ok) {
           throw new Error(response.statusText);
         }
