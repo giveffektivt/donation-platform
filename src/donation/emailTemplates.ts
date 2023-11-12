@@ -15,7 +15,7 @@ export function paymentReceipt(
 
   const bankInfo = bank
     ? `<li>Beløb: <b>${bank.amount} DKK</b></li>
-       <li>Konto: <b>5351-0242661</b></li>
+       <li>Konto: <b>5351-0000242661</b></li>
        <li>Besked til modtager: <b>d-${bank.msg}</b></li>`
     : "";
 
