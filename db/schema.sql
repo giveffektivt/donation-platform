@@ -1019,7 +1019,7 @@ CREATE VIEW giveffektivt.kpi AS
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= date_trunc('year'::text, now())))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= date_trunc('year'::text, now())))
         ), members_pending_renewal AS (
          SELECT (count(*))::numeric AS members_pending_renewal
            FROM ( SELECT DISTINCT ON (p.tin) p.tin,
@@ -1571,4 +1571,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230703175813'),
     ('20230826132840'),
     ('20230830183452'),
-    ('20231106141243');
+    ('20231106141243'),
+    ('20231112162539');
