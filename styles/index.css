@@ -5,7 +5,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-image: url("https://giveffektivt.dk/wp-content/uploads/2021/04/doug-linstedt-jEEYZsaxbH4-unsplash.jpg") !important;
   background-blend-mode: overlay;
-  background-color: #916468 !important;
+  background-color: #757474 !important;
   background-repeat: no-repeat;
   background-size: cover;
   display: flex;
@@ -71,7 +71,7 @@ body {
 }
 
 .custom-header {
-  background-color: #921223;
+  background-color: black;
   padding: 20px;
   font-size: 26px;
   color: white;
@@ -103,7 +103,7 @@ body {
 }
 
 .button.button-primary.custom-button {
-  background-color: #921223;
+  background-color: black;
   border-width: 0px;
   padding: 12px 23px;
   font-size: 17px;
