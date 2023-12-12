@@ -995,16 +995,16 @@ CREATE VIEW giveffektivt.transfer AS
 
 CREATE VIEW giveffektivt.kpi AS
  WITH dkk_total AS (
-         SELECT sum(d.amount) AS dkk_total
+         SELECT round(sum(d.amount)) AS dkk_total
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
         ), dkk_pending_transfer AS (
-         SELECT (max(dkk_total_1.dkk_total) - COALESCE(sum(transfer.amount), (0)::numeric)) AS dkk_pending_transfer
+         SELECT round((max(dkk_total_1.dkk_total) - COALESCE(sum(transfer.amount), (0)::numeric))) AS dkk_pending_transfer
            FROM (dkk_total dkk_total_1
              LEFT JOIN giveffektivt.transfer ON (true))
         ), dkk_last_30_days AS (
-         SELECT sum(d.amount) AS dkk_last_30_days
+         SELECT round(sum(d.amount)) AS dkk_last_30_days
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= (date_trunc('day'::text, now()) - '30 days'::interval)))
@@ -1572,4 +1572,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20230826132840'),
     ('20230830183452'),
     ('20231106141243'),
-    ('20231112162539');
+    ('20231112162539'),
+    ('20231212102739');
