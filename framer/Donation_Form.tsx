@@ -359,6 +359,13 @@ export const withVariantMethod = (Component: any): ComponentType => {
   ]);
 };
 
+export const withVariantMethodPhone = (Component: any): ComponentType => {
+  return withVariant(Component, (store: any, setStore: any) => [
+    `Phone/${store.method}`,
+    `Phone/None`,
+  ]);
+};
+
 export const withVariantRecipient = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `${store.recipient}`,
