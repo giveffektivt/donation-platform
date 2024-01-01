@@ -11,7 +11,7 @@ export function paymentReceipt(
   donation: DonationToEmail,
   bank?: BankTransferInfo,
 ) {
-  const { id, recipient, amount, frequency, tax_deductible } = donation;
+  const { id, amount, frequency, tax_deductible } = donation;
 
   const bankInfo = bank
     ? `<li>Beløb: <b>${bank.amount} DKK</b></li>
@@ -19,9 +19,8 @@ export function paymentReceipt(
        <li>Besked til modtager: <b>d-${bank.msg}</b></li>`
     : "";
 
-  const text = `<li>${amount} DKK til <a href="https://giveffektivt.dk/anbefalinger/" target="_blank">${
-    donationPurpose[recipient as DonationRecipient]
-  }</a>.</li>
+  // TODO this no longer uses recipient
+  const text = `<li>${amount} DKK <a href="https://giveffektivt.dk/anbefalinger/" target="_blank">fordelt efter Giv Effektivts anbefaling</a>.</li>
   ${
     frequency === DonationFrequency.Monthly
       ? `<li>Donationen er månedlig.</li>`
