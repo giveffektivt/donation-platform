@@ -1,7 +1,7 @@
 version: "3.9"
 
 volumes:
-  postgres14:
+  postgres16:
 
 services:
   giveffektivt-db:
@@ -14,4 +14,4 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - postgres14:/var/lib/postgresql/data
+      - postgres16:/var/lib/postgresql/data
