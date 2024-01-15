@@ -477,6 +477,29 @@ test("Gavebrev with missing income report is processed as if income is zero", as
   ]);
 });
 
+test("Gavebrev debt (but not aconto!) carries over when gavebrev conditions are not met and no donations were made in a year", async () => {
+  const db = await client;
+
+  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 100_000, years_ago: 2 });
+  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 100_000, years_ago: 2 });
+
+  await incomeEveryone(db, { income_verified: 200_000, years_ago: 2 }); // earned more than gavebrev conditions
+  await incomeEveryone(db, { income_verified: 10_000, years_ago: 1 }); // earned less than gavebrev conditions
+  await incomeEveryone(db, { income_verified: 200_000 }); // earned more than gavebrev conditions
+
+  await donate(db, { tin: "111111-1111", amount: 11_000, years_ago: 2 }); // donates 1k too much
+  await donate(db, { tin: "222222-2222", amount: 9_000, years_ago: 2 }); // donates 1k too little
+  // donate nothing when their income was too low
+  await donate(db, { tin: "111111-1111", amount: 11_000 }); // donates 1k too much
+  await donate(db, { tin: "222222-2222", amount: 9_000 }); // donates 1k too little
+
+  const taxReport = await findAnnualTaxReport(db);
+  expect(taxReport).toMatchObject([
+    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 10_000, aconto_debt: 1_000 }, // report 10k as per agreement, remember: aconto does NOT accumulate, so only the last year aconto gets carried over
+    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 9_000, aconto_debt: -2_000 }, // report donated 9k, debt DOES accumulate, so it gets carried over in full
+  ]);
+});
+
 test("Official tax report contains all the necessary fields in the expected format", async () => {
   const db = await client;
 
@@ -542,7 +565,7 @@ type gavebrevArgs = {
 
 const gavebrev = async (
   db: PoolClient,
-  { tin, amount, percentage, years_ago = 0, when_income_over, of_income_over }: gavebrevArgs
+  { tin, amount, percentage, years_ago = 0, when_income_over, of_income_over }: gavebrevArgs,
 ): Promise<Gavebrev> => {
   const startYear = getYear(years_ago);
 

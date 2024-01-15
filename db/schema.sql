@@ -503,22 +503,6 @@ CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
 
 
 --
--- Name: annual_tax_report_gavebrev_all_payments; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
- SELECT p.tin,
-    EXTRACT(year FROM c.created_at) AS year,
-    round(sum(d.amount)) AS actual_total
-   FROM (((giveffektivt.annual_tax_report_const
-     CROSS JOIN giveffektivt.donor_with_sensitive_info p)
-     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at < annual_tax_report_const.year_to) AND d.tax_deductible)
-  GROUP BY p.tin, (EXTRACT(year FROM c.created_at));
-
-
---
 -- Name: gavebrev; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -535,6 +519,43 @@ CREATE VIEW giveffektivt.gavebrev AS
     _gavebrev.updated_at
    FROM giveffektivt._gavebrev
   WHERE (_gavebrev.deleted_at IS NULL);
+
+
+--
+-- Name: annual_tax_report_gavebrev_all_payments; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
+ WITH gavebrev_per_tin AS (
+         SELECT p.tin,
+            min(g.started_at) AS started_at,
+            max(g.stopped_at) AS stopped_at
+           FROM (giveffektivt.gavebrev g
+             JOIN giveffektivt.donor_with_sensitive_info p ON ((g.donor_id = p.id)))
+          GROUP BY p.tin
+        ), gavebrev_tin_years_until_now AS (
+         SELECT g.tin,
+            generate_series(EXTRACT(year FROM g.started_at), EXTRACT(year FROM annual_tax_report_const.year_from)) AS year
+           FROM (giveffektivt.annual_tax_report_const
+             CROSS JOIN gavebrev_per_tin g)
+          WHERE ((g.started_at <= annual_tax_report_const.year_from) AND (g.stopped_at > annual_tax_report_const.year_from))
+        ), gavebrev_tin_all_donations_per_year AS (
+         SELECT i_1.tin,
+            i_1.year,
+            d_1.amount
+           FROM (((gavebrev_tin_years_until_now i_1
+             JOIN giveffektivt.donor_with_sensitive_info p ON ((i_1.tin = p.tin)))
+             JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON (((c.donation_id = d_1.id) AND (i_1.year = EXTRACT(year FROM c.created_at)))))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND d_1.tax_deductible)
+        )
+ SELECT i.tin,
+    i.year,
+    COALESCE(round(sum(d.amount)), (0)::numeric) AS actual_total
+   FROM (gavebrev_tin_years_until_now i
+     LEFT JOIN gavebrev_tin_all_donations_per_year d ON (((i.tin = d.tin) AND (i.year = d.year))))
+  GROUP BY i.tin, i.year
+  ORDER BY i.tin, i.year;
 
 
 --
@@ -629,21 +650,30 @@ CREATE TABLE giveffektivt.max_tax_deduction (
 
 CREATE VIEW giveffektivt.annual_tax_report_gavebrev_results AS
  WITH RECURSIVE data AS (
-         SELECT DISTINCT ON (get.tin) get.tin,
-            get.year,
-            a.can_be_reported_this_year,
-            get.expected_total,
-            gap.actual_total,
-            c.non_gavebrev_total,
-            b.gavebrev_total AS result,
-            ((gap.actual_total - get.expected_total) - c.non_gavebrev_total) AS aconto_debt
-           FROM (((((giveffektivt.annual_tax_report_gavebrev_expected_totals get
-             JOIN giveffektivt.annual_tax_report_gavebrev_all_payments gap ON (((gap.tin = get.tin) AND (gap.year = get.year))))
-             LEFT JOIN giveffektivt.max_tax_deduction m ON ((m.year = get.year)))
-             CROSS JOIN LATERAL ( SELECT get.expected_total AS can_be_reported_this_year) a)
-             CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
-                    LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
-             CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
+         SELECT _a.tin,
+            _a.year,
+            _a.can_be_reported_this_year,
+            _a.expected_total,
+            _a.actual_total,
+            _a.non_gavebrev_total,
+            _a.result,
+            _a.aconto_debt
+           FROM ( SELECT DISTINCT ON (get.tin) get.tin,
+                    get.year,
+                    a.can_be_reported_this_year,
+                    get.expected_total,
+                    gap.actual_total,
+                    c.non_gavebrev_total,
+                    b.gavebrev_total AS result,
+                    ((gap.actual_total - get.expected_total) - c.non_gavebrev_total) AS aconto_debt
+                   FROM (((((giveffektivt.annual_tax_report_gavebrev_expected_totals get
+                     JOIN giveffektivt.annual_tax_report_gavebrev_all_payments gap ON (((gap.tin = get.tin) AND (gap.year = get.year))))
+                     LEFT JOIN giveffektivt.max_tax_deduction m ON ((m.year = get.year)))
+                     CROSS JOIN LATERAL ( SELECT get.expected_total AS can_be_reported_this_year) a)
+                     CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
+                            LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
+                     CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
+                  ORDER BY get.tin, get.year) _a
         UNION ALL
          SELECT get.tin,
             get.year,
@@ -1237,8 +1267,7 @@ CREATE VIEW giveffektivt.time_distribution AS
           WHERE (a_1.month <= now())
           GROUP BY a_1.year, a_1.month
         )
- SELECT to_char(a.year, 'yyyy'::text) AS year,
-    to_char(a.month, 'Mon'::text) AS month,
+ SELECT ((to_char(a.year, 'yyyy'::text) || '-'::text) || to_char(a.month, 'MM'::text)) AS date,
     COALESCE(sum(a.dkk_total), (0)::numeric) AS dkk_total,
     COALESCE(sum(a.payments_total), (0)::numeric) AS payments_total,
     COALESCE(sum(b.value_added), (0)::numeric) AS value_added,
@@ -1608,4 +1637,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20231106141243'),
     ('20231112162539'),
     ('20231212102739'),
-    ('20231218184326');
+    ('20231218184326'),
+    ('20240115002613');
