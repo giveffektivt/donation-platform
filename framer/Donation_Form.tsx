@@ -417,6 +417,18 @@ export const withVariantStepPhone = (Component: any): ComponentType => {
   });
 };
 
+export const showCprCvrWarning = (Component: any): ComponentType => {
+  return (props) => {
+    const [store] = useStore();
+
+    const isCprCvrSuspicious =
+      isCprCvrValid(store.taxDeductible, store.tin) &&
+      !isCprCvrPlausible(store.tin);
+
+    return isCprCvrSuspicious ? <Component {...props} /> : null;
+  };
+};
+
 // Debug
 
 export const showDebug = (Component: any): ComponentType => {

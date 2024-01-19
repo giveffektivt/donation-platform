@@ -37,3 +37,25 @@ test("CVR validation", async () => {
   expect(_test.isCprCvrValid(isNotTaxDeductible, "")).toBe(true);
   expect(_test.isCprCvrValid(isNotTaxDeductible, "123456")).toBe(true);
 });
+
+test("CPR plausability", async () => {
+  // Non-digits
+  expect(_test.isCprCvrPlausible("aaaaaa-aaaa")).toBe(false);
+
+  // Modulus11 mismatch
+  expect(_test.isCprCvrPlausible("111111-1111")).toBe(false);
+
+  // Invalid date portion
+  expect(_test.isCprCvrPlausible("999999-9996")).toBe(false);
+
+  // Valid
+  expect(_test.isCprCvrPlausible("111111-1118")).toBe(true);
+});
+
+test("CVR plausability", async () => {
+  // Non-digits
+  expect(_test.isCprCvrPlausible("aaaaaaaa")).toBe(false);
+
+  // Valid
+  expect(_test.isCprCvrPlausible("11111111")).toBe(true);
+});
