@@ -205,11 +205,16 @@ export function paymentTemplate(text: string, bankInfo?: string) {
             bankInfo &&
             `
             <div class="row">
-              <h1>Du kan nu lave bankoverførsler</h1>
+              <h1>Du kan nu åbne din netbank eller mobilbank og overføre til:</h1>
               <p>
                   <ul>
                   ${bankInfo}
                   </ul>
+              </p>
+              <p>
+                  Du kan lave en eller flere overførsler med ovenstående besked i din netbank eller mobilbank.
+                  Så sender vi donationen til det valgte velgørende formål og indberetter evt. fradrag.
+                  Vi indrapporterer kun det, der faktisk er overført.
               </p>
           </div>
           `
