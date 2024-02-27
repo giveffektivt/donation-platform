@@ -30,10 +30,13 @@ export const loadKpi = (Component: any): ComponentType => {
 
         setStore({
           dkk_total:
-            (body.kpi.dkk_total / 1e6).toLocaleString("da-DK", {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            }) + "M",
+            (Math.floor(body.kpi.dkk_total / 1e5) / 10).toLocaleString(
+              "da-DK",
+              {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              },
+            ) + "M",
           dkk_last_30_days: body.kpi.dkk_last_30_days.toLocaleString("da-DK"),
           monthly_donors: body.kpi.monthly_donors.toLocaleString("da-DK"),
         });
