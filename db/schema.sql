@@ -976,28 +976,28 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
           ORDER BY d.id
         )
- SELECT s.donor_id,
-    s.donor_name,
+ SELECT s.failed_at,
+    s.charge_id,
+    s.short_id,
+    s.amount,
+    s.method,
+    s.gateway,
+    s.donor_id,
     s.donor_email,
     s.donation_id,
-    s.amount,
-    s.recipient,
-    s.frequency,
-    s.method,
-    s.tax_deductible,
-    s.status,
-    s.failed_at
-   FROM ( SELECT DISTINCT ON (d.id) p.id AS donor_id,
-            p.name AS donor_name,
+    s.gateway_metadata,
+    s.status
+   FROM ( SELECT DISTINCT ON (d.id) c.created_at AS failed_at,
+            c.id AS charge_id,
+            c.short_id,
+            d.amount,
+            d.method,
+            d.gateway,
+            p.id AS donor_id,
             p.email AS donor_email,
             d.id AS donation_id,
-            d.amount,
-            d.recipient,
-            d.frequency,
-            d.method,
-            d.tax_deductible,
-            c.status,
-            c.created_at AS failed_at
+            d.gateway_metadata,
+            c.status
            FROM ((giveffektivt.donation_with_gateway_info d
              JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
@@ -1638,4 +1638,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20231112162539'),
     ('20231212102739'),
     ('20231218184326'),
-    ('20240115002613');
+    ('20240115002613'),
+    ('20240303130208');
