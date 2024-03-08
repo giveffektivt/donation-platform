@@ -983,9 +983,13 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
     s.method,
     s.gateway,
     s.donor_id,
+    s.donor_name,
     s.donor_email,
     s.donation_id,
     s.gateway_metadata,
+    s.recipient,
+    s.frequency,
+    s.tax_deductible,
     s.status
    FROM ( SELECT DISTINCT ON (d.id) c.created_at AS failed_at,
             c.id AS charge_id,
@@ -994,9 +998,13 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
             d.method,
             d.gateway,
             p.id AS donor_id,
+            p.name AS donor_name,
             p.email AS donor_email,
             d.id AS donation_id,
             d.gateway_metadata,
+            d.recipient,
+            d.frequency,
+            d.tax_deductible,
             c.status
            FROM ((giveffektivt.donation_with_gateway_info d
              JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
@@ -1639,4 +1647,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20231212102739'),
     ('20231218184326'),
     ('20240115002613'),
-    ('20240303130208');
+    ('20240303130208'),
+    ('20240308103949');

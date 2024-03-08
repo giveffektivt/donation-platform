@@ -83,16 +83,19 @@ export type DonationToEmail = {
 };
 
 export type FailedRecurringDonation = {
+  failed_at: Date;
+  charge_id: string;
+  short_id: string;
+  amount: number;
+  method: PaymentMethod;
+  gateway: PaymentGateway;
   donor_id: string;
   donor_name: string;
   donor_email: string;
   donation_id: string;
-  amount: number;
   recipient: DonationRecipient;
   frequency: DonationFrequency;
   tax_deductible: boolean;
-  method: PaymentMethod;
-  failed_at: Date;
 };
 
 export type FailedRecurringDonationToEmail = {
