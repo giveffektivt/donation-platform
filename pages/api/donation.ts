@@ -28,7 +28,7 @@ const firstElementOrString = (x: any) => {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Data>,
 ) {
   try {
     await cors(req, res);
@@ -39,6 +39,14 @@ export default async function handler(
       firstElementOrString(req.headers["x-forwarded-for"]) ||
       req.socket.remoteAddress ||
       "no ip";
+
+    const blockedIps = process.env.BLOCKED_IPS
+      ? process.env.BLOCKED_IPS.split(",")
+      : [];
+
+    if (blockedIps.includes(ip)) {
+      throw new Error("Blocked IP address: " + ip);
+    }
 
     let submitData: SubmitDataDonation = await yup
       .object()
@@ -64,20 +72,19 @@ function getMailchimpAuthorizationHeader() {
   }
 
   const base64key = Buffer.from(
-    `key:${process.env.MAILCHIMP_API_KEY}`
+    `key:${process.env.MAILCHIMP_API_KEY}`,
   ).toString("base64");
   return `Basic ${base64key}`;
 }
 
 async function processPayment(
   submitData: SubmitDataDonation,
-  ip: string
+  ip: string,
 ): Promise<[Data, string]> {
   switch (parsePaymentMethod(submitData.method)) {
     case PaymentMethod.BankTransfer: {
-      const [bankTransferId, donorId] = await processBankTransferDonation(
-        submitData
-      );
+      const [bankTransferId, donorId] =
+        await processBankTransferDonation(submitData);
       return [
         {
           message: "OK",
@@ -107,7 +114,7 @@ async function processPayment(
         case PaymentGateway.Scanpay: {
           const [redirect, donorId] = await processScanpayDonation(
             submitData,
-            ip
+            ip,
           );
           return [
             {
@@ -120,7 +127,7 @@ async function processPayment(
 
         default:
           throw new Error(
-            `api/donation: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`
+            `api/donation: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`,
           );
       }
   }
@@ -128,7 +135,7 @@ async function processPayment(
 
 async function subscribeToNewsletter(
   submitData: SubmitDataDonation,
-  donorId: string
+  donorId: string,
 ) {
   if (!process.env.MAILCHIMP_SUBSCRIBE_URL) {
     throw new Error(`No Mailchimp subscribe URL defined`);
@@ -150,7 +157,7 @@ async function subscribeToNewsletter(
     const error = (await response.json()).title || "Unknown";
     if (error !== "Member Exists") {
       console.error(
-        `Error subscribing ${donorId} to newsletter: ${response.statusText} (${error})`
+        `Error subscribing ${donorId} to newsletter: ${response.statusText} (${error})`,
       );
     }
   }
