@@ -12,13 +12,15 @@ export type Kpi = {
 
 export type RecipientDistribution = {
   recipient: string;
-  count: string;
-  sum: number;
+  dkk_total: number;
+  dkk_pending_transfer: number;
+  payments_total: string;
 };
 
 export type TimeDistribution = {
-  year: string;
-  month: string;
-  sum: number;
+  date: string;
+  dkk_total: number;
+  payments_total: number;
   value_added: number;
+  value_lost: number;
 };
