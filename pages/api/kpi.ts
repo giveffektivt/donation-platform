@@ -28,9 +28,20 @@ export default async function handler(
     await cors(req, res);
 
     db = await dbClient();
+
+    // Dirty hack to account for reassigning recent transfer, until this is properly fixed in db
+    const by_cause = await getRecipientDistribution(db);
+    by_cause.forEach((entry) => {
+      if (entry.recipient === "Giv Effektivts anbefaling") {
+        entry.dkk_total -= 387_750;
+      } else if (entry.recipient === "Stor og velkendt effekt") {
+        entry.dkk_total += 387_750;
+      }
+    });
+
     const result = {
       kpi: await getKpi(db),
-      by_cause: await getRecipientDistribution(db),
+      by_cause,
       by_time: await getTimeDistribution(db),
     };
 
