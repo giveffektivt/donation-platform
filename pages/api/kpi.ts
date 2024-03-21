@@ -5,22 +5,25 @@ import {
   dbClient,
   dbRelease,
   getKpi,
-  getRecipientDistribution,
+  getPendingDistribution,
+  getTransferredDistribution,
   getTimeDistribution,
   Kpi,
-  RecipientDistribution,
+  PendingDistribution,
+  TransferredDistribution,
   TimeDistribution,
 } from "src";
 
 type Data = {
   kpi: Kpi;
-  by_cause: RecipientDistribution[];
-  by_time: TimeDistribution[];
+  pending: PendingDistribution[];
+  transferred: TransferredDistribution[];
+  collected: TimeDistribution[];
 };
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<Data>,
 ) {
   let db = null;
 
@@ -29,20 +32,11 @@ export default async function handler(
 
     db = await dbClient();
 
-    // Dirty hack to account for reassigning recent transfer, until this is properly fixed in db
-    const by_cause = await getRecipientDistribution(db);
-    by_cause.forEach((entry) => {
-      if (entry.recipient === "Giv Effektivts anbefaling") {
-        entry.dkk_total -= 387_750;
-      } else if (entry.recipient === "Stor og velkendt effekt") {
-        entry.dkk_total += 387_750;
-      }
-    });
-
     const result = {
       kpi: await getKpi(db),
-      by_cause,
-      by_time: await getTimeDistribution(db),
+      pending: await getPendingDistribution(db),
+      transferred: await getTransferredDistribution(db),
+      collected: await getTimeDistribution(db),
     };
 
     res.setHeader("Content-Type", "application/json");

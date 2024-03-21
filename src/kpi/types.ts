@@ -10,11 +10,16 @@ export type Kpi = {
   donations_recurring_per_year: number;
 };
 
-export type RecipientDistribution = {
+export type PendingDistribution = {
   recipient: string;
   dkk_total: number;
-  dkk_pending_transfer: number;
-  payments_total: string;
+  payments_total: number;
+}
+
+export type TransferredDistribution = {
+  recipient: string;
+  dkk_total: number;
+  payments_total: number;
 };
 
 export type TimeDistribution = {

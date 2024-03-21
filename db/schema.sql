@@ -113,6 +113,22 @@ CREATE TYPE giveffektivt.payment_method AS ENUM (
 
 
 --
+-- Name: transfer_recipient; Type: TYPE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TYPE giveffektivt.transfer_recipient AS ENUM (
+    'GiveWell Top Charities Fund',
+    'GiveWell All Grants Fund',
+    'Against Malaria Foundation',
+    'Malaria Consortium',
+    'Helen Keller International',
+    'New Incentives',
+    'Give Directly',
+    'SCI Foundation'
+);
+
+
+--
 -- Name: gen_random_string(integer, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -198,7 +214,8 @@ CREATE TABLE giveffektivt._charge (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
-    _old_id integer
+    _old_id integer,
+    transfer_id uuid
 );
 
 
@@ -328,8 +345,7 @@ CREATE TABLE giveffektivt._skat_gaveskema (
 
 CREATE TABLE giveffektivt._transfer (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    amount numeric NOT NULL,
-    recipient giveffektivt.donation_recipient NOT NULL,
+    recipient giveffektivt.transfer_recipient NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone
@@ -341,14 +357,15 @@ CREATE TABLE giveffektivt._transfer (
 --
 
 CREATE VIEW giveffektivt.charge AS
- SELECT id,
-    donation_id,
-    short_id,
-    status,
-    created_at,
-    updated_at
+ SELECT _charge.id,
+    _charge.donation_id,
+    _charge.short_id,
+    _charge.status,
+    _charge.created_at,
+    _charge.updated_at,
+    _charge.transfer_id
    FROM giveffektivt._charge
-  WHERE (deleted_at IS NULL);
+  WHERE (_charge.deleted_at IS NULL);
 
 
 --
@@ -356,20 +373,20 @@ CREATE VIEW giveffektivt.charge AS
 --
 
 CREATE VIEW giveffektivt.donation AS
- SELECT id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    created_at,
-    updated_at
+ SELECT _donation.id,
+    _donation.donor_id,
+    _donation.emailed,
+    _donation.amount,
+    _donation.recipient,
+    _donation.frequency,
+    _donation.cancelled,
+    _donation.gateway,
+    _donation.method,
+    _donation.tax_deductible,
+    _donation.created_at,
+    _donation.updated_at
    FROM giveffektivt._donation
-  WHERE (deleted_at IS NULL);
+  WHERE (_donation.deleted_at IS NULL);
 
 
 --
@@ -377,19 +394,19 @@ CREATE VIEW giveffektivt.donation AS
 --
 
 CREATE VIEW giveffektivt.donor_with_sensitive_info AS
- SELECT id,
-    name,
-    email,
-    address,
-    postcode,
-    city,
-    country,
-    tin,
-    birthday,
-    created_at,
-    updated_at
+ SELECT _donor.id,
+    _donor.name,
+    _donor.email,
+    _donor.address,
+    _donor.postcode,
+    _donor.city,
+    _donor.country,
+    _donor.tin,
+    _donor.birthday,
+    _donor.created_at,
+    _donor.updated_at
    FROM giveffektivt._donor
-  WHERE (deleted_at IS NULL);
+  WHERE (_donor.deleted_at IS NULL);
 
 
 --
@@ -507,18 +524,18 @@ CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
 --
 
 CREATE VIEW giveffektivt.gavebrev AS
- SELECT id,
-    donor_id,
-    status,
-    type,
-    amount,
-    minimal_income,
-    started_at,
-    stopped_at,
-    created_at,
-    updated_at
+ SELECT _gavebrev.id,
+    _gavebrev.donor_id,
+    _gavebrev.status,
+    _gavebrev.type,
+    _gavebrev.amount,
+    _gavebrev.minimal_income,
+    _gavebrev.started_at,
+    _gavebrev.stopped_at,
+    _gavebrev.created_at,
+    _gavebrev.updated_at
    FROM giveffektivt._gavebrev
-  WHERE (deleted_at IS NULL);
+  WHERE (_gavebrev.deleted_at IS NULL);
 
 
 --
@@ -583,17 +600,17 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_since AS
 --
 
 CREATE VIEW giveffektivt.gavebrev_checkin AS
- SELECT id,
-    donor_id,
-    year,
-    income_inferred,
-    income_preliminary,
-    income_verified,
-    maximize_tax_deduction,
-    created_at,
-    updated_at
+ SELECT _gavebrev_checkin.id,
+    _gavebrev_checkin.donor_id,
+    _gavebrev_checkin.year,
+    _gavebrev_checkin.income_inferred,
+    _gavebrev_checkin.income_preliminary,
+    _gavebrev_checkin.income_verified,
+    _gavebrev_checkin.maximize_tax_deduction,
+    _gavebrev_checkin.created_at,
+    _gavebrev_checkin.updated_at
    FROM giveffektivt._gavebrev_checkin
-  WHERE (deleted_at IS NULL);
+  WHERE (_gavebrev_checkin.deleted_at IS NULL);
 
 
 --
@@ -692,14 +709,14 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_results AS
                     LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
              CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
         )
- SELECT tin,
-    year,
-    can_be_reported_this_year,
-    expected_total,
-    actual_total,
-    non_gavebrev_total,
-    result,
-    aconto_debt
+ SELECT data.tin,
+    data.year,
+    data.can_be_reported_this_year,
+    data.expected_total,
+    data.actual_total,
+    data.non_gavebrev_total,
+    data.result,
+    data.aconto_debt
    FROM data;
 
 
@@ -745,14 +762,14 @@ CREATE VIEW giveffektivt.annual_tax_report_data AS
             without_gavebrev.year
            FROM without_gavebrev
         )
- SELECT ll8a_or_gavebrev,
-    tin,
-    total,
-    aconto_debt,
-    year
+ SELECT data.ll8a_or_gavebrev,
+    data.tin,
+    data.total,
+    data.aconto_debt,
+    data.year
    FROM data
-  WHERE ((total > (0)::numeric) OR (aconto_debt > (0)::numeric))
-  ORDER BY tin, ll8a_or_gavebrev DESC;
+  WHERE ((data.total > (0)::numeric) OR (data.aconto_debt > (0)::numeric))
+  ORDER BY data.tin, data.ll8a_or_gavebrev DESC;
 
 
 --
@@ -762,15 +779,15 @@ CREATE VIEW giveffektivt.annual_tax_report_data AS
 CREATE VIEW giveffektivt.annual_tax_report AS
  SELECT 2262 AS const,
     42490903 AS ge_cvr,
-    replace(tin, '-'::text, ''::text) AS donor_cpr,
-    year,
+    replace(annual_tax_report_data.tin, '-'::text, ''::text) AS donor_cpr,
+    annual_tax_report_data.year,
     ''::text AS blank,
-    total,
-    ll8a_or_gavebrev,
+    annual_tax_report_data.total,
+    annual_tax_report_data.ll8a_or_gavebrev,
     ''::text AS ge_notes,
     0 AS rettekode
    FROM giveffektivt.annual_tax_report_data
-  WHERE (total > (0)::numeric);
+  WHERE (annual_tax_report_data.total > (0)::numeric);
 
 
 --
@@ -838,15 +855,16 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
 --
 
 CREATE VIEW giveffektivt.charge_with_gateway_info AS
- SELECT id,
-    donation_id,
-    short_id,
-    status,
-    gateway_metadata,
-    created_at,
-    updated_at
+ SELECT _charge.id,
+    _charge.donation_id,
+    _charge.short_id,
+    _charge.status,
+    _charge.gateway_metadata,
+    _charge.created_at,
+    _charge.updated_at,
+    _charge.transfer_id
    FROM giveffektivt._charge
-  WHERE (deleted_at IS NULL);
+  WHERE (_charge.deleted_at IS NULL);
 
 
 --
@@ -854,21 +872,21 @@ CREATE VIEW giveffektivt.charge_with_gateway_info AS
 --
 
 CREATE VIEW giveffektivt.donation_with_gateway_info AS
- SELECT id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    gateway_metadata,
-    created_at,
-    updated_at
+ SELECT _donation.id,
+    _donation.donor_id,
+    _donation.emailed,
+    _donation.amount,
+    _donation.recipient,
+    _donation.frequency,
+    _donation.cancelled,
+    _donation.gateway,
+    _donation.method,
+    _donation.tax_deductible,
+    _donation.gateway_metadata,
+    _donation.created_at,
+    _donation.updated_at
    FROM giveffektivt._donation
-  WHERE (deleted_at IS NULL);
+  WHERE (_donation.deleted_at IS NULL);
 
 
 --
@@ -876,13 +894,13 @@ CREATE VIEW giveffektivt.donation_with_gateway_info AS
 --
 
 CREATE VIEW giveffektivt.donor_with_contact_info AS
- SELECT id,
-    name,
-    email,
-    created_at,
-    updated_at
+ SELECT _donor.id,
+    _donor.name,
+    _donor.email,
+    _donor.created_at,
+    _donor.updated_at
    FROM giveffektivt._donor
-  WHERE (deleted_at IS NULL);
+  WHERE (_donor.deleted_at IS NULL);
 
 
 --
@@ -910,10 +928,10 @@ CREATE VIEW giveffektivt.charges_to_charge AS
 --
 
 CREATE VIEW giveffektivt.donations_to_create_charges AS
- SELECT donation_id,
-    frequency,
-    last_charge,
-    next_charge
+ SELECT s.donation_id,
+    s.frequency,
+    s.last_charge,
+    s.next_charge
    FROM ( SELECT DISTINCT ON (d.id) d.id AS donation_id,
             d.frequency,
             c.created_at AS last_charge,
@@ -926,7 +944,7 @@ CREATE VIEW giveffektivt.donations_to_create_charges AS
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])))
           ORDER BY d.id, c.created_at DESC) s
-  WHERE (next_charge <= now());
+  WHERE (s.next_charge <= now());
 
 
 --
@@ -956,11 +974,11 @@ CREATE VIEW giveffektivt.donations_to_email AS
 --
 
 CREATE VIEW giveffektivt.donor AS
- SELECT id,
-    created_at,
-    updated_at
+ SELECT _donor.id,
+    _donor.created_at,
+    _donor.updated_at
    FROM giveffektivt._donor
-  WHERE (deleted_at IS NULL);
+  WHERE (_donor.deleted_at IS NULL);
 
 
 --
@@ -976,21 +994,21 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
           ORDER BY d.id
         )
- SELECT failed_at,
-    charge_id,
-    short_id,
-    amount,
-    method,
-    gateway,
-    donor_id,
-    donor_name,
-    donor_email,
-    donation_id,
-    gateway_metadata,
-    recipient,
-    frequency,
-    tax_deductible,
-    status
+ SELECT s.failed_at,
+    s.charge_id,
+    s.short_id,
+    s.amount,
+    s.method,
+    s.gateway,
+    s.donor_id,
+    s.donor_name,
+    s.donor_email,
+    s.donation_id,
+    s.gateway_metadata,
+    s.recipient,
+    s.frequency,
+    s.tax_deductible,
+    s.status
    FROM ( SELECT DISTINCT ON (d.id) c.created_at AS failed_at,
             c.id AS charge_id,
             c.short_id,
@@ -1012,8 +1030,8 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
           WHERE (d.id IN ( SELECT paid_before.id
                    FROM paid_before))
           ORDER BY d.id, c.created_at DESC) s
-  WHERE (status = 'error'::giveffektivt.charge_status)
-  ORDER BY failed_at DESC;
+  WHERE (s.status = 'error'::giveffektivt.charge_status)
+  ORDER BY s.failed_at DESC;
 
 
 --
@@ -1033,9 +1051,9 @@ CREATE TABLE giveffektivt.gateway_webhook (
 --
 
 CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
- SELECT donor_id,
-    year,
-    income_inferred
+ SELECT s.donor_id,
+    s.year,
+    s.income_inferred
    FROM ( SELECT DISTINCT ON (c.donor_id) c.donor_id,
             (c.year + (1)::numeric) AS year,
             COALESCE(c.income_verified, COALESCE(c.income_preliminary, c.income_inferred)) AS income_inferred
@@ -1043,21 +1061,7 @@ CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
              JOIN giveffektivt.gavebrev g ON ((g.donor_id = c.donor_id)))
           WHERE ((g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.stopped_at >= now()))
           ORDER BY c.donor_id, c.year DESC) s
-  WHERE ((year)::double precision <= date_part('year'::text, now()));
-
-
---
--- Name: transfer; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.transfer AS
- SELECT id,
-    amount,
-    recipient,
-    created_at,
-    updated_at
-   FROM giveffektivt._transfer
-  WHERE (deleted_at IS NULL);
+  WHERE ((s.year)::double precision <= date_part('year'::text, now()));
 
 
 --
@@ -1071,9 +1075,10 @@ CREATE VIEW giveffektivt.kpi AS
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
         ), dkk_pending_transfer AS (
-         SELECT round((max(dkk_total_1.dkk_total) - COALESCE(sum(transfer.amount), (0)::numeric))) AS dkk_pending_transfer
-           FROM (dkk_total dkk_total_1
-             LEFT JOIN giveffektivt.transfer ON (true))
+         SELECT COALESCE(round(sum(d.amount)), (0)::numeric) AS dkk_pending_transfer
+           FROM (giveffektivt.donation d
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NULL))
         ), dkk_last_30_days AS (
          SELECT round(sum(d.amount)) AS dkk_last_30_days
            FROM (giveffektivt.donation d
@@ -1142,26 +1147,18 @@ CREATE VIEW giveffektivt.old_ids_map AS
 
 
 --
--- Name: recipient_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: pending_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.recipient_distribution AS
- SELECT COALESCE(d.recipient, t.recipient) AS recipient,
-    COALESCE(d.dkk_total, (0)::numeric) AS dkk_total,
-    (COALESCE(d.dkk_total, (0)::numeric) - COALESCE(t.dkk_total, (0)::numeric)) AS dkk_pending_transfer,
-    COALESCE(d.payments_total, (0)::numeric) AS payments_total
-   FROM (( SELECT d_1.recipient,
-            (count(*))::numeric AS payments_total,
-            sum(d_1.amount) AS dkk_total
-           FROM (giveffektivt.donation d_1
-             JOIN giveffektivt.charge c ON ((c.donation_id = d_1.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-          GROUP BY d_1.recipient) d
-     FULL JOIN ( SELECT transfer.recipient,
-            sum(transfer.amount) AS dkk_total
-           FROM giveffektivt.transfer
-          GROUP BY transfer.recipient) t ON ((d.recipient = t.recipient)))
-  ORDER BY COALESCE(d.dkk_total, (0)::numeric) DESC;
+CREATE VIEW giveffektivt.pending_distribution AS
+ SELECT d.recipient,
+    round(sum(d.amount)) AS dkk_total,
+    (count(*))::numeric AS payments_total
+   FROM (giveffektivt.donation d
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NULL))
+  GROUP BY d.recipient
+  ORDER BY (round(sum(d.amount))) DESC;
 
 
 --
@@ -1188,20 +1185,20 @@ CREATE TABLE giveffektivt.schema_migrations (
 --
 
 CREATE VIEW giveffektivt.skat AS
- SELECT const,
-    ge_cvr,
-    donor_cpr,
-    year,
-    blank,
-    total,
-    ll8a_or_gavebrev,
-    ge_notes,
-    rettekode,
-    id,
-    created_at,
-    updated_at
+ SELECT _skat.const,
+    _skat.ge_cvr,
+    _skat.donor_cpr,
+    _skat.year,
+    _skat.blank,
+    _skat.total,
+    _skat.ll8a_or_gavebrev,
+    _skat.ge_notes,
+    _skat.rettekode,
+    _skat.id,
+    _skat.created_at,
+    _skat.updated_at
    FROM giveffektivt._skat
-  WHERE (deleted_at IS NULL);
+  WHERE (_skat.deleted_at IS NULL);
 
 
 --
@@ -1209,17 +1206,17 @@ CREATE VIEW giveffektivt.skat AS
 --
 
 CREATE VIEW giveffektivt.skat_gaveskema AS
- SELECT year,
-    count_donors_donated_min_200_kr,
-    count_members,
-    amount_donated_a,
-    amount_donated_l,
-    amount_donated_total,
-    id,
-    created_at,
-    updated_at
+ SELECT _skat_gaveskema.year,
+    _skat_gaveskema.count_donors_donated_min_200_kr,
+    _skat_gaveskema.count_members,
+    _skat_gaveskema.amount_donated_a,
+    _skat_gaveskema.amount_donated_l,
+    _skat_gaveskema.amount_donated_total,
+    _skat_gaveskema.id,
+    _skat_gaveskema.created_at,
+    _skat_gaveskema.updated_at
    FROM giveffektivt._skat_gaveskema
-  WHERE (deleted_at IS NULL);
+  WHERE (_skat_gaveskema.deleted_at IS NULL);
 
 
 --
@@ -1285,6 +1282,50 @@ CREATE VIEW giveffektivt.time_distribution AS
      FULL JOIN value_lost c ON (((a.year = c.year) AND (a.month = c.month))))
   GROUP BY a.year, a.month
   ORDER BY a.year DESC, a.month DESC;
+
+
+--
+-- Name: transfer; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer AS
+ SELECT _transfer.id,
+    _transfer.recipient,
+    _transfer.created_at,
+    _transfer.updated_at
+   FROM giveffektivt._transfer
+  WHERE (_transfer.deleted_at IS NULL);
+
+
+--
+-- Name: transfer_overview; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer_overview AS
+ SELECT t.recipient,
+    round(sum(d.amount)) AS dkk_total,
+    t.created_at
+   FROM ((giveffektivt.donation d
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+     JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
+  GROUP BY t.recipient, t.created_at
+  ORDER BY t.created_at, (sum(d.amount)) DESC;
+
+
+--
+-- Name: transferred_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transferred_distribution AS
+ SELECT t.recipient,
+    round(sum(d.amount)) AS dkk_total,
+    (count(*))::numeric AS payments_total
+   FROM ((giveffektivt.donation d
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+     JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NOT NULL))
+  GROUP BY t.recipient
+  ORDER BY (round(sum(d.amount))) DESC;
 
 
 --
@@ -1575,6 +1616,14 @@ ALTER TABLE ONLY giveffektivt._charge
 
 
 --
+-- Name: _charge _charge_transfer_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._charge
+    ADD CONSTRAINT _charge_transfer_id_fkey FOREIGN KEY (transfer_id) REFERENCES giveffektivt._transfer(id);
+
+
+--
 -- Name: _donation _donation_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -1648,4 +1697,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20231218184326'),
     ('20240115002613'),
     ('20240303130208'),
-    ('20240308103949');
+    ('20240308103949'),
+    ('20240321100834');
