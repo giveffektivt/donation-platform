@@ -106,3 +106,4 @@ There is no way to test the payment gateway locally, but for a development envir
 ## Credits
 
 Thanks to @maximbaz, @noverby, @lindeloev and @alimony for helping me to create this app :)
+
