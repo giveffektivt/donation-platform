@@ -1,5 +1,4 @@
 import {
-  DonationRecipient,
   dbExecuteInTransaction,
   generateRenewPaymentUrl,
   getDonationToUpdateQuickpayPaymentInfoById,
@@ -34,26 +33,6 @@ export async function sendFailedRecurringDonationEmails(ids: string[]) {
       }
     }
   });
-}
-
-export async function sendFailedRecurringDonationEmailsTest(data: {
-  email: string;
-}) {
-  try {
-    await sendFailedRecurringDonationEmail({
-      donor_email: data.email,
-      donor_name: "John Doe",
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
-      amount: 100,
-      payment_link: `${process.env.RENEW_PAYMENT_INFO_URL}?id=1234`,
-    });
-    console.log(`Sent test email for a failed recurring donation`);
-  } catch (err) {
-    console.error(
-      `Error sending test email for a failed recurring donation`,
-      err,
-    );
-  }
 }
 
 export async function getRenewPaymentLink(
