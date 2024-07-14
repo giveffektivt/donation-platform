@@ -27,14 +27,7 @@ export const validationSchemaMembership = {
     .string()
     .trim()
     .required("Postnr. skal udfyldes")
-    .test("type", "Skriv et tal", (val: string | undefined) => {
-      return val ? /^[0-9]*$/.test(val) : false;
-    })
-    .test(
-      "len",
-      "Skriv 3 eller 4 tal",
-      (val: string | undefined) => val?.length === 3 || val?.length === 4
-    ),
+    .max(320, "Højst 320 tegn"),
   city: yup
     .string()
     .trim()

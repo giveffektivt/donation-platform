@@ -1,5 +1,6 @@
 const apiProd = "https://donation-platform.vercel.app";
-const apiDev = "https://donation-platform-info-giveffektivt.vercel.app";
+const apiDev =
+  "https://donation-platform-info-giveffektivt-giv-effektivts-projects.vercel.app";
 
 const errorMessage = `
 Der opstod en serverfejl. Prøv venligst igen. Skriv til os på donation@giveffektivt.dk \
@@ -24,38 +25,62 @@ const canSubmitStep2 = (store: any): boolean => {
   );
 };
 
+const canSubmitMembership = (store: any): boolean => {
+  return (
+    store.name !== "" &&
+    isCprValid(store.tin) &&
+    store.email.includes("@") &&
+    store.address !== "" &&
+    store.postcode !== "" &&
+    store.city !== "" &&
+    !store.isLoading
+  );
+};
+
+const isCprValid = (tin: string): boolean => {
+  return tin.length === 11;
+};
+
 const isCprCvrValid = (taxDeductible: boolean, tin: string): boolean => {
   return !taxDeductible || [8, 11].includes(tin.length);
 };
 
-const isCprCvrPlausible = (tin: string): boolean => {
-  if (tin.length === 11) {
-    const cprRegex = /^(\d{2})(\d{2})(\d{2})-\d{4}$/;
-    const match = tin.match(cprRegex);
-    if (!match) {
-      return false;
-    }
-
-    const day = parseInt(match[1], 10);
-    const month = parseInt(match[2], 10);
-    const year = parseInt(match[3], 10);
-
-    if (day < 1 || day > 31 || month < 1 || month > 12) {
-      return false;
-    }
-
-    tin = tin.replace("-", "");
-    const weights = [4, 3, 2, 7, 6, 5, 4, 3, 2, 1];
-    let sum = 0;
-    for (let i = 0; i < 10; i++) {
-      sum += parseInt(tin.charAt(i), 10) * weights[i];
-    }
-
-    return sum % 11 === 0;
-  } else if (tin.length === 8) {
-    return /^\d{8}$/.test(tin);
+const isCprPlausible = (tin: string): boolean => {
+  if (tin.length !== 11) {
+    return false;
   }
 
+  const cprRegex = /^(\d{2})(\d{2})(\d{2})-\d{4}$/;
+  const match = tin.match(cprRegex);
+  if (!match) {
+    return false;
+  }
+
+  const day = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const year = Number.parseInt(match[3], 10);
+
+  if (day < 1 || day > 31 || month < 1 || month > 12) {
+    return false;
+  }
+
+  tin = tin.replace("-", "");
+  const weights = [4, 3, 2, 7, 6, 5, 4, 3, 2, 1];
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += Number.parseInt(tin.charAt(i), 10) * weights[i];
+  }
+
+  return sum % 11 === 0;
+};
+
+const isCprCvrPlausible = (tin: string): boolean => {
+  if (tin.length === 11) {
+    return isCprPlausible(tin);
+  }
+  if (tin.length === 8) {
+    return /^\d{8}$/.test(tin);
+  }
   return false;
 };
 
@@ -65,7 +90,7 @@ const toAmount = (value: string): string => {
 };
 
 const parseAmount = (value: string): number | "" => {
-  return value === "" ? "" : parseInt(value.replace(/\./g, ""));
+  return value === "" ? "" : Number.parseInt(value.replace(/\./g, ""));
 };
 
 const parseRecipient = (value: string): string => {
@@ -116,6 +141,17 @@ const prepareDonationPayload = (store: any) => {
   };
 };
 
+const prepareMembershipPayload = (store: any) => {
+  return {
+    name: store.name,
+    tin: store.tin,
+    email: store.email,
+    address: store.address,
+    postcode: store.postcode,
+    city: store.city,
+  };
+};
+
 const submitDonation = async (store: any, setStore: any) => {
   try {
     setStore({ isLoading: true });
@@ -133,6 +169,33 @@ const submitDonation = async (store: any, setStore: any) => {
         bank: response.bank,
         step: "Bank",
       });
+    }
+  } catch (err) {
+    alert(errorMessage);
+    console.error(err);
+
+    try {
+      await reportError(store.env);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  setStore({ isLoading: false });
+};
+
+const submitMembership = async (store: any, setStore: any) => {
+  try {
+    setStore({ isLoading: true });
+
+    const response = await submitForm(
+      store.env,
+      "membership",
+      prepareMembershipPayload(store),
+    );
+
+    if (response.redirect) {
+      window.open(response.redirect, "_parent");
     }
   } catch (err) {
     alert(errorMessage);

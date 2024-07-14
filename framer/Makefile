@@ -1,7 +1,7 @@
-.PHONY: copy
-copy:
-	cat Donation_Form.tsx helpers.ts | wl-copy
+.PHONY: donation
+donation:
+	@cat Donation_Form.tsx helpers.ts
 
-.PHONY: build
-build:
-	cat Donation_Form.tsx helpers.ts
+.PHONY: membership
+membership:
+	@cat Membership_Form.tsx helpers.ts
