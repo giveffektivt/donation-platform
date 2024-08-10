@@ -9,6 +9,7 @@ import {
   DonationWithGatewayInfoScanpay,
   EmailedStatus,
   FailedRecurringDonation,
+  Fundraiser,
   PaymentGateway,
   PaymentMethod,
 } from "src";
@@ -65,8 +66,8 @@ export async function insertDonationViaScanpay(
 ): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(
-      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible)
-       values ($1, $2, $3, $4, $5, $6, $7)
+      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        returning *`,
       [
         donation.donor_id,
@@ -76,6 +77,7 @@ export async function insertDonationViaScanpay(
         PaymentGateway.Scanpay,
         donation.method,
         donation.tax_deductible,
+        donation.fundraiser_id,
       ],
     )
   ).rows[0];
@@ -87,8 +89,8 @@ export async function insertDonationViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -98,6 +100,7 @@ export async function insertDonationViaQuickpay(
         PaymentGateway.Quickpay,
         donation.method,
         donation.tax_deductible,
+        donation.fundraiser_id,
       ],
     )
   ).rows[0];
@@ -131,8 +134,8 @@ export async function insertDonationViaBankTransfer(
 ): Promise<DonationWithGatewayInfoBankTransfer> {
   return (
     await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"bank_msg": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''bank_msg'''))::jsonb)
+      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, format('{"bank_msg": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''bank_msg'''))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -142,6 +145,7 @@ export async function insertDonationViaBankTransfer(
         PaymentGateway.BankTransfer,
         PaymentMethod.BankTransfer,
         donation.tax_deductible,
+        donation.fundraiser_id,
       ],
     )
   ).rows[0];
@@ -195,6 +199,26 @@ export async function getDonationToUpdateQuickpayPaymentInfoById(
        left join charge c on d.id = c.donation_id and c.status != 'created'
        where d.id = $1 and c.donation_id is null and d.gateway = 'Quickpay' and d.frequency != 'once' and not d.cancelled`,
       [id],
+    )
+  ).rows[0];
+}
+
+export async function insertFundraiser(
+  client: PoolClient,
+  fundraiser: Partial<Fundraiser>,
+): Promise<Fundraiser> {
+  return (
+    await client.query(
+      `insert into fundraiser (email, title, description, media, target)
+       values ($1, $2, $3, $4, $5)
+       returning *`,
+      [
+        fundraiser.email,
+        fundraiser.title,
+        fundraiser.description,
+        fundraiser.media,
+        fundraiser.target,
+      ],
     )
   ).rows[0];
 }

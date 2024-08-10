@@ -7,6 +7,7 @@ export type SubmitDataDonation = {
   email: string;
   method: string;
   subscribeToNewsletter: boolean;
+  fundraiserId?: string;
 };
 
 export type SubmitDataMembership = {

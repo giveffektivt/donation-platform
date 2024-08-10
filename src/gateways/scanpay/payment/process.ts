@@ -50,6 +50,7 @@ export async function insertScanpayData(
     frequency: parseDonationFrequency(submitData.frequency),
     method: parsePaymentMethod(submitData.method),
     tax_deductible: submitData.taxDeductible,
+    fundraiser_id: submitData.fundraiserId,
   });
 
   // Only create charges at this moment for auto-captured one-time donations

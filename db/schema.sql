@@ -238,7 +238,8 @@ CREATE TABLE giveffektivt._donation (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
-    _old_id integer
+    _old_id integer,
+    fundraiser_id uuid
 );
 
 
@@ -260,6 +261,24 @@ CREATE TABLE giveffektivt._donor (
     _old_id integer,
     country text,
     birthday date
+);
+
+
+--
+-- Name: _fundraiser; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt._fundraiser (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email text NOT NULL,
+    title text NOT NULL,
+    description text,
+    media text,
+    target numeric NOT NULL,
+    key uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone
 );
 
 
@@ -384,7 +403,8 @@ CREATE VIEW giveffektivt.donation AS
     method,
     tax_deductible,
     created_at,
-    updated_at
+    updated_at,
+    fundraiser_id
    FROM giveffektivt._donation
   WHERE (deleted_at IS NULL);
 
@@ -884,7 +904,8 @@ CREATE VIEW giveffektivt.donation_with_gateway_info AS
     tax_deductible,
     gateway_metadata,
     created_at,
-    updated_at
+    updated_at,
+    fundraiser_id
    FROM giveffektivt._donation
   WHERE (deleted_at IS NULL);
 
@@ -1032,6 +1053,24 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
           ORDER BY d.id, c.created_at DESC) s
   WHERE (status = 'error'::giveffektivt.charge_status)
   ORDER BY failed_at DESC;
+
+
+--
+-- Name: fundraiser; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.fundraiser AS
+ SELECT id,
+    email,
+    title,
+    description,
+    media,
+    target,
+    key,
+    created_at,
+    updated_at
+   FROM giveffektivt._fundraiser
+  WHERE (deleted_at IS NULL);
 
 
 --
@@ -1361,6 +1400,14 @@ ALTER TABLE ONLY giveffektivt._donor
 
 
 --
+-- Name: _fundraiser _fundraiser_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._fundraiser
+    ADD CONSTRAINT _fundraiser_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: _gavebrev_checkin _gavebrev_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -1500,6 +1547,15 @@ CREATE RULE donor_soft_delete_cascade_gavebrev_checkin AS
 
 
 --
+-- Name: fundraiser fundraiser_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE fundraiser_soft_delete AS
+    ON DELETE TO giveffektivt.fundraiser DO INSTEAD  UPDATE giveffektivt._fundraiser SET deleted_at = now()
+  WHERE ((_fundraiser.id = old.id) AND (_fundraiser.deleted_at IS NULL));
+
+
+--
 -- Name: gavebrev_checkin gavebrev_checkin_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
 --
 
@@ -1563,6 +1619,13 @@ CREATE TRIGGER donation_update_timestamp BEFORE UPDATE ON giveffektivt._donation
 --
 
 CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt._donor FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: _fundraiser fundraiser_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER fundraiser_update_timestamp BEFORE UPDATE ON giveffektivt._fundraiser FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
@@ -1632,6 +1695,14 @@ ALTER TABLE ONLY giveffektivt._donation
 
 
 --
+-- Name: _donation _donation_fundraiser_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._donation
+    ADD CONSTRAINT _donation_fundraiser_id_fkey FOREIGN KEY (fundraiser_id) REFERENCES giveffektivt._fundraiser(id);
+
+
+--
 -- Name: _gavebrev_checkin _gavebrev_checkin_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -1698,4 +1769,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240115002613'),
     ('20240303130208'),
     ('20240308103949'),
-    ('20240321100834');
+    ('20240321100834'),
+    ('20240810181005');

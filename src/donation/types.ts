@@ -44,6 +44,7 @@ export type Donation = {
   gateway: PaymentGateway;
   method: PaymentMethod;
   tax_deductible: boolean;
+  fundraiser_id: string;
   created_at: Date;
   updated_at: Date;
 };
@@ -109,4 +110,16 @@ export type FailedRecurringDonationToEmail = {
 export type BankTransferInfo = {
   amount: number;
   msg: string;
+};
+
+export type Fundraiser = {
+  id: string;
+  email: string;
+  title: string;
+  description: string;
+  media: string;
+  target: number;
+  key: string;
+  created_at: Date;
+  updated_at: Date;
 };

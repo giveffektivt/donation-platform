@@ -11,6 +11,8 @@ import {
   insertDonorWithSensitiveInfo,
   PaymentGateway,
   PaymentMethod,
+  insertFundraiser,
+  insertDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
@@ -46,6 +48,7 @@ test("Insert donation for Giv Effektivt membership using Quickpay", async () => 
     method: PaymentMethod.CreditCard,
     tax_deductible: false,
     gateway: PaymentGateway.Quickpay,
+    fundraiser_id: null,
   });
 });
 
@@ -75,6 +78,7 @@ test("Insert donation using Scanpay", async () => {
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
     gateway: PaymentGateway.Scanpay,
+    fundraiser_id: null,
   });
 });
 
@@ -103,5 +107,79 @@ test("Insert donation using bank transfer", async () => {
     method: PaymentMethod.BankTransfer,
     tax_deductible: true,
     gateway: PaymentGateway.BankTransfer,
+    fundraiser_id: null,
+  });
+});
+
+test("Insert donation with fundraiser using Quickpay", async () => {
+  const db = await client;
+
+  const fundraiser = await insertFundraiser(db, {
+    email: "hello@example.com",
+    title: "Birthday",
+    target: 1000,
+  });
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 123,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+    fundraiser_id: fundraiser.id,
+  });
+
+  expect(donation).toMatchObject({
+    donor_id: donor.id,
+    emailed: EmailedStatus.No,
+    amount: 123,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
+    cancelled: false,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+    gateway: PaymentGateway.Quickpay,
+    fundraiser_id: fundraiser.id,
+  });
+});
+
+test("Insert donation with fundraiser using bank transfer", async () => {
+  const db = await client;
+
+  const fundraiser = await insertFundraiser(db, {
+    email: "hello@example.com",
+    title: "Birthday",
+    target: 2000,
+  });
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaBankTransfer(db, {
+    donor_id: donor.id,
+    amount: 123,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
+    tax_deductible: true,
+    fundraiser_id: fundraiser.id,
+  });
+
+  expect(donation).toMatchObject({
+    donor_id: donor.id,
+    emailed: EmailedStatus.No,
+    amount: 123,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
+    cancelled: false,
+    method: PaymentMethod.BankTransfer,
+    tax_deductible: true,
+    gateway: PaymentGateway.BankTransfer,
+    fundraiser_id: fundraiser.id,
   });
 });
