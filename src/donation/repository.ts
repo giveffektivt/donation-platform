@@ -222,3 +222,18 @@ export async function insertFundraiser(
     )
   ).rows[0];
 }
+
+export async function getFundraiser(
+  client: PoolClient,
+  id: string,
+): Promise<Fundraiser[]> {
+  return (
+    await client.query(
+      `
+      select id, title, description, media, target, (select coalesce(sum(amount),0) from donation d join charge c on d.id = c.donation_id where fundraiser_id = $1 and c.status = 'charged') as raised
+      from fundraiser
+      where id = $1`,
+      [id],
+    )
+  ).rows[0];
+}
