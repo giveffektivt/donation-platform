@@ -90,7 +90,7 @@ const toAmount = (value: string): string => {
 };
 
 const parseAmount = (value: string): number | "" => {
-  return value === "" ? "" : Number.parseInt(value.replace(/\./g, ""));
+  return value === "" ? "" : Number.parseInt(value.replace(/\./g, ""), 10);
 };
 
 const parseRecipient = (value: string): string => {
