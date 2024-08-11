@@ -83,14 +83,18 @@ export const showError = (Component: any): ComponentType => {
 export const showHasTitle = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return store.data.title ? <Component {...props} /> : null;
+    return !store.hasError && store.data?.title ? (
+      <Component {...props} />
+    ) : null;
   };
 };
 
 export const showHasTarget = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return store.data.target ? <Component {...props} /> : null;
+    return !store.hasError && store.data?.target ? (
+      <Component {...props} />
+    ) : null;
   };
 };
 
@@ -109,8 +113,8 @@ export const showRaised = (Component: any): ComponentType =>
 export const showField = (Component: any, key: string): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return !store.hasError && store.data[key] !== null ? (
-      <Component {...props} text={store.data[key].toString() ?? "..."} />
+    return !store.hasError && store.data && store.data[key] !== null ? (
+      <Component {...props} text={store.data[key].toString()} />
     ) : null;
   };
 };
