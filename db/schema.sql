@@ -274,7 +274,7 @@ CREATE TABLE giveffektivt._fundraiser (
     title text NOT NULL,
     description text,
     media text,
-    target numeric NOT NULL,
+    target numeric,
     key uuid DEFAULT gen_random_uuid() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -1692,14 +1692,6 @@ ALTER TABLE ONLY giveffektivt._charge
 
 ALTER TABLE ONLY giveffektivt._donation
     ADD CONSTRAINT _donation_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
-
-
---
--- Name: _donation _donation_fundraiser_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt._donation
-    ADD CONSTRAINT _donation_fundraiser_id_fkey FOREIGN KEY (fundraiser_id) REFERENCES giveffektivt._fundraiser(id);
 
 
 --

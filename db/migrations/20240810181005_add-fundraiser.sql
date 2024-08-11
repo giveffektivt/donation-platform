@@ -5,7 +5,7 @@ create table _fundraiser(
     title text not null,
     description text,
     media text,
-    target numeric not null,
+    target numeric,
     key uuid not null default gen_random_uuid(),
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now(),
@@ -41,9 +41,13 @@ create rule fundraiser_soft_delete as on delete to fundraiser
         id = old.id
         and deleted_at is null;
 
+grant select on fundraiser to reader;
+
+grant insert, update, delete on fundraiser to writer;
+
 ----------------------------------------------------
 alter table _donation
-    add column fundraiser_id uuid references _fundraiser(id);
+    add column fundraiser_id uuid;
 
 create or replace view donation as
 select
