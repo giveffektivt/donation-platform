@@ -138,6 +138,7 @@ const prepareDonationPayload = (store: any) => {
     method: parseMethod(store.method),
     rulesAccepted: store.rulesAccepted,
     subscribeToNewsletter: store.subscribeToNewsletter,
+    fundraiserId: store.fundraiserId,
   };
 };
 

@@ -21,6 +21,8 @@ const emptyStore = {
   step: "Step 1",
   isLoading: false,
   preselectedRecipient: "",
+  fundraiserId: null,
+  fundraiserName: null,
 };
 const useStore = createStore(emptyStore);
 
@@ -426,6 +428,59 @@ export const showCprCvrWarning = (Component: any): ComponentType => {
       !isCprCvrPlausible(store.tin);
 
     return isCprCvrSuspicious ? <Component {...props} /> : null;
+  };
+};
+
+// Fundraiser
+
+export const withFundraiser = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [_, setStore] = useStore();
+
+    useEffect(() => {
+      const request = async () => {
+        const id = new URLSearchParams(window.location.search).get("id");
+        if (id == null) {
+          throw new Error("Unable to find ID in the URL");
+        }
+
+        setStore({ fundraiserId: id });
+
+        const response = await fetch(
+          `${apiUrl("prod", "fundraiser")}?id=${id}`,
+        );
+
+        if (!response.ok) {
+          throw new Error(response.statusText);
+        }
+
+        const body = await response.json();
+        setStore({ fundraiserName: body.title });
+      };
+
+      request().catch((err) => {
+        setStore({ fundraiserName: null });
+        console.error(err.message);
+      });
+    }, []);
+
+    return <Component {...props} />;
+  };
+};
+
+export const showFundraiser = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.fundraiserName ? <Component {...props} /> : null;
+  };
+};
+
+export const showFundraiserName = (Component: any): ComponentType => {
+  return (props) => {
+    const [store] = useStore();
+    return store.fundraiserName ? (
+      <Component {...props} text={store.fundraiserName} />
+    ) : null;
   };
 };
 
