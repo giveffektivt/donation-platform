@@ -17,7 +17,7 @@ const useStore = createStore({
     raised: null,
   },
   hasError: false,
-  isLoading: true,
+  isLoading: false,
 });
 
 export const loadData = (Component: any): ComponentType => {
@@ -26,6 +26,8 @@ export const loadData = (Component: any): ComponentType => {
 
     useEffect(() => {
       const request = async () => {
+        setStore({ isLoading: true });
+
         const id = new URLSearchParams(window.location.search).get("id");
         if (id == null) {
           throw new Error("Unable to find ID in the URL");
@@ -43,7 +45,10 @@ export const loadData = (Component: any): ComponentType => {
         setStore({
           data: {
             ...body,
-            target: new Intl.NumberFormat("da-DK").format(body.target),
+            target:
+              body.target !== null
+                ? new Intl.NumberFormat("da-DK").format(body.target)
+                : null,
             raised: new Intl.NumberFormat("da-DK").format(body.raised),
           },
           hasError: false,
@@ -64,7 +69,7 @@ export const loadData = (Component: any): ComponentType => {
 export const showLoading = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return !store.hasError && store.isLoading ? <Component {...props} /> : null;
+    return store.isLoading ? <Component {...props} /> : null;
   };
 };
 
@@ -75,12 +80,17 @@ export const showError = (Component: any): ComponentType => {
   };
 };
 
-export const showNoError = (Component: any): ComponentType => {
+export const showHasTitle = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return !store.hasError && !!store.data.title ? (
-      <Component {...props} />
-    ) : null;
+    return store.data.title ? <Component {...props} /> : null;
+  };
+};
+
+export const showHasTarget = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.data.target ? <Component {...props} /> : null;
   };
 };
 
