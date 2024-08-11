@@ -5,7 +5,7 @@ import { addPropertyControls, ControlType } from "framer";
  * @framerSupportedLayoutWidth auto
  * @framerSupportedLayoutHeight auto
  */
-export default function RemoteImage(props) {
+export default function RemoteImage(props: any) {
   return (
     <div style={containerStyle}>
       {!!props.url && (
