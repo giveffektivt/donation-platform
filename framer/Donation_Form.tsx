@@ -23,6 +23,7 @@ const emptyStore = {
   preselectedRecipient: "",
   fundraiserId: null,
   fundraiserName: null,
+  message: null,
 };
 const useStore = createStore(emptyStore);
 
@@ -438,6 +439,8 @@ export const withFundraiser = (Component: any): ComponentType => {
     const [_, setStore] = useStore();
 
     useEffect(() => {
+      setStore({ frequency: "Giv en gang" });
+
       const request = async () => {
         const id = new URLSearchParams(window.location.search).get("id");
         if (id == null) {
@@ -480,6 +483,22 @@ export const showFundraiserName = (Component: any): ComponentType => {
     const [store] = useStore();
     return store.fundraiserName ? (
       <Component {...props} text={store.fundraiserName} />
+    ) : null;
+  };
+};
+
+export const inputMessage = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store, setStore] = useStore();
+
+    const onValueChange = (message: string) => setStore({ message });
+
+    return store.fundraiserId ? (
+      <Component
+        {...props}
+        value={store.message ?? ""}
+        onValueChange={onValueChange}
+      />
     ) : null;
   };
 };

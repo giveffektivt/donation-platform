@@ -139,6 +139,7 @@ const prepareDonationPayload = (store: any) => {
     rulesAccepted: store.rulesAccepted,
     subscribeToNewsletter: store.subscribeToNewsletter,
     fundraiserId: store.fundraiserId,
+    message: store.message ? store.message : null,
   };
 };
 
