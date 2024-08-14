@@ -633,6 +633,6 @@ const gavebrevDonor = async (db: PoolClient, tin: string): Promise<DonorWithSens
   });
 };
 
-const getDate = (years_ago = 0) => subYears(subMonths(new Date(), 6), years_ago);
+const getDate = (years_ago = 0) => subYears(subMonths(new Date(), 9), years_ago);
 
 const getYear = (years_ago = 0) => getDate(years_ago).getFullYear();
