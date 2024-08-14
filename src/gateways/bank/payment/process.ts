@@ -44,6 +44,7 @@ export async function insertBankTransferData(
     frequency: parseDonationFrequency(submitData.frequency),
     tax_deductible: submitData.taxDeductible,
     fundraiser_id: submitData.fundraiserId,
+    message: submitData.message,
   });
 
   return [donor, donation];

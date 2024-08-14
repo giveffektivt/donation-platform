@@ -45,6 +45,7 @@ export type Donation = {
   method: PaymentMethod;
   tax_deductible: boolean;
   fundraiser_id: string;
+  message: string;
   created_at: Date;
   updated_at: Date;
 };
@@ -97,6 +98,8 @@ export type FailedRecurringDonation = {
   recipient: DonationRecipient;
   frequency: DonationFrequency;
   tax_deductible: boolean;
+  fundraiser_id: string;
+  message: string;
 };
 
 export type FailedRecurringDonationToEmail = {

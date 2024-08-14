@@ -239,7 +239,8 @@ CREATE TABLE giveffektivt._donation (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
     _old_id integer,
-    fundraiser_id uuid
+    fundraiser_id uuid,
+    message text
 );
 
 
@@ -888,10 +889,10 @@ CREATE VIEW giveffektivt.charge_with_gateway_info AS
 
 
 --
--- Name: donation_with_gateway_info; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: donation_with_sensitive_info; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.donation_with_gateway_info AS
+CREATE VIEW giveffektivt.donation_with_sensitive_info AS
  SELECT id,
     donor_id,
     emailed,
@@ -902,10 +903,11 @@ CREATE VIEW giveffektivt.donation_with_gateway_info AS
     gateway,
     method,
     tax_deductible,
+    fundraiser_id,
+    message,
     gateway_metadata,
     created_at,
-    updated_at,
-    fundraiser_id
+    updated_at
    FROM giveffektivt._donation
   WHERE (deleted_at IS NULL);
 
@@ -939,9 +941,32 @@ CREATE VIEW giveffektivt.charges_to_charge AS
     c.gateway_metadata,
     d.gateway_metadata AS donation_gateway_metadata
    FROM ((giveffektivt.donor_with_contact_info dc
-     JOIN giveffektivt.donation_with_gateway_info d ON ((d.donor_id = dc.id)))
+     JOIN giveffektivt.donation_with_sensitive_info d ON ((d.donor_id = dc.id)))
      JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
   WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (c.status = 'created'::giveffektivt.charge_status) AND (c.created_at <= now()));
+
+
+--
+-- Name: donation_with_contact_info; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donation_with_contact_info AS
+ SELECT id,
+    donor_id,
+    emailed,
+    amount,
+    recipient,
+    frequency,
+    cancelled,
+    gateway,
+    method,
+    tax_deductible,
+    fundraiser_id,
+    message,
+    created_at,
+    updated_at
+   FROM giveffektivt._donation
+  WHERE (deleted_at IS NULL);
 
 
 --
@@ -1009,7 +1034,7 @@ CREATE VIEW giveffektivt.donor AS
 CREATE VIEW giveffektivt.failed_recurring_donations AS
  WITH paid_before AS (
          SELECT DISTINCT ON (d.id) d.id
-           FROM ((giveffektivt.donation_with_gateway_info d
+           FROM ((giveffektivt.donation_with_sensitive_info d
              JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
@@ -1029,6 +1054,8 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
     recipient,
     frequency,
     tax_deductible,
+    fundraiser_id,
+    message,
     status
    FROM ( SELECT DISTINCT ON (d.id) c.created_at AS failed_at,
             c.id AS charge_id,
@@ -1044,8 +1071,10 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
             d.recipient,
             d.frequency,
             d.tax_deductible,
+            d.fundraiser_id,
+            d.message,
             c.status
-           FROM ((giveffektivt.donation_with_gateway_info d
+           FROM ((giveffektivt.donation_with_sensitive_info d
              JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
           WHERE (d.id IN ( SELECT paid_before.id
@@ -1762,4 +1791,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240303130208'),
     ('20240308103949'),
     ('20240321100834'),
-    ('20240810181005');
+    ('20240810181005'),
+    ('20240814200924');

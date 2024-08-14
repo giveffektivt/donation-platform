@@ -405,7 +405,10 @@ test("Should find donation ID by old donor ID", async () => {
     status: ChargeStatus.Charged,
   });
 
-  expect(await getDonationIdsByOldDonorId(db, oldDonor._old_id)).toEqual([oldDonation1.id, oldDonation2.id]);
+  expect(await getDonationIdsByOldDonorId(db, oldDonor._old_id)).toEqual([
+    oldDonation1.id,
+    oldDonation2.id,
+  ]);
 });
 
 test("Finds failed recurring donations to email", async () => {
@@ -444,6 +447,8 @@ test("Finds failed recurring donations to email", async () => {
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
+    fundraiser_id: "00000000-0000-0000-0000-000000000000",
+    message: "hello world",
   });
 
   await insertChargeWithCreatedAt(db, {
@@ -608,6 +613,8 @@ test("Finds failed recurring donations to email", async () => {
       frequency: donation2.frequency,
       tax_deductible: donation2.tax_deductible,
       method: donation2.method,
+      fundraiser_id: "00000000-0000-0000-0000-000000000000",
+      message: "hello world",
     },
   ];
 
@@ -715,12 +722,28 @@ test("Finds donations that can get a link to renew payment", async () => {
   });
 
   // ...should allow only the first two donations to renew payment
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation1.id)).toEqual(donation1);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation2.id)).toEqual(donation2);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation3.id)).toEqual(donation3);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation4.id)).toEqual(undefined);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation5.id)).toEqual(undefined);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation6.id)).toEqual(undefined);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation7.id)).toEqual(undefined);
-  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation8.id)).toEqual(undefined);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation1.id),
+  ).toEqual(donation1);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation2.id),
+  ).toEqual(donation2);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation3.id),
+  ).toEqual(donation3);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation4.id),
+  ).toEqual(undefined);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation5.id),
+  ).toEqual(undefined);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation6.id),
+  ).toEqual(undefined);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation7.id),
+  ).toEqual(undefined);
+  expect(
+    await getDonationToUpdateQuickpayPaymentInfoById(db, donation8.id),
+  ).toEqual(undefined);
 });

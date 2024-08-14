@@ -28,14 +28,14 @@ export async function findDonationScanpay(
   client: PoolClient,
   donation: Partial<DonationWithGatewayInfoScanpay>
 ): Promise<DonationWithGatewayInfoScanpay> {
-  return (await client.query(`select * from donation_with_gateway_info where id=$1`, [donation.id])).rows[0];
+  return (await client.query(`select * from donation_with_sensitive_info where id=$1`, [donation.id])).rows[0];
 }
 
 export async function findDonationQuickpay(
   client: PoolClient,
   donation: Partial<DonationWithGatewayInfoQuickpay>
 ): Promise<DonationWithGatewayInfoQuickpay> {
-  return (await client.query(`select * from donation_with_gateway_info where id=$1`, [donation.id])).rows[0];
+  return (await client.query(`select * from donation_with_sensitive_info where id=$1`, [donation.id])).rows[0];
 }
 
 export async function findAllDonors(client: PoolClient): Promise<DonorWithSensitiveInfo[]> {
@@ -47,7 +47,7 @@ export async function findAllGavebrevs(client: PoolClient): Promise<Gavebrev[]> 
 }
 
 export async function findAllDonations(client: PoolClient): Promise<DonationWithGatewayInfoAny[]> {
-  return (await client.query(`select * from donation_with_gateway_info`)).rows;
+  return (await client.query(`select * from donation_with_sensitive_info`)).rows;
 }
 
 export async function findAllCharges(client: PoolClient): Promise<ChargeWithGatewayMetadata[]> {

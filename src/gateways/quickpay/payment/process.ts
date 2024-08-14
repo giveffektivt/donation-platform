@@ -96,6 +96,7 @@ export async function insertQuickpayDataDonation(
     method: parsePaymentMethod(submitData.method),
     tax_deductible: submitData.taxDeductible,
     fundraiser_id: submitData.fundraiserId,
+    message: submitData.message,
   });
 
   // Only create charges at this moment for auto-captured one-time donations
@@ -153,6 +154,8 @@ export async function recreateQuickpayRecurringDonation(
           frequency: info.frequency,
           method: info.method,
           tax_deductible: info.tax_deductible,
+          fundraiser_id: info.fundraiser_id,
+          message: info.message,
         });
 
   await setDonationEmailed(db, donation, EmailedStatus.Yes);

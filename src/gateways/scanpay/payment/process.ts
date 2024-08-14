@@ -51,6 +51,7 @@ export async function insertScanpayData(
     method: parsePaymentMethod(submitData.method),
     tax_deductible: submitData.taxDeductible,
     fundraiser_id: submitData.fundraiserId,
+    message: submitData.message,
   });
 
   // Only create charges at this moment for auto-captured one-time donations

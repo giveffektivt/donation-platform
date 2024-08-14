@@ -44,7 +44,7 @@ export async function setDonationCancelledByQuickpayOrder(
   quickpay_order: string,
 ) {
   return await client.query(
-    `update donation_with_gateway_info set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
+    `update donation_with_sensitive_info set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
     [quickpay_order],
   );
 }
@@ -55,7 +55,7 @@ export async function setDonationMethodByQuickpayOrder(
   method: PaymentMethod,
 ) {
   return await client.query(
-    `update donation_with_gateway_info set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
+    `update donation_with_sensitive_info set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
     [method, quickpay_order],
   );
 }
@@ -66,8 +66,8 @@ export async function insertDonationViaScanpay(
 ): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(
-      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
+      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        returning *`,
       [
         donation.donor_id,
@@ -78,6 +78,7 @@ export async function insertDonationViaScanpay(
         donation.method,
         donation.tax_deductible,
         donation.fundraiser_id,
+        donation.message,
       ],
     )
   ).rows[0];
@@ -89,8 +90,8 @@ export async function insertDonationViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -101,6 +102,7 @@ export async function insertDonationViaQuickpay(
         donation.method,
         donation.tax_deductible,
         donation.fundraiser_id,
+        donation.message,
       ],
     )
   ).rows[0];
@@ -112,8 +114,8 @@ export async function insertMembershipViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -134,8 +136,8 @@ export async function insertDonationViaBankTransfer(
 ): Promise<DonationWithGatewayInfoBankTransfer> {
   return (
     await client.query(
-      `insert into donation_with_gateway_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, format('{"bank_msg": "%s"}', gen_short_id('donation_with_gateway_info', 'gateway_metadata->>''bank_msg'''))::jsonb)
+      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''bank_msg'''))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -146,6 +148,7 @@ export async function insertDonationViaBankTransfer(
         PaymentMethod.BankTransfer,
         donation.tax_deductible,
         donation.fundraiser_id,
+        donation.message,
       ],
     )
   ).rows[0];
@@ -156,7 +159,7 @@ export async function setDonationScanpayId(
   donation: Partial<DonationWithGatewayInfoScanpay>,
 ) {
   return await client.query(
-    `update donation_with_gateway_info set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
+    `update donation_with_sensitive_info set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
     [donation.gateway_metadata?.scanpay_id, donation.id],
   );
 }
@@ -166,7 +169,7 @@ export async function setDonationQuickpayId(
   donation: Partial<DonationWithGatewayInfoQuickpay>,
 ) {
   return await client.query(
-    `update donation_with_gateway_info set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
+    `update donation_with_sensitive_info set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
     [donation.gateway_metadata?.quickpay_id, donation.id],
   );
 }
@@ -195,7 +198,7 @@ export async function getDonationToUpdateQuickpayPaymentInfoById(
 ): Promise<DonationWithGatewayInfoQuickpay | null> {
   return (
     await client.query(
-      `select d.* from donation_with_gateway_info d
+      `select d.* from donation_with_sensitive_info d
        left join charge c on d.id = c.donation_id and c.status != 'created'
        where d.id = $1 and c.donation_id is null and d.gateway = 'Quickpay' and d.frequency != 'once' and not d.cancelled`,
       [id],

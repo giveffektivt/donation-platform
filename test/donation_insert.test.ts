@@ -183,3 +183,34 @@ test("Insert donation with fundraiser using bank transfer", async () => {
     fundraiser_id: fundraiser.id,
   });
 });
+
+test("Insert donation with a custom message", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    amount: 123,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+    message: "hello world",
+  });
+
+  expect(donation).toMatchObject({
+    donor_id: donor.id,
+    emailed: EmailedStatus.No,
+    amount: 123,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Monthly,
+    cancelled: false,
+    method: PaymentMethod.MobilePay,
+    tax_deductible: true,
+    gateway: PaymentGateway.Quickpay,
+    message: "hello world",
+  });
+});
