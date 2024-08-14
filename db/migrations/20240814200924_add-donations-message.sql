@@ -138,6 +138,8 @@ grant select on failed_recurring_donations to reader_sensitive;
 
 grant select on charges_to_charge to reader_sensitive;
 
+grant update on charges_to_charge to writer;
+
 ----
 drop view donation_with_gateway_info;
 
