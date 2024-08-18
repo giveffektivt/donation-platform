@@ -13,6 +13,7 @@ export enum DonationFrequency {
   Once = "once",
   Monthly = "monthly",
   Yearly = "yearly",
+  Match = "match",
 }
 
 export enum PaymentGateway {

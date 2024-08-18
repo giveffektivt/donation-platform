@@ -39,7 +39,7 @@ export async function insertInitialChargeQuickpay(
 ): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
-      `with d as (select id from donation_with_sensitive_info where gateway_metadata ->> 'quickpay_order' = $1 limit 1)
+      `with d as (select id from donation_with_sensitive_info where frequency in ('monthly', 'yearly') and gateway_metadata ->> 'quickpay_order' = $1 limit 1)
        insert into charge_with_gateway_info (donation_id, status)
        select id, 'created' from d
        where not exists (select id from charge where donation_id = d.id limit 1)

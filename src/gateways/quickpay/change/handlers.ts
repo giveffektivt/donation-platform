@@ -38,9 +38,13 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
   }
 
   console.log(
-    `Creating initial charges for Quickpay subscription ${change.order_id}`
+    `Checking the need for initial charges for Quickpay subscription ${change.order_id}`
   );
-  await insertInitialChargeQuickpay(db, change.order_id);
+  if (await insertInitialChargeQuickpay(db, change.order_id)) {
+    console.log(
+      `Created initial charges for Quickpay subscription ${change.order_id}`
+    );
+  }
 }
 
 /** Add gateway response to a charge */

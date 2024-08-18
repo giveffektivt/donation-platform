@@ -14,6 +14,7 @@ import {
   PaymentMethod,
   setChargeIdempotencyKey,
   setChargeStatus,
+  insertDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllCharges, findCharge } from "./repository";
@@ -121,6 +122,32 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
   );
 
   expect(await findAllCharges(db)).toHaveLength(1);
+});
+
+test("Do not insert initial charge for a matching donation", async () => {
+  const db = await client;
+
+  const donor = await insertDonorWithSensitiveInfo(db, {
+    email: "hello@example.com",
+  });
+
+  const donation = await insertDonationViaQuickpay(db, {
+    donor_id: donor.id,
+    method: PaymentMethod.CreditCard,
+    amount: 0.1,
+    recipient: DonationRecipient.MyggenetModMalaria,
+    frequency: DonationFrequency.Match,
+    tax_deductible: false,
+    fundraiser_id: "00000000-0000-0000-0000-000000000000"
+  });
+
+  const charge = await insertInitialChargeQuickpay(
+    db,
+    donation.gateway_metadata.quickpay_order
+  );
+
+  expect(charge).toBeUndefined();
+  expect(await findAllCharges(db)).toHaveLength(0);
 });
 
 test("Update charge status", async () => {

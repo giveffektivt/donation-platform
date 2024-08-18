@@ -28,7 +28,11 @@ export const validationSchemaDonation = {
     .string()
     .trim()
     .required("Vælg hvor ofte du vil donere")
-    .oneOf([DonationFrequency.Once, DonationFrequency.Monthly]),
+    .oneOf([
+      DonationFrequency.Once,
+      DonationFrequency.Monthly,
+      DonationFrequency.Match,
+    ]),
   taxDeductible: yup.bool().required(),
   tin: yup
     .string()
@@ -42,7 +46,7 @@ export const validationSchemaDonation = {
     })
     .matches(
       /^(\d{6}-\d{4}|\d{8})?$/,
-      "Angiv CPR-nr. som DDMMÅÅ-XXXX eller CVR-nr. som XXXXXXXX"
+      "Angiv CPR-nr. som DDMMÅÅ-XXXX eller CVR-nr. som XXXXXXXX",
     )
     .transform((value) => (!value ? undefined : value)),
   email: yup

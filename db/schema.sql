@@ -36,7 +36,8 @@ CREATE TYPE giveffektivt.charge_status AS ENUM (
 CREATE TYPE giveffektivt.donation_frequency AS ENUM (
     'once',
     'monthly',
-    'yearly'
+    'yearly',
+    'match'
 );
 
 
@@ -277,6 +278,22 @@ CREATE TABLE giveffektivt._fundraiser (
     media text,
     target numeric,
     key uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp with time zone,
+    has_match boolean DEFAULT false NOT NULL,
+    match_currency text
+);
+
+
+--
+-- Name: _fundraiser_activity_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt._fundraiser_activity_checkin (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    fundraiser_id uuid NOT NULL,
+    amount numeric NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone
@@ -1095,10 +1112,26 @@ CREATE VIEW giveffektivt.fundraiser AS
     description,
     media,
     target,
+    has_match,
+    match_currency,
     key,
     created_at,
     updated_at
    FROM giveffektivt._fundraiser
+  WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: fundraiser_activity_checkin; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.fundraiser_activity_checkin AS
+ SELECT id,
+    fundraiser_id,
+    amount,
+    created_at,
+    updated_at
+   FROM giveffektivt._fundraiser_activity_checkin
   WHERE (deleted_at IS NULL);
 
 
@@ -1429,6 +1462,14 @@ ALTER TABLE ONLY giveffektivt._donor
 
 
 --
+-- Name: _fundraiser_activity_checkin _fundraiser_activity_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._fundraiser_activity_checkin
+    ADD CONSTRAINT _fundraiser_activity_checkin_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: _fundraiser _fundraiser_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -1576,15 +1617,6 @@ CREATE RULE donor_soft_delete_cascade_gavebrev_checkin AS
 
 
 --
--- Name: fundraiser fundraiser_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE fundraiser_soft_delete AS
-    ON DELETE TO giveffektivt.fundraiser DO INSTEAD  UPDATE giveffektivt._fundraiser SET deleted_at = now()
-  WHERE ((_fundraiser.id = old.id) AND (_fundraiser.deleted_at IS NULL));
-
-
---
 -- Name: gavebrev_checkin gavebrev_checkin_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
 --
 
@@ -1724,6 +1756,14 @@ ALTER TABLE ONLY giveffektivt._donation
 
 
 --
+-- Name: _fundraiser_activity_checkin _fundraiser_activity_checkin_fundraiser_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt._fundraiser_activity_checkin
+    ADD CONSTRAINT _fundraiser_activity_checkin_fundraiser_id_fkey FOREIGN KEY (fundraiser_id) REFERENCES giveffektivt._fundraiser(id);
+
+
+--
 -- Name: _gavebrev_checkin _gavebrev_checkin_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -1792,4 +1832,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240308103949'),
     ('20240321100834'),
     ('20240810181005'),
-    ('20240814200924');
+    ('20240814200924'),
+    ('20240817162007');

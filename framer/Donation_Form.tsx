@@ -23,6 +23,8 @@ const emptyStore = {
   preselectedRecipient: "",
   fundraiserId: null,
   fundraiserName: null,
+  fundraiserHasMatch: false,
+  fundraiserMatchCurrency: null,
   message: null,
 };
 const useStore = createStore(emptyStore);
@@ -173,13 +175,26 @@ export const inputAmount = (Component: any): ComponentType => {
     const onValueChange = (amount: string) =>
       setStore({ amount: toAmount(amount) });
 
+    const frequency = parseFrequency(store.frequency);
+
     return (
       <Component
         {...props}
         value={parseAmount(store.amount)}
+        placeholder={frequency === "match" ? "0,1" : "0"}
         onValueChange={onValueChange}
       />
     );
+  };
+};
+
+export const showCurrency = (Component: any): ComponentType => {
+  return (props) => {
+    const [store] = useStore();
+    const frequency = parseFrequency(store.frequency);
+    const currency =
+      frequency === "match" ? store.fundraiserMatchCurrency ?? "kr" : "kr";
+    return <Component {...props} text={`${currency}`} />;
   };
 };
 
@@ -436,7 +451,7 @@ export const showCprCvrWarning = (Component: any): ComponentType => {
 
 export const withFundraiser = (Component: any): ComponentType => {
   return (props: any) => {
-    const [_, setStore] = useStore();
+    const [store, setStore] = useStore();
 
     useEffect(() => {
       setStore({ frequency: "Giv en gang" });
@@ -458,11 +473,15 @@ export const withFundraiser = (Component: any): ComponentType => {
         }
 
         const body = await response.json();
-        setStore({ fundraiserName: body.title });
+        setStore({
+          fundraiserName: body.title,
+          frequency: body.has_match ? "Match" : store.frequency,
+          fundraiserHasMatch: body.has_match ?? false,
+          fundraiserMatchCurrency: body.match_currency ?? null,
+        });
       };
 
       request().catch((err) => {
-        setStore({ fundraiserName: null });
         console.error(err.message);
       });
     }, []);
@@ -474,7 +493,37 @@ export const withFundraiser = (Component: any): ComponentType => {
 export const showFundraiser = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return store.fundraiserName ? <Component {...props} /> : null;
+    return store.fundraiserId ? <Component {...props} /> : null;
+  };
+};
+
+export const showNoFundraiser = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.fundraiserId ? null : <Component {...props} />;
+  };
+};
+
+export const showHasMatch = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.fundraiserHasMatch ? <Component {...props} /> : null;
+  };
+};
+
+export const showMatch = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    const frequency = parseFrequency(store.frequency);
+    return frequency === "match" ? <Component {...props} /> : null;
+  };
+};
+
+export const showNoMatch = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    const frequency = parseFrequency(store.frequency);
+    return frequency === "match" ? null : <Component {...props} />;
   };
 };
 

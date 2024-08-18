@@ -85,12 +85,20 @@ const isCprCvrPlausible = (tin: string): boolean => {
 };
 
 const toAmount = (value: string): string => {
-  const parsed = parseAmount(value);
+  const parsed = /^[\d\.]+$/.test(value)
+    ? parseInputAmount(value)
+    : parseAmount(value);
   return parsed === "" ? "" : `${parsed.toLocaleString("da-DK")} kr`;
 };
 
+const parseInputAmount = (value: string): number | "" => {
+  return value === "" ? "" : Number.parseFloat(value);
+};
+
 const parseAmount = (value: string): number | "" => {
-  return value === "" ? "" : Number.parseInt(value.replace(/\./g, ""), 10);
+  return value === ""
+    ? ""
+    : Number.parseFloat(value.replace(/\./g, "").replace(/,/g, "."));
 };
 
 const parseRecipient = (value: string): string => {
@@ -104,7 +112,9 @@ const parseFrequency = (value: string): string => {
     ? ""
     : frequency.includes("måned")
       ? "monthly"
-      : "once";
+      : frequency.includes("match")
+        ? "match"
+        : "once";
 };
 
 const parseMethod = (value: string): string => {
