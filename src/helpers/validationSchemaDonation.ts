@@ -9,9 +9,13 @@ export const validationSchemaDonation = {
   amount: yup
     .number()
     .required("Vælg hvor meget du vil donere")
-    .min(1, "Mindst 1 kr.")
-    .integer("Skriv et heltal")
-    .typeError("Skriv et heltal"),
+    .when("frequency", {
+      is: DonationFrequency.Match,
+      then: (schema) => schema.moreThan(0, "Mere end 0"),
+      otherwise: (schema) =>
+        schema.min(1, "Mindst 1 kr.").integer("Skriv et heltal"),
+    })
+    .typeError("Skriv et tal"),
   recipient: yup
     .string()
     .trim()
