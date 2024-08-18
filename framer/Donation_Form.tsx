@@ -451,7 +451,7 @@ export const showCprCvrWarning = (Component: any): ComponentType => {
 
 export const withFundraiser = (Component: any): ComponentType => {
   return (props: any) => {
-    const [store, setStore] = useStore();
+    const [_, setStore] = useStore();
 
     useEffect(() => {
       setStore({ frequency: "Giv en gang" });
@@ -475,7 +475,7 @@ export const withFundraiser = (Component: any): ComponentType => {
         const body = await response.json();
         setStore({
           fundraiserName: body.title,
-          frequency: body.has_match ? "Match" : store.frequency,
+          frequency: body.has_match ? "Match" : "Giv en gang",
           fundraiserHasMatch: body.has_match ?? false,
           fundraiserMatchCurrency: body.match_currency ?? null,
         });
@@ -511,6 +511,13 @@ export const showHasMatch = (Component: any): ComponentType => {
   };
 };
 
+export const showHasNoMatch = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.fundraiserHasMatch ? null : <Component {...props} />;
+  };
+};
+
 export const showMatch = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
@@ -542,13 +549,13 @@ export const inputMessage = (Component: any): ComponentType => {
 
     const onValueChange = (message: string) => setStore({ message });
 
-    return store.fundraiserId ? (
+    return (
       <Component
         {...props}
         value={store.message ?? ""}
         onValueChange={onValueChange}
       />
-    ) : null;
+    );
   };
 };
 
