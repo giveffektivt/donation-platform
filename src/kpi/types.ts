@@ -14,7 +14,7 @@ export type PendingDistribution = {
   recipient: string;
   dkk_total: number;
   payments_total: number;
-}
+};
 
 export type TransferredDistribution = {
   recipient: string;
@@ -28,4 +28,12 @@ export type TimeDistribution = {
   payments_total: number;
   value_added: number;
   value_lost: number;
+};
+
+export type FundraiserKpi = {
+  created_at: string;
+  message: string;
+  frequency: string;
+  cancelled: boolean;
+  total_amount: number;
 };
