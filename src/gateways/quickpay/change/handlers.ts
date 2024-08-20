@@ -1,9 +1,11 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
   ChargeStatus,
+  getDonorIdByChargeShortId,
   insertInitialChargeQuickpay,
   PaymentMethod,
-  QuickpayChange,
+  type QuickpayChange,
+  sendFailedRecurringDonationEmails,
   setChargeStatusByShortId,
   setDonationCancelledByQuickpayOrder,
   setDonationMethodByQuickpayOrder,
@@ -16,7 +18,7 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
 
   if (process.env.VERCEL_ENV === "production" && change.test_mode) {
     console.error(
-      `Quickpay subscription ${change.order_id} was paid using test card, ignoring.`
+      `Quickpay subscription ${change.order_id} was paid using test card, ignoring.`,
     );
     return;
   }
@@ -33,16 +35,16 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
     await setDonationMethodByQuickpayOrder(
       db,
       change.order_id,
-      PaymentMethod.MobilePay
+      PaymentMethod.MobilePay,
     );
   }
 
   console.log(
-    `Checking the need for initial charges for Quickpay subscription ${change.order_id}`
+    `Checking the need for initial charges for Quickpay subscription ${change.order_id}`,
   );
   if (await insertInitialChargeQuickpay(db, change.order_id)) {
     console.log(
-      `Created initial charges for Quickpay subscription ${change.order_id}`
+      `Created initial charges for Quickpay subscription ${change.order_id}`,
     );
   }
 }
@@ -51,19 +53,24 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
 async function handleCharge(db: PoolClient, change: QuickpayChange) {
   const [status, msg] = getChargeStatusFromOperations(change);
   if (status) {
-    const log = status == ChargeStatus.Error ? console.error : console.log;
+    const log = status === ChargeStatus.Error ? console.error : console.log;
     log(`Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`);
     await setChargeStatusByShortId(db, {
       status,
       short_id: change.order_id,
     });
+
+    if (status === ChargeStatus.Error && msg === "card expired") {
+      const donorId = await getDonorIdByChargeShortId(db, change.order_id);
+      await sendFailedRecurringDonationEmails(db, [donorId]);
+    }
   }
 }
 
 /** run appropriate handler based on change type */
 export async function quickpayHandleChange(
   db: PoolClient,
-  change: QuickpayChange
+  change: QuickpayChange,
 ) {
   switch (change.type) {
     case "Payment":
@@ -74,7 +81,7 @@ export async function quickpayHandleChange(
 }
 
 const getChargeStatusFromOperations = (
-  change: QuickpayChange
+  change: QuickpayChange,
 ): [ChargeStatus | null, string] => {
   if (!(change.operations?.length > 0)) {
     return [null, ""];

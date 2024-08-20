@@ -1,8 +1,10 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import scanpay from "scanpay";
 import {
   ChargeStatus,
-  ChargeToChargeScanpay,
+  type ChargeToChargeScanpay,
+  getDonorIdByChargeShortId,
+  sendFailedRecurringDonationEmails,
   setChargeIdempotencyKey,
   setChargeStatus,
 } from "src";
@@ -12,12 +14,12 @@ const client = scanpay(process.env.SCANPAY_KEY);
 /** Charges subscriber and updates data in Database */
 export async function scanpayChargeSubscription(
   db: PoolClient,
-  charge: ChargeToChargeScanpay
+  charge: ChargeToChargeScanpay,
 ) {
-  let scanpayId = charge.donation_gateway_metadata?.scanpay_id;
+  const scanpayId = charge.donation_gateway_metadata?.scanpay_id;
   if (!scanpayId) {
     console.error(
-      `Charge with ID '${charge.id}' does not have a corresponding Scanpay ID that is required for charging`
+      `Charge with ID '${charge.id}' does not have a corresponding Scanpay ID that is required for charging`,
     );
     await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
     return;
@@ -57,11 +59,18 @@ export async function scanpayChargeSubscription(
   };
 
   let status = ChargeStatus.Waiting;
+  let isCardExpired = false;
 
   try {
     await client.subscriber.charge(scanpayId, data, options);
   } catch (err: any) {
     console.error(`Error while charging ID '${charge.id}':`, err);
+    console.error(
+      `Error message: ${err.message} | Includes 'card expired': ${err.message?.includes("card expired")}`,
+    );
+    if (err.message?.includes("card expired")) {
+      isCardExpired = true;
+    }
     status = ChargeStatus.Error;
 
     if (err?.type === "ScanpayError") {
@@ -71,4 +80,9 @@ export async function scanpayChargeSubscription(
   }
 
   await setChargeStatus(db, { id: charge.id, status });
+
+  if (isCardExpired) {
+    const donorId = await getDonorIdByChargeShortId(db, charge.short_id);
+    await sendFailedRecurringDonationEmails(db, [donorId]);
+  }
 }

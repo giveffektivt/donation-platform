@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import {
   dbExecuteInTransaction,
   generateRenewPaymentUrl,
@@ -7,32 +8,33 @@ import {
   sendFailedRecurringDonationEmail,
 } from "src";
 
-export async function sendFailedRecurringDonationEmails(ids: string[]) {
-  await dbExecuteInTransaction(async (db) => {
-    for (let info of await getFailedRecurringDonations(db)) {
-      if (!ids.includes(info.donor_id)) {
-        continue;
-      }
-
-      try {
-        await sendFailedRecurringDonationEmail({
-          donor_email: info.donor_email,
-          donor_name: info.donor_name,
-          recipient: info.recipient,
-          amount: info.amount,
-          payment_link: await recreateQuickpayFailedRecurringDonation(info),
-        });
-        console.log(
-          `Sent new payment link for a failed recurring donation: ${info.donation_id}`,
-        );
-      } catch (err) {
-        console.error(
-          `Error sending new payment link for a failed recurring donation: ${info.donation_id}`,
-          err,
-        );
-      }
+export async function sendFailedRecurringDonationEmails(
+  db: PoolClient,
+  ids: string[],
+) {
+  for (const info of await getFailedRecurringDonations(db)) {
+    if (!ids.includes(info.donor_id)) {
+      continue;
     }
-  });
+
+    try {
+      await sendFailedRecurringDonationEmail({
+        donor_email: info.donor_email,
+        donor_name: info.donor_name,
+        recipient: info.recipient,
+        amount: info.amount,
+        payment_link: await recreateQuickpayFailedRecurringDonation(info),
+      });
+      console.log(
+        `Sent new payment link for a failed recurring donation: ${info.donation_id}`,
+      );
+    } catch (err) {
+      console.error(
+        `Error sending new payment link for a failed recurring donation: ${info.donation_id}`,
+        err,
+      );
+    }
+  }
 }
 
 export async function getRenewPaymentLink(
