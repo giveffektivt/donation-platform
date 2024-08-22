@@ -14,12 +14,16 @@ import {
   insertQuickpayDataMembership,
   PaymentGateway,
   PaymentMethod,
-  recreateQuickpayFailedRecurringDonation,
   recreateQuickpayRecurringDonation,
   setDonationQuickpayId,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { findAllCharges, findAllDonations, findAllDonors, insertChargeWithCreatedAt } from "./repository";
+import {
+  findAllCharges,
+  findAllDonations,
+  findAllDonors,
+  insertChargeWithCreatedAt,
+} from "./repository";
 
 const client = dbClient();
 
@@ -287,8 +291,12 @@ test("Recreate failed recurring donation", async () => {
     },
   ];
 
-  donations.sort((a, b) => (a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1));
-  expectedDonations.sort((a, b) => (a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1));
+  donations.sort((a, b) =>
+    a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1,
+  );
+  expectedDonations.sort((a, b) =>
+    a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1,
+  );
 
   expect(donations).toMatchObject(expectedDonations);
 
