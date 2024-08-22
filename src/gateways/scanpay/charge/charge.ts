@@ -65,7 +65,10 @@ export async function scanpayChargeSubscription(
     await client.subscriber.charge(scanpayId, data, options);
   } catch (err: any) {
     console.error(`Error while charging ID '${charge.id}':`, err);
-    if (err.message?.includes("card expired")) {
+    if (
+      err.message?.includes("card expired") ||
+      err.message?.includes("card restricted")
+    ) {
       isCardExpired = true;
     }
     status = ChargeStatus.Error;
