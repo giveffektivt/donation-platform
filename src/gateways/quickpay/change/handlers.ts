@@ -60,7 +60,10 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
       short_id: change.order_id,
     });
 
-    if (status === ChargeStatus.Error && msg === "card expired") {
+    if (
+      status === ChargeStatus.Error &&
+      ["card expired", "Card lost or stolen"].includes(msg)
+    ) {
       const donorId = await getDonorIdByChargeShortId(db, change.order_id);
       await sendFailedRecurringDonationEmails(db, [donorId]);
     }
