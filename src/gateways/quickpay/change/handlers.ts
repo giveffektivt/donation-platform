@@ -53,17 +53,21 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
 async function handleCharge(db: PoolClient, change: QuickpayChange) {
   const [status, msg] = getChargeStatusFromOperations(change);
   if (status) {
-    const log = status === ChargeStatus.Error ? console.error : console.log;
+    const isCardExpired =
+      status === ChargeStatus.Error &&
+      ["card expired", "Card lost or stolen"].includes(msg);
+
+    const log =
+      status === ChargeStatus.Error && !isCardExpired
+        ? console.error
+        : console.log;
     log(`Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`);
     await setChargeStatusByShortId(db, {
       status,
       short_id: change.order_id,
     });
 
-    if (
-      status === ChargeStatus.Error &&
-      ["card expired", "Card lost or stolen"].includes(msg)
-    ) {
+    if (isCardExpired) {
       const donorId = await getDonorIdByChargeShortId(db, change.order_id);
       await sendFailedRecurringDonationEmails(db, [donorId]);
     }

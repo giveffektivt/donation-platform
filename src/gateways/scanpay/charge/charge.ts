@@ -64,14 +64,16 @@ export async function scanpayChargeSubscription(
   try {
     await client.subscriber.charge(scanpayId, data, options);
   } catch (err: any) {
-    console.error(`Error while charging ID '${charge.id}':`, err);
     if (
-      err.message?.includes("card expired") ||
-      err.message?.includes("card restricted")
+      err?.message?.includes("card expired") ||
+      err?.message?.includes("card restricted")
     ) {
       isCardExpired = true;
     }
     status = ChargeStatus.Error;
+
+    const log = isCardExpired ? console.log : console.error;
+    log(`Error while charging ID '${charge.id}':`, err);
 
     if (err?.type === "ScanpayError") {
       charge.gateway_metadata.idempotency_key = client.generateIdempotencyKey();
