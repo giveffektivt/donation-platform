@@ -66,7 +66,8 @@ export async function scanpayChargeSubscription(
   } catch (err: any) {
     if (
       err?.message?.includes("card expired") ||
-      err?.message?.includes("card restricted")
+      err?.message?.includes("card restricted") ||
+      err?.message?.includes("card lost or stolen")
     ) {
       isCardExpired = true;
     }
