@@ -29,6 +29,40 @@ export async function getTimeDistribution(
   return (await client.query("select * from time_distribution")).rows;
 }
 
+export async function getRecentMembersCount(
+  client: PoolClient,
+): Promise<number> {
+  return (
+    await client.query(`
+      with already_member as (
+          select distinct
+              p.tin
+          from
+              donor_with_sensitive_info p
+              inner join donation d on d.donor_id = p.id
+              inner join charge c on c.donation_id = d.id
+          where
+              c.status = 'charged'
+              and d.recipient = 'Giv Effektivt'
+              and c.created_at between '2024-01-01' and '2024-09-09'
+      )
+      select
+          count(distinct p.tin)::numeric as count
+      from
+          donor_with_sensitive_info p
+          inner join donation d on d.donor_id = p.id
+          inner join charge c on c.donation_id = d.id
+          left join already_member a on p.tin = a.tin
+      where
+          c.status = 'charged'
+          and d.recipient = 'Giv Effektivt'
+          and c.created_at >= '2024-09-09'
+          and p.created_at >= '2024-09-09'
+          and a.tin is null
+    `)
+  ).rows[0].count;
+}
+
 export async function getFundraiserKpi(
   client: PoolClient,
   id: string,
