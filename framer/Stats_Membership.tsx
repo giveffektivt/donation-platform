@@ -34,7 +34,7 @@ export const loadMembersKpi = (Component: any): ComponentType => {
           members_campaign: body.members_campaign.toLocaleString("da-DK"),
           matched: (body.members_campaign * 100).toLocaleString("da-DK"),
           matched_vitaminA: Math.floor(
-            (body.members_campaign * 100) / 14,
+            (body.members_campaign * 100) / 7,
           ).toLocaleString("da-DK"),
         });
       };
