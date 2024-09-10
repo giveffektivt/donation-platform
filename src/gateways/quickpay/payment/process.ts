@@ -121,7 +121,7 @@ export async function insertQuickpayDataMembership(
     address: submitData.address,
     postcode: submitData.postcode,
     city: submitData.city,
-    country: "Denmark",
+    country: submitData.country,
     tin: submitData.tin,
   });
 

@@ -11,6 +11,7 @@ const emptyStore = {
   address: "",
   postcode: "",
   city: "",
+  country: "Denmark",
   env: "prod",
   isLoading: false,
 };
@@ -86,6 +87,10 @@ export const inputCity = (Component: any): ComponentType => {
   return setInput(Component, "city");
 };
 
+export const inputCountry = (Component: any): ComponentType => {
+  return setInput(Component, "country");
+};
+
 export const inputCpr = (Component: any): ComponentType => {
   return (props: any) => {
     const [store, setStore] = useStore();
@@ -114,7 +119,11 @@ export const inputCpr = (Component: any): ComponentType => {
         {...props}
         value={store.tin}
         onValueChange={onValueChange}
-        isError={store.tin !== "" && !isCprValid(store.tin)}
+        isError={
+          store.country !== "Denmark"
+            ? false
+            : store.tin !== "" && !isCprValid(store.tin)
+        }
       />
     );
   };

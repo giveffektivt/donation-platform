@@ -28,11 +28,12 @@ const canSubmitStep2 = (store: any): boolean => {
 const canSubmitMembership = (store: any): boolean => {
   return (
     store.name !== "" &&
-    isCprValid(store.tin) &&
+    (store.country === "Denmark" ? isCprValid(store.tin) : true) &&
     store.email.includes("@") &&
     store.address !== "" &&
     store.postcode !== "" &&
     store.city !== "" &&
+    store.country !== "" &&
     !store.isLoading
   );
 };
@@ -161,6 +162,7 @@ const prepareMembershipPayload = (store: any) => {
     address: store.address,
     postcode: store.postcode,
     city: store.city,
+    country: store.country,
   };
 };
 

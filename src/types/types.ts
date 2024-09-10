@@ -18,6 +18,7 @@ export type SubmitDataMembership = {
   address: string;
   postcode: string;
   city: string;
+  country: string;
 };
 
 export type SubmitDataGavebrev = {

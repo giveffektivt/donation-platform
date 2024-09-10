@@ -10,7 +10,7 @@ export const validationSchemaMembership = {
     .string()
     .trim()
     .required("CPR-nr. skal udfyldes")
-    .matches(/^(\d{6}-\d{4})?$/, "Angiv CPR-nr. som DDMMÅÅ-XXXX"),
+    .max(320, "Højst 320 tegn"),
   email: yup
     .string()
     .trim()
@@ -32,5 +32,10 @@ export const validationSchemaMembership = {
     .string()
     .trim()
     .required("By skal udfyldes")
+    .max(320, "Højst 320 tegn"),
+  country: yup
+    .string()
+    .trim()
+    .required("Land skal udfyldes")
     .max(320, "Højst 320 tegn"),
 };
