@@ -19,6 +19,7 @@ export type SubmitDataMembership = {
   postcode: string;
   city: string;
   country: string;
+  birthday?: Date;
 };
 
 export type SubmitDataGavebrev = {

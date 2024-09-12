@@ -34,6 +34,9 @@ const canSubmitMembership = (store: any): boolean => {
     store.postcode !== "" &&
     store.city !== "" &&
     store.country !== "" &&
+    (store.country === "Denmark"
+      ? true
+      : /^\d{4}-\d{2}-\d{2}$/.test(store.birthday)) &&
     !store.isLoading
   );
 };
@@ -163,6 +166,7 @@ const prepareMembershipPayload = (store: any) => {
     postcode: store.postcode,
     city: store.city,
     country: store.country,
+    birthday: store.birthday,
   };
 };
 

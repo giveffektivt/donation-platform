@@ -123,6 +123,7 @@ export async function insertQuickpayDataMembership(
     city: submitData.city,
     country: submitData.country,
     tin: submitData.tin,
+    birthday: submitData.birthday,
   });
 
   const donation = await insertMembershipViaQuickpay(db, {

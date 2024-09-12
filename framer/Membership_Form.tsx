@@ -12,6 +12,7 @@ const emptyStore = {
   postcode: "",
   city: "",
   country: "Denmark",
+  birthday: "",
   env: "prod",
   isLoading: false,
 };
@@ -89,6 +90,25 @@ export const inputCity = (Component: any): ComponentType => {
 
 export const inputCountry = (Component: any): ComponentType => {
   return setInput(Component, "country");
+};
+
+export const inputBirthday = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store, setStore] = useStore();
+
+    const onValueChange = (value: string) => setStore({ birthday: value });
+
+    return store.country === "Denmark" ? null : (
+      <Component
+        {...props}
+        value={store.birthday}
+        onValueChange={onValueChange}
+        isError={
+          store.birthday !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(store.birthday)
+        }
+      />
+    );
+  };
 };
 
 export const inputCpr = (Component: any): ComponentType => {

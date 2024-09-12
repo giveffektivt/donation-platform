@@ -38,4 +38,7 @@ export const validationSchemaMembership = {
     .trim()
     .required("Land skal udfyldes")
     .max(320, "Højst 320 tegn"),
+  birthday: yup
+    .date()
+    .transform((value, originalValue) => (originalValue ? value : undefined)),
 };
