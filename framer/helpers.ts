@@ -28,7 +28,7 @@ const canSubmitStep2 = (store: any): boolean => {
 const canSubmitMembership = (store: any): boolean => {
   return (
     store.name !== "" &&
-    (store.country === "Denmark" ? isCprValid(store.tin) : true) &&
+    (store.country === "Denmark" ? isCprValid(store.tin) : store.tin !== "") &&
     store.email.includes("@") &&
     store.address !== "" &&
     store.postcode !== "" &&
