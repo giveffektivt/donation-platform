@@ -28,18 +28,21 @@ const canSubmitStep2 = (store: any): boolean => {
 const canSubmitMembership = (store: any): boolean => {
   return (
     store.name !== "" &&
-    (store.country === "Denmark" ? isCprValid(store.tin) : store.tin !== "") &&
+    (isDenmark(store.country) ? isCprValid(store.tin) : store.tin !== "") &&
     store.email.includes("@") &&
     store.address !== "" &&
     store.postcode !== "" &&
     store.city !== "" &&
     store.country !== "" &&
-    (store.country === "Denmark"
+    (isDenmark(store.country)
       ? true
       : /^\d{4}-\d{2}-\d{2}$/.test(store.birthday)) &&
     !store.isLoading
   );
 };
+
+const isDenmark = (country: string): boolean =>
+  ["Danmark", "Denmark"].includes(country);
 
 const isCprValid = (tin: string): boolean => {
   return tin.length === 11;
@@ -165,7 +168,7 @@ const prepareMembershipPayload = (store: any) => {
     address: store.address,
     postcode: store.postcode,
     city: store.city,
-    country: store.country,
+    country: store.country === "Danmark" ? "Denmark" : store.country,
     birthday: store.birthday,
   };
 };

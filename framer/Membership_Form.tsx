@@ -11,7 +11,7 @@ const emptyStore = {
   address: "",
   postcode: "",
   city: "",
-  country: "Denmark",
+  country: "Danmark",
   birthday: "",
   env: "prod",
   isLoading: false,
@@ -98,7 +98,7 @@ export const inputBirthday = (Component: any): ComponentType => {
 
     const onValueChange = (value: string) => setStore({ birthday: value });
 
-    return store.country === "Denmark" ? null : (
+    return isDenmark(store.country) ? null : (
       <Component
         {...props}
         value={store.birthday}
@@ -139,11 +139,7 @@ export const inputCpr = (Component: any): ComponentType => {
         {...props}
         value={store.tin}
         onValueChange={onValueChange}
-        isError={
-          store.country !== "Denmark"
-            ? false
-            : store.tin !== "" && !isCprValid(store.tin)
-        }
+        isError={store.tin !== "" && !isCprValid(store.tin)}
       />
     );
   };
@@ -156,14 +152,14 @@ export const inputInternationalTin = (Component: any): ComponentType => {
 export const showDanish = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return store.country === "Denmark" ? <Component {...props} /> : null;
+    return isDenmark(store.country) ? <Component {...props} /> : null;
   };
 };
 
 export const showInternational = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return store.country === "Denmark" ? null : <Component {...props} />;
+    return isDenmark(store.country) ? null : <Component {...props} />;
   };
 };
 
