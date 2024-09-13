@@ -149,6 +149,24 @@ export const inputCpr = (Component: any): ComponentType => {
   };
 };
 
+export const inputInternationalTin = (Component: any): ComponentType => {
+  return setInput(Component, "tin");
+};
+
+export const showDanish = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.country === "Denmark" ? <Component {...props} /> : null;
+  };
+};
+
+export const showInternational = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    return store.country === "Denmark" ? null : <Component {...props} />;
+  };
+};
+
 // Show warnings
 
 export const showCprWarning = (Component: any): ComponentType => {
