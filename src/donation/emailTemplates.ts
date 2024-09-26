@@ -80,8 +80,8 @@ export function paymentTemplate(text: string, bankInfo?: string) {
           }
 
           .header_container {
-              background-color: black;
-              color: white;
+              background-color: white;
+              color: black;
 
               padding: 30px;
               overflow: auto;
@@ -90,7 +90,7 @@ export function paymentTemplate(text: string, bankInfo?: string) {
           .header_heading {
               font-weight: 600;
               font-size: 40px;
-              color: #ffffff!important;
+              color: #000000!important;
               line-height: 1.3em;
 
               padding-bottom: 10px;
@@ -105,7 +105,7 @@ export function paymentTemplate(text: string, bankInfo?: string) {
 
           .header_text {
               font-size: 16px;
-              color: #ffffff!important;
+              color: #000000!important;
           }
 
           h1 {
@@ -243,11 +243,27 @@ export function paymentTemplate(text: string, bankInfo?: string) {
   <!--[if mso]>
   <table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0">
   <![endif]-->
+          <div class="row">
+              <h1>Bliv medlem</h1>
+              <p>
+                  Medlemskabet er en <a href="https://giveffektivt.dk/fradrag/" target="_blank">lovmæssig formalitet omkring fradragsberettigelse</a> og derfor kommer du som medlem ikke til at høre meget fra os. Bliv medlem for kun 50 kr om året på <a href="https://giveffektivt.dk/medlemskab" target="_blank">vores hjemmeside</a>.
+              </p>
+              <p>
+                  <a href="http://eepurl.com/hZhf_D" target="_blank">Tilmeld dig vores nyhedsbrev</a>, hvor vi årligt sender 4-6 emails med seneste nyt om Giv Effektivt og hvordan du kan hjælpe med at fremme effektiv velgørenhed i Danmark.
+              </p>
+          </div>
+  <!--[if mso]>
+  </table>
+  <![endif]-->
+
+  <!--[if mso]>
+  <table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0">
+  <![endif]-->
 
           <div class="row">
               <h1>Kontakt os</h1>
               <p>
-                  Hvis du har spørgsmål, forbedringsforslag eller ønsker at ændre månedlige donationer, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 40 33 10 97.
+                  Hvis du har spørgsmål, forbedringsforslag eller ønsker at ændre månedlige donationer, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 60 90 89 82.
               </p>
           </div>
 
@@ -346,8 +362,8 @@ export function membershipTemplate(text: string) {
           }
 
           .header_container {
-              background-color: black;
-              color: white;
+              background-color: white;
+              color: black;
 
               padding: 30px;
               overflow: auto;
@@ -356,7 +372,7 @@ export function membershipTemplate(text: string) {
           .header_heading {
               font-weight: 600;
               font-size: 40px;
-              color: #ffffff!important;
+              color: #000000!important;
               line-height: 1.3em;
 
               padding-bottom: 10px;
@@ -371,7 +387,7 @@ export function membershipTemplate(text: string) {
 
           .header_text {
               font-size: 16px;
-              color: #ffffff!important;
+              color: #000000!important;
           }
 
           h1 {
@@ -431,7 +447,7 @@ export function membershipTemplate(text: string) {
           <div class="row">
               <h1>Kontakt os</h1>
               <p>
-                  Hvis du har spørgsmål, kommentarer eller forbedringsforslag, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 40 33 10 97.
+                  Hvis du har spørgsmål, kommentarer eller forbedringsforslag, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 60 90 89 82.
                   <br /><br />
               </p>
           </div>

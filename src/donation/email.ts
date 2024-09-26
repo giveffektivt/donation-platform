@@ -26,7 +26,7 @@ export async function sendNewEmails() {
 
     console.log(
       `Sending ${donationsToEmail.length} donation email(s):`,
-      donationsToEmail.map((d) => d.id)
+      donationsToEmail.map((d) => d.id),
     );
     for (let donation of donationsToEmail) {
       try {
@@ -46,7 +46,7 @@ export async function sendNewEmails() {
 
 export async function sendMembershipEmail(
   donation: DonationToEmail,
-  bank?: BankTransferInfo
+  bank?: BankTransferInfo,
 ) {
   const { email } = donation;
 
@@ -91,7 +91,7 @@ export async function sendMembershipEmail(
 
 export async function sendPaymentEmail(
   donation: DonationToEmail,
-  bank?: BankTransferInfo
+  bank?: BankTransferInfo,
 ) {
   const { email } = donation;
 
@@ -135,7 +135,7 @@ export async function sendPaymentEmail(
 }
 
 export async function sendFailedRecurringDonationEmail(
-  info: FailedRecurringDonationToEmail
+  info: FailedRecurringDonationToEmail,
 ) {
   const text = failedRecurringDonationTemplate(info);
   const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
