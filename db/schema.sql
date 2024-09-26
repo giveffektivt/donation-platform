@@ -1403,13 +1403,15 @@ CREATE VIEW giveffektivt.transfer AS
 --
 
 CREATE VIEW giveffektivt.transfer_overview AS
- SELECT t.recipient,
+ SELECT t.id,
+    t.recipient,
     round(sum(d.amount)) AS dkk_total,
-    t.created_at
+    max(c.created_at) AS computed,
+    t.created_at AS transferred
    FROM ((giveffektivt.donation d
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
      JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-  GROUP BY t.recipient, t.created_at
+  GROUP BY t.id, t.recipient, t.created_at
   ORDER BY t.created_at, (sum(d.amount)) DESC;
 
 
@@ -1833,4 +1835,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240321100834'),
     ('20240810181005'),
     ('20240814200924'),
-    ('20240817162007');
+    ('20240817162007'),
+    ('20240923191628');
