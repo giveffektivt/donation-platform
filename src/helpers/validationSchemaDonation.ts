@@ -12,9 +12,9 @@ export const validationSchemaDonation = {
     .when("frequency", {
       is: DonationFrequency.Match,
       then: (schema) => schema.moreThan(0, "Mere end 0"),
-      otherwise: (schema) =>
-        schema.min(1, "Mindst 1 kr.").integer("Skriv et heltal"),
+      otherwise: (schema) => schema.min(1, "Mindst 1 kr."),
     })
+    .transform((value) => Math.round(value))
     .typeError("Skriv et tal"),
   recipient: yup
     .string()
