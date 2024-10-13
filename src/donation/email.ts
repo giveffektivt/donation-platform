@@ -99,11 +99,21 @@ export async function sendPaymentEmail(
   const text = htmlToText(htmlNoInline);
   const html = juice(htmlNoInline);
   const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
+  const bcc =
+    (donation.frequency === "once" &&
+      donation.amount >=
+        Number.parseInt(process.env.BCC_DONATION_ONCE_LARGE_AMOUNT ?? "0")) ||
+    (donation.frequency === "monthly" &&
+      donation.amount >=
+        Number.parseInt(process.env.BCC_DONATION_MONTHLY_LARGE_AMOUNT ?? "0"))
+      ? `<${process.env.BCC_DONATION_LARGE_EMAIL}>`
+      : undefined;
 
   const letter: any = {
     from: '"Giv Effektivt" <kvittering@giveffektivt.dk>',
     replyTo: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
     to: `<${email}>`,
+    bcc,
     subject: `${prefix}Kvittering for donation via Giv Effektivt`,
     attachments: [
       {
