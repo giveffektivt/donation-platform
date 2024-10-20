@@ -57,6 +57,13 @@ const setField = (Component: any, field: string): ComponentType => {
   };
 };
 
+export const trackSubmitStep1 = (Component: any): ComponentType => {
+  return (props) => {
+    const onTap = async () => track("Donation form step 1 submitted", 10);
+    return <Component {...props} onTap={onTap} />;
+  };
+};
+
 export const submitStep1 = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
@@ -94,6 +101,13 @@ export const submitBank = (Component: any): ComponentType => {
   return (props: any) => {
     const [_, setStore] = useStore();
     const onTap = () => setStore(emptyStore);
+    return <Component {...props} onTap={onTap} />;
+  };
+};
+
+export const trackStotNu = (Component: any): ComponentType => {
+  return (props) => {
+    const onTap = async () => track("Støt nu clicked", 5);
     return <Component {...props} onTap={onTap} />;
   };
 };
@@ -193,7 +207,7 @@ export const showCurrency = (Component: any): ComponentType => {
     const [store] = useStore();
     const frequency = parseFrequency(store.frequency);
     const currency =
-      frequency === "match" ? store.fundraiserMatchCurrency ?? "kr" : "kr";
+      frequency === "match" ? (store.fundraiserMatchCurrency ?? "kr") : "kr";
     return <Component {...props} text={`${currency}`} />;
   };
 };

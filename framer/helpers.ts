@@ -8,6 +8,15 @@ hvis problemet opstår igen. Hvis muligt, så fortæl gerne, hvordan \
 man kan fremprovokere fejlen.
 `;
 
+const track = (event: string, amount?: number | "") => {
+  // @ts-ignore
+  if (typeof plausible !== "undefined") {
+    const extra = amount ? { revenue: { currency: "DKK", amount } } : undefined;
+    // @ts-ignore
+    plausible(event, extra);
+  }
+};
+
 const canSubmitStep1 = (store: any): boolean => {
   return (
     store.frequency !== "" &&
@@ -176,6 +185,7 @@ const prepareMembershipPayload = (store: any) => {
 const submitDonation = async (store: any, setStore: any) => {
   try {
     setStore({ isLoading: true });
+    track("Donation form step 2 submitted", parseAmount(store.amount));
 
     const response = await submitForm(
       store.env,
@@ -208,6 +218,7 @@ const submitDonation = async (store: any, setStore: any) => {
 const submitMembership = async (store: any, setStore: any) => {
   try {
     setStore({ isLoading: true });
+    track("Membership form submitted", 50);
 
     const response = await submitForm(
       store.env,
