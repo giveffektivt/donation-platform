@@ -66,17 +66,6 @@ export default async function handler(
   }
 }
 
-function getMailchimpAuthorizationHeader() {
-  if (!process.env.MAILCHIMP_API_KEY) {
-    throw new Error(`No Mailchimp API key defined`);
-  }
-
-  const base64key = Buffer.from(
-    `key:${process.env.MAILCHIMP_API_KEY}`,
-  ).toString("base64");
-  return `Basic ${base64key}`;
-}
-
 async function processPayment(
   submitData: SubmitDataDonation,
   ip: string,
@@ -137,28 +126,76 @@ async function subscribeToNewsletter(
   submitData: SubmitDataDonation,
   donorId: string,
 ) {
-  if (!process.env.MAILCHIMP_SUBSCRIBE_URL) {
-    throw new Error(`No Mailchimp subscribe URL defined`);
+  if (!process.env.PIPEDRIVE_API_URL) {
+    throw new Error("No Pipedrive API URL defined");
+  }
+  if (!process.env.PIPEDRIVE_API_KEY) {
+    throw new Error("No Pipedrive API key defined");
   }
 
-  const response = await fetch(process.env.MAILCHIMP_SUBSCRIBE_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: getMailchimpAuthorizationHeader(),
+  /*
+  const searchResult = await fetch(
+    `${process.env.PIPEDRIVE_API_URL}/api/v2/persons/search?fields=email&exact_match=true&term=${submitData.email}`,
+    {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Token": process.env.PIPEDRIVE_API_KEY,
+      },
     },
-    body: JSON.stringify({
-      email_address: submitData.email,
-      status: "subscribed",
-    }),
-  });
+  );
 
-  if (!response.ok) {
-    const error = (await response.json()).title || "Unknown";
-    if (error !== "Member Exists") {
+  if (!searchResult.ok) {
+    console.error(
+      `Error subscribing ${donorId} to newsletter: search failed, ${searchResult.statusText}`,
+    );
+    return;
+  }
+
+  const id = (await searchResult.json())?.data?.items?.[0]?.item?.id;
+  if (id) {
+    const response = await fetch(
+      `${process.env.PIPEDRIVE_API_URL}/api/v2/persons/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Token": process.env.PIPEDRIVE_API_KEY,
+        },
+        body: JSON.stringify({
+          marketing_status: "subscribed",
+        }),
+      },
+    );
+
+    if (!response.ok) {
       console.error(
-        `Error subscribing ${donorId} to newsletter: ${response.statusText} (${error})`,
+        `Error subscribing ${donorId} to newsletter: patch failed, ${response.statusText}`,
       );
     }
+
+    return;
+  }
+  */
+
+  const response = await fetch(
+    `${process.env.PIPEDRIVE_API_URL}/api/v2/persons`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Token": process.env.PIPEDRIVE_API_KEY,
+      },
+      body: JSON.stringify({
+        name: "Unknown",
+        emails: [{ value: submitData.email, primary: true }],
+        marketing_status: "subscribed",
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    console.error(
+      `Error subscribing ${donorId} to newsletter: post failed, ${response.statusText}`,
+    );
   }
 }
