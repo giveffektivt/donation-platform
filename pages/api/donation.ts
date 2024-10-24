@@ -174,8 +174,8 @@ async function subscribeToNewsletter(
       console.error(
         `Donor ${donorId} previously unsubscribed but now wants to subscribe to newsletter again, this required manual action`,
       );
-      return;
     }
+    return;
   }
 
   const response = await fetch(
