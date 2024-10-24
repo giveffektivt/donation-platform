@@ -150,10 +150,32 @@ async function subscribeToNewsletter(
     return;
   }
 
-  if ((await searchResult.json())?.data?.items?.length) {
-    // There's already a registered person with such email,
-    // and even if they unsubscribed earlier, Pipedrive says there is no way to resubscribe them again.
-    return;
+  const id = (await searchResult.json())?.data?.items?.[0]?.item?.id;
+  if (id) {
+    const response = await fetch(
+      `${process.env.PIPEDRIVE_API_URL}/api/v2/persons/${id}?include_fields=marketing_status`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "X-Api-Token": process.env.PIPEDRIVE_API_KEY,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      console.error(
+        `Error subscribing ${donorId} to newsletter: get failed, ${response.statusText}`,
+      );
+      return;
+    }
+
+    const status = (await response.json())?.data?.marketing_status;
+    if (status !== "subscribed") {
+      console.error(
+        `Donor ${donorId} previously unsubscribed but now wants to subscribe to newsletter again, this required manual action`,
+      );
+      return;
+    }
   }
 
   const response = await fetch(
