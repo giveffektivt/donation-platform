@@ -133,7 +133,6 @@ async function subscribeToNewsletter(
     throw new Error("No Pipedrive API key defined");
   }
 
-  /*
   const searchResult = await fetch(
     `${process.env.PIPEDRIVE_API_URL}/api/v2/persons/search?fields=email&exact_match=true&term=${submitData.email}`,
     {
@@ -151,31 +150,11 @@ async function subscribeToNewsletter(
     return;
   }
 
-  const id = (await searchResult.json())?.data?.items?.[0]?.item?.id;
-  if (id) {
-    const response = await fetch(
-      `${process.env.PIPEDRIVE_API_URL}/api/v2/persons/${id}`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Api-Token": process.env.PIPEDRIVE_API_KEY,
-        },
-        body: JSON.stringify({
-          marketing_status: "subscribed",
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      console.error(
-        `Error subscribing ${donorId} to newsletter: patch failed, ${response.statusText}`,
-      );
-    }
-
+  if ((await searchResult.json())?.data?.items?.length) {
+    // There's already a registered person with such email,
+    // and even if they unsubscribed earlier, Pipedrive says there is no way to resubscribe them again.
     return;
   }
-  */
 
   const response = await fetch(
     `${process.env.PIPEDRIVE_API_URL}/api/v2/persons`,
