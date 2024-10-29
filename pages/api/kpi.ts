@@ -8,11 +8,10 @@ import {
   getPendingDistribution,
   getTransferredDistribution,
   getTimeDistribution,
-  Kpi,
-  PendingDistribution,
-  TransferredDistribution,
-  TimeDistribution,
-  getRecentMembersCount,
+  type Kpi,
+  type PendingDistribution,
+  type TransferredDistribution,
+  type TimeDistribution,
 } from "src";
 
 type Data = {
@@ -38,7 +37,6 @@ export default async function handler(
       pending: await getPendingDistribution(db),
       transferred: await getTransferredDistribution(db),
       collected: await getTimeDistribution(db),
-      members_campaign: await getRecentMembersCount(db),
     };
 
     res.setHeader("Content-Type", "application/json");
