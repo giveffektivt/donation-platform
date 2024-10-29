@@ -263,7 +263,7 @@ export function paymentTemplate(text: string, bankInfo?: string) {
           <div class="row">
               <h1>Kontakt os</h1>
               <p>
-                  Hvis du har spørgsmål, forbedringsforslag eller ønsker at ændre månedlige donationer, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 60 90 89 82.
+                  Hvis du har spørgsmål, forbedringsforslag eller ønsker at ændre månedlige donationer, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 20 31 49 17.
               </p>
           </div>
 
@@ -447,7 +447,7 @@ export function membershipTemplate(text: string) {
           <div class="row">
               <h1>Kontakt os</h1>
               <p>
-                  Hvis du har spørgsmål, kommentarer eller forbedringsforslag, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 60 90 89 82.
+                  Hvis du har spørgsmål, kommentarer eller forbedringsforslag, er du altid velkommen til at kontakte os på <a href="mailto:donation@giveffektivt.dk">donation@giveffektivt.dk</a> eller tlf. 20 31 49 17.
                   <br /><br />
               </p>
           </div>
