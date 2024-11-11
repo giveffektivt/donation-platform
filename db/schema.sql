@@ -1328,59 +1328,81 @@ CREATE VIEW giveffektivt.time_distribution AS
  WITH successful_charges AS (
          SELECT date_trunc('year'::text, c_1.created_at) AS year,
             date_trunc('month'::text, c_1.created_at) AS month,
-            sum(d.amount) AS dkk_total,
+            sum(d_1.amount) AS dkk_total,
             (count(*))::numeric AS payments_total
            FROM (giveffektivt.charge c_1
-             JOIN giveffektivt.donation d ON ((c_1.donation_id = d.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+             JOIN giveffektivt.donation d_1 ON ((c_1.donation_id = d_1.id)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
           GROUP BY (date_trunc('year'::text, c_1.created_at)), (date_trunc('month'::text, c_1.created_at))
         ), value_added AS (
          SELECT a_1.year,
             a_1.month,
             sum((a_1.amount * (
                 CASE
-                    WHEN (a_1.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 12
+                    WHEN (a_1.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
                     ELSE 1
-                END)::numeric)) AS value_added
+                END)::numeric)) AS value_added,
+            sum((a_1.amount * (
+                CASE
+                    WHEN (a_1.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
+                    ELSE 0
+                END)::numeric)) AS value_added_monthly,
+            sum((a_1.amount * (
+                CASE
+                    WHEN (a_1.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 0
+                    ELSE 1
+                END)::numeric)) AS value_added_once
            FROM ( SELECT DISTINCT ON (p.id) date_trunc('year'::text, c_1.created_at) AS year,
                     date_trunc('month'::text, c_1.created_at) AS month,
-                    d.amount,
-                    d.frequency
+                    d_1.amount,
+                    d_1.frequency
                    FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d.id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+                     JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
+                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
+                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
                   ORDER BY p.id, c_1.created_at) a_1
           GROUP BY a_1.year, a_1.month
         ), value_lost AS (
          SELECT a_1.year,
             a_1.month,
-            sum((a_1.amount * (12)::numeric)) AS value_lost
+            sum((a_1.amount * (18)::numeric)) AS value_lost
            FROM ( SELECT p.id,
                     date_trunc('year'::text, (max(c_1.created_at) + '1 mon'::interval)) AS year,
                     date_trunc('month'::text, (max(c_1.created_at) + '1 mon'::interval)) AS month,
-                    max(d.amount) AS amount
+                    max(d_1.amount) AS amount
                    FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d.id)))
-                  WHERE ((c_1.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency))
+                     JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
+                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
+                  WHERE ((c_1.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d_1.frequency = 'monthly'::giveffektivt.donation_frequency))
                   GROUP BY p.id
                  HAVING (sum(
                         CASE
-                            WHEN d.cancelled THEN 0
+                            WHEN d_1.cancelled THEN 0
                             ELSE 1
                         END) = 0)) a_1
           WHERE (a_1.month <= now())
           GROUP BY a_1.year, a_1.month
+        ), monthly_donors AS (
+         SELECT date_trunc('year'::text, c_1.created_at) AS year,
+            date_trunc('month'::text, c_1.created_at) AS month,
+            count(DISTINCT c_1.donation_id) AS monthly_donors
+           FROM (giveffektivt.charge c_1
+             JOIN giveffektivt.donation_with_contact_info d_1 ON ((c_1.donation_id = d_1.id)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          GROUP BY (date_trunc('year'::text, c_1.created_at)), (date_trunc('month'::text, c_1.created_at))
         )
  SELECT ((to_char(a.year, 'yyyy'::text) || '-'::text) || to_char(a.month, 'MM'::text)) AS date,
     COALESCE(sum(a.dkk_total), (0)::numeric) AS dkk_total,
     COALESCE(sum(a.payments_total), (0)::numeric) AS payments_total,
     COALESCE(sum(b.value_added), (0)::numeric) AS value_added,
-    COALESCE(sum(c.value_lost), (0)::numeric) AS value_lost
-   FROM ((successful_charges a
+    COALESCE(sum(b.value_added_monthly), (0)::numeric) AS value_added_monthly,
+    COALESCE(sum(b.value_added_once), (0)::numeric) AS value_added_once,
+    COALESCE(sum(c.value_lost), (0)::numeric) AS value_lost,
+    COALESCE(sum(d.monthly_donors), (0)::numeric) AS monthly_donors
+   FROM (((successful_charges a
      FULL JOIN value_added b ON (((a.year = b.year) AND (a.month = b.month))))
      FULL JOIN value_lost c ON (((a.year = c.year) AND (a.month = c.month))))
+     FULL JOIN monthly_donors d ON (((a.year = d.year) AND (a.month = d.month))))
   GROUP BY a.year, a.month
   ORDER BY a.year DESC, a.month DESC;
 
@@ -1837,4 +1859,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240814200924'),
     ('20240817162007'),
     ('20240923191628'),
-    ('20241009084603');
+    ('20241009084603'),
+    ('20241108133243');

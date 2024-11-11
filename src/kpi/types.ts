@@ -27,7 +27,10 @@ export type TimeDistribution = {
   dkk_total: number;
   payments_total: number;
   value_added: number;
+  value_added_monthly: number;
+  value_added_once: number;
   value_lost: number;
+  monthly_donors: number;
 };
 
 export type FundraiserKpi = {
