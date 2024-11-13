@@ -9,13 +9,7 @@ const apiDev =
   "https://donation-platform-info-giveffektivt-giv-effektivts-projects.vercel.app";
 
 const useStore = createStore({
-  data: {
-    title: null,
-    description: null,
-    media: null,
-    target: null,
-    raised: null,
-  },
+  raised: null,
   hasError: false,
   isLoading: false,
 });
@@ -28,7 +22,10 @@ export const loadData = (Component: any): ComponentType => {
       const request = async () => {
         setStore({ isLoading: true });
 
-        const id = new URLSearchParams(window.location.search).get("id");
+        const cleanedUrl = window.location.href
+          .split("?")[0]
+          .replace(/\/+$/, "");
+        const id = cleanedUrl.substring(cleanedUrl.lastIndexOf("/") + 1);
         if (id == null) {
           throw new Error("Unable to find ID in the URL");
         }
@@ -43,14 +40,7 @@ export const loadData = (Component: any): ComponentType => {
 
         const body = await response.json();
         setStore({
-          data: {
-            ...body,
-            target:
-              body.target !== null
-                ? new Intl.NumberFormat("da-DK").format(body.target)
-                : null,
-            raised: new Intl.NumberFormat("da-DK").format(body.raised),
-          },
+          raised: new Intl.NumberFormat("da-DK").format(body.raised),
           hasError: false,
           isLoading: false,
         });
@@ -66,67 +56,21 @@ export const loadData = (Component: any): ComponentType => {
   };
 };
 
-export const showLoading = (Component: any): ComponentType => {
+export const showRaised = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
-    return store.isLoading ? <Component {...props} /> : null;
+    return (
+      <Component
+        {...props}
+        text={
+          !store.hasError && store.raised !== null
+            ? store.raised.toString()
+            : "..."
+        }
+      />
+    );
   };
 };
-
-export const showError = (Component: any): ComponentType => {
-  return (props: any) => {
-    const [store] = useStore();
-    return store.hasError ? <Component {...props} /> : null;
-  };
-};
-
-export const showHasTitle = (Component: any): ComponentType => {
-  return (props: any) => {
-    const [store] = useStore();
-    return !store.hasError && store.data?.title ? (
-      <Component {...props} />
-    ) : null;
-  };
-};
-
-export const showHasTarget = (Component: any): ComponentType => {
-  return (props: any) => {
-    const [store] = useStore();
-    return !store.hasError && store.data?.target ? (
-      <Component {...props} />
-    ) : null;
-  };
-};
-
-export const showTitle = (Component: any): ComponentType =>
-  showField(Component, "title");
-
-export const showDescription = (Component: any): ComponentType =>
-  showField(Component, "description");
-
-export const showTarget = (Component: any): ComponentType =>
-  showField(Component, "target");
-
-export const showRaised = (Component: any): ComponentType =>
-  showField(Component, "raised");
-
-export const showField = (Component: any, key: string): ComponentType => {
-  return (props: any) => {
-    const [store] = useStore();
-    return !store.hasError && store.data && store.data[key] !== null ? (
-      <Component {...props} text={store.data[key].toString()} />
-    ) : null;
-  };
-};
-
-export const showMedia =
-  (Component: any): ComponentType =>
-  (props: any) => {
-    const [store] = useStore();
-    return !store.hasError && store.data.media !== null ? (
-      <Component {...props} url={store.data.media} />
-    ) : null;
-  };
 
 const apiUrl = (env: string, path: string): string => {
   return `${env === "prod" ? apiProd : apiDev}/api/${path}`;

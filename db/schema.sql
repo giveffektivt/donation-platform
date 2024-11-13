@@ -274,9 +274,6 @@ CREATE TABLE giveffektivt._fundraiser (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     email text NOT NULL,
     title text NOT NULL,
-    description text,
-    media text,
-    target numeric,
     key uuid DEFAULT gen_random_uuid() NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -1109,9 +1106,6 @@ CREATE VIEW giveffektivt.fundraiser AS
  SELECT id,
     email,
     title,
-    description,
-    media,
-    target,
     has_match,
     match_currency,
     key,
@@ -1860,4 +1854,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240817162007'),
     ('20240923191628'),
     ('20241009084603'),
-    ('20241108133243');
+    ('20241108133243'),
+    ('20241113220928');
