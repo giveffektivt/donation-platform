@@ -18,33 +18,30 @@
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "html-to-text": "^9.0.5",
-    "juice": "^9.1.0",
+    "juice": "^11.0.0",
     "moment": "^2.29.4",
-    "next": "^13.4.12",
+    "next": "^15.0.3",
     "nodemailer": "^6.9.16",
     "pg": "^8.13.1",
-    "raw-body": "^2.5.2",
+    "raw-body": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
-    "yup": "^0.32.11"
+    "yup": "^1.4.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
-    "@types/node": "^20.4.5",
+    "@types/node": "^22.9.0",
     "@types/nodemailer": "^6.4.16",
     "@types/pg": "^8.11.10",
-    "@types/react": "^18.2.17",
+    "@types/react": "^18.3.12",
     "create-ts-index": "^1.14.0",
-    "eslint": "^8.46.0",
-    "eslint-config-next": "^13.4.12",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "^15.0.3",
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
-    "vite-tsconfig-paths": "^4.2.0",
-    "vitest": "^0.33.0",
+    "vite-tsconfig-paths": "^5.1.2",
+    "vitest": "^2.1.5",
     "yarn-upgrade-all": "^0.7.4"
-  },
-  "resolutions": {
-    "dom-serializer": "^2.0.0"
   }
 }

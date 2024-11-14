@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -16,14 +20,39 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "comps": ["./components"],
-      "comps/*": ["./components/*"],
-      "src": ["src"],
-      "src/*": ["src/*"],
-      "aggregates": ["aggregates"],
-      "aggregates/*": ["aggregates/*"]
-    }
+      "comps": [
+        "./components"
+      ],
+      "comps/*": [
+        "./components/*"
+      ],
+      "src": [
+        "src"
+      ],
+      "src/*": [
+        "src/*"
+      ],
+      "aggregates": [
+        "aggregates"
+      ],
+      "aggregates/*": [
+        "aggregates/*"
+      ]
+    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/scanpay.d.tsy.d.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "src/scanpay.d.tsy.d.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }
