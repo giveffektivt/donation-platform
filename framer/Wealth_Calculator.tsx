@@ -236,8 +236,10 @@ export const textImpact = (Component): ComponentType => {
 
 // Math
 
-// 2023 https://databank.worldbank.org/source/world-development-indicators/Series/PA.NUS.PPP
-const PPP_FACTOR = 6.1;
+// 2017 - same year as data in wealthMountainGraphData below https://databank.worldbank.org/source/world-development-indicators/Series/PA.NUS.PPP
+const PPP_FACTOR = 6.9;
+// since 2017 till now - same year as data in wealthMountainGraphData below https://www.dst.dk/da/Statistik/emner/oekonomi/prisindeks/forbrugerprisindeks
+const CUMULATIVE_INFLATION_PCT = 0.2;
 // 2024 https://skat.dk/hjaelp/satser
 const PERSONFRADRAG = 49700;
 const AM_BIDRAG_PCT = 0.08;
@@ -296,7 +298,8 @@ const calculateDailyIncome = (store, afterDonation: boolean): number => {
     totalIncome /
     (1 + 0.3 * store.numberOfChildren + 0.5 * (store.numberOfAdults - 1));
 
-  const dailyIncome = equivalizedIncome / 365 / PPP_FACTOR;
+  const dailyIncome =
+    equivalizedIncome / 365 / PPP_FACTOR / (1 + CUMULATIVE_INFLATION_PCT);
 
   return dailyIncome;
 };
