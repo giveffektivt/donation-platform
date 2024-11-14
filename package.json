@@ -13,16 +13,16 @@
     "create-index": "yarn cti -b -w -q \\\" ./components ./src"
   },
   "dependencies": {
-    "@date-fns/utc": "^1.0.0",
-    "date-fns": "^2.30.0",
+    "@date-fns/utc": "^2.1.0",
     "@types/html-to-text": "^9.0.1",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
     "html-to-text": "^9.0.5",
     "juice": "^9.1.0",
     "moment": "^2.29.4",
     "next": "^13.4.12",
-    "nodemailer": "^6.9.4",
-    "pg": "^8.11.1",
+    "nodemailer": "^6.9.16",
+    "pg": "^8.13.1",
     "raw-body": "^2.5.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -30,19 +30,19 @@
     "yup": "^0.32.11"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.13",
+    "@types/cors": "^2.8.17",
     "@types/node": "^20.4.5",
-    "@types/nodemailer": "^6.4.9",
-    "@types/pg": "^8.10.2",
+    "@types/nodemailer": "^6.4.16",
+    "@types/pg": "^8.11.10",
     "@types/react": "^18.2.17",
     "create-ts-index": "^1.14.0",
     "eslint": "^8.46.0",
     "eslint-config-next": "^13.4.12",
-    "prettier": "^3.0.0",
-    "typescript": "^5.1.6",
+    "prettier": "^3.3.3",
+    "typescript": "^5.6.3",
     "vite-tsconfig-paths": "^4.2.0",
     "vitest": "^0.33.0",
-    "yarn-upgrade-all": "^0.7.2"
+    "yarn-upgrade-all": "^0.7.4"
   },
   "resolutions": {
     "dom-serializer": "^2.0.0"
