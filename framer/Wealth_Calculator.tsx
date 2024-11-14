@@ -43,7 +43,7 @@ const setIncomeInput = (Component, adultNo: number): ComponentType => {
 
     const onValueChange = (value: string) => {
       const newNumber = Number.parseFloat(value);
-      if (!Number.isNaN(newNumber)) {
+      if (value === "" || !Number.isNaN(newNumber)) {
         setStore({ [field]: value });
       }
     };
