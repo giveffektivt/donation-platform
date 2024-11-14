@@ -165,7 +165,7 @@ export const textAmongRichest = (Component): ComponentType => {
 
     const richestPct = calculateWealthPercentile(
       calculateDailyIncome(store, false),
-    );
+    ).toLocaleString("da-DK");
     const pronoun = store.numberOfAdults > 1 ? "I" : "Du";
 
     return (
@@ -183,7 +183,7 @@ export const textConsideration = (Component): ComponentType => {
 
     const richestPctAfterDonation = calculateWealthPercentile(
       calculateDailyIncome(store, true),
-    );
+    ).toLocaleString("da-DK");
     const donationAmount = roundNumber(
       calculateDonationAmount(store),
     ).toLocaleString("da-DK");
@@ -238,12 +238,14 @@ export const textImpact = (Component): ComponentType => {
 
 const PPP_FACTOR = 6.9;
 const CUMULATIVE_INFLATION_PCT = 0.2;
-const PERSONFRADRAG = 48000;
+// https://skat.dk/hjaelp/satser
+const PERSONFRADRAG = 49700;
 const AM_BIDRAG_PCT = 0.08;
 const TOP_SKAT_PCT = 0.15;
-const TOP_SKAT_THRESHOLD = 588500;
-const KOMMUNE_SKAT_PCT = 0.25;
-const BUNDSKAT_PCT = 0.1216;
+const TOP_SKAT_THRESHOLD = 588900;
+const KOMMUNE_SKAT_PCT = 0.251;
+const BUNDSKAT_PCT = 0.1201;
+const SKATTELOFT_PCT = 0.5207;
 
 const calculateWealthPercentile = (dailyIncome: number): number => {
   const totalPopulation = wealthMountainGraphData.reduce(
@@ -318,7 +320,10 @@ const calculatePostTax = (income: number): number => {
   const bundSkat = taxable * BUNDSKAT_PCT;
   const kommuneSkat = taxable * KOMMUNE_SKAT_PCT;
   const topSkat = Math.max(0, taxable - TOP_SKAT_THRESHOLD) * TOP_SKAT_PCT;
-  return income - amBidrag - kommuneSkat - bundSkat - topSkat;
+  const skatteLoft = Math.max(0, (income - amBidrag) * SKATTELOFT_PCT);
+  return (
+    income - amBidrag - Math.min(kommuneSkat + bundSkat + topSkat, skatteLoft)
+  );
 };
 
 const roundNumber = (value: number): number => {
@@ -386,7 +391,7 @@ export const showDebug = (Component): ComponentType => {
   return (props) => {
     const [store] = useStore();
 
-    return store.env === "prod" ? null : (
+    return !location || location.host === "giveffektivt.dk" ? null : (
       <Component
         {...props}
         text={`${JSON.stringify(
@@ -396,6 +401,7 @@ export const showDebug = (Component): ComponentType => {
               calculateTotalPostTaxIncome(store),
             ),
             totalDonationAmount: roundNumber(calculateDonationAmount(store)),
+            dailyIncome: roundNumber(calculateDailyIncome(store, false)),
             richerThan: calculateWealthPercentile(
               calculateDailyIncome(store, false),
             ),
