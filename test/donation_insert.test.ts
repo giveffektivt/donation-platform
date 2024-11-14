@@ -117,7 +117,6 @@ test("Insert donation with fundraiser using Quickpay", async () => {
   const fundraiser = await insertFundraiser(db, {
     email: "hello@example.com",
     title: "Birthday",
-    target: 1000,
   });
 
   const donor = await insertDonorWithSensitiveInfo(db, {
@@ -154,7 +153,6 @@ test("Insert donation with fundraiser using bank transfer", async () => {
   const fundraiser = await insertFundraiser(db, {
     email: "hello@example.com",
     title: "Birthday",
-    target: 2000,
   });
 
   const donor = await insertDonorWithSensitiveInfo(db, {

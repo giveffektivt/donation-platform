@@ -1,4 +1,3 @@
-import { Gantari } from "@next/font/google";
 import { PoolClient } from "pg";
 import {
   DonorWithSensitiveInfo,

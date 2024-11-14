@@ -1,4 +1,4 @@
-import moment from "moment";
+import { addDays } from "date-fns";
 import { PoolClient } from "pg";
 import {
   ChargeStatus,
@@ -144,7 +144,7 @@ export async function quickpayChargeSubscription(
         order_id: charge.short_id,
         auto_capture: true,
         auto_capture_at: isMobilePay
-          ? moment().add(3, "day").toDate() // must be at least 2 days in the future for MobilePay Subscriptions
+          ? addDays(new Date(), 3) // must be at least 2 days in the future for MobilePay Subscriptions
           : undefined,
         text_on_statement,
         description: `Giv Effektivt ${charge.short_id}`,
