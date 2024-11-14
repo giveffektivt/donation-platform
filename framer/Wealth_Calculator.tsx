@@ -236,9 +236,9 @@ export const textImpact = (Component): ComponentType => {
 
 // Math
 
-const PPP_FACTOR = 6.9;
-const CUMULATIVE_INFLATION_PCT = 0.2;
-// https://skat.dk/hjaelp/satser
+// 2023 https://databank.worldbank.org/source/world-development-indicators/Series/PA.NUS.PPP
+const PPP_FACTOR = 6.1;
+// 2024 https://skat.dk/hjaelp/satser
 const PERSONFRADRAG = 49700;
 const AM_BIDRAG_PCT = 0.08;
 const TOP_SKAT_PCT = 0.15;
@@ -296,8 +296,7 @@ const calculateDailyIncome = (store, afterDonation: boolean): number => {
     totalIncome /
     (1 + 0.3 * store.numberOfChildren + 0.5 * (store.numberOfAdults - 1));
 
-  const dailyIncome =
-    equivalizedIncome / 365 / (PPP_FACTOR * (1 + CUMULATIVE_INFLATION_PCT));
+  const dailyIncome = equivalizedIncome / 365 / PPP_FACTOR;
 
   return dailyIncome;
 };
