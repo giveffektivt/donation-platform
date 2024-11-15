@@ -471,10 +471,10 @@ export const withFundraiser = (Component: any): ComponentType => {
       setStore({ frequency: "Giv en gang" });
 
       const request = async () => {
-        const cleanedUrl = window.location.href
-          .split("?")[0]
-          .replace(/\/+$/, "");
-        const id = cleanedUrl.substring(cleanedUrl.lastIndexOf("/") + 1);
+        const cleanedUrl = window?.location
+          ? window.location.href.split("?")[0].replace(/\/+$/, "")
+          : null;
+        const id = cleanedUrl?.substring(cleanedUrl.lastIndexOf("/") + 1);
         if (id == null) {
           throw new Error("Unable to find ID in the URL");
         }

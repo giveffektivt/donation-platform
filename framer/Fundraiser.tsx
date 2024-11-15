@@ -22,10 +22,10 @@ export const loadData = (Component: any): ComponentType => {
       const request = async () => {
         setStore({ isLoading: true });
 
-        const cleanedUrl = window.location.href
-          .split("?")[0]
-          .replace(/\/+$/, "");
-        const id = cleanedUrl.substring(cleanedUrl.lastIndexOf("/") + 1);
+        const cleanedUrl = window?.location
+          ? window.location.href.split("?")[0].replace(/\/+$/, "")
+          : null;
+        const id = cleanedUrl?.substring(cleanedUrl.lastIndexOf("/") + 1);
         if (id == null) {
           throw new Error("Unable to find ID in the URL");
         }
@@ -67,6 +67,21 @@ export const showRaised = (Component: any): ComponentType => {
             ? store.raised.toString()
             : "..."
         }
+      />
+    );
+  };
+};
+
+export const showQr = (Component: any): ComponentType => {
+  return (props: any) => {
+    const cleanedUrl = window?.location
+      ? window.location.href.split("?")[0].replace(/\/+$/, "")
+      : null;
+    const id = cleanedUrl?.substring(cleanedUrl.lastIndexOf("/") + 1);
+    return id == null ? null : (
+      <Component
+        {...props}
+        url={`https://kissapi-qrcode.vercel.app/api/qrcode?cht=qr&chs=200x200&chld=4|0&chl=${window?.location?.origin}/indsamling/${id}`}
       />
     );
   };
