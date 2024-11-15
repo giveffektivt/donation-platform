@@ -7,7 +7,7 @@ import { addPropertyControls, ControlType } from "framer";
  */
 export default function RemoteImage(props: any) {
   return (
-    <div style={containerStyle}>
+    <div style={{ ...containerStyle, paddingTop: `${props.paddingTop}px` }}>
       {!!props.url && (
         <img
           src={props.url}
@@ -29,12 +29,15 @@ const containerStyle = {
   justifyContent: "center",
   alignItems: "center",
   overflow: "hidden",
+  paddingTop: 0,
 };
 
 RemoteImage.defaultProps = {
   url: null,
+  paddingTop: 0,
 };
 
 addPropertyControls(RemoteImage, {
   url: { type: ControlType.String, title: "Image URL" },
+  paddingTop: { type: ControlType.Number, title: "Padding Top" },
 });
