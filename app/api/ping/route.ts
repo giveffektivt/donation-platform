@@ -1,4 +1,3 @@
-import type { NextApiRequest, NextApiResponse } from "next";
 import {
   dbClient,
   dbRelease,
@@ -11,21 +10,14 @@ import {
 
 const scanpay = require("scanpay")(process.env.SCANPAY_KEY);
 
-type Data = {
-  message: string;
-};
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+export async function POST(req: Request) {
   let db = null;
 
   try {
     // Validate that the request comes from Scanpay
     await scanpay.sync.parsePing(
       JSON.stringify(req.body),
-      req.headers["x-signature"]
+      req.headers.get("X-Signature"),
     );
 
     db = await dbClient();
@@ -45,10 +37,10 @@ export default async function handler(
     // Process all the new changes
     if (changes.length > 0) {
       console.log(
-        `Processing ${changes.length} Scanpay changes (seq ${dbSeq} -> ${scanpaySeq})`
+        `Processing ${changes.length} Scanpay changes (seq ${dbSeq} -> ${scanpaySeq})`,
       );
 
-      for (let change of changes) {
+      for (const change of changes) {
         await handleChange(db, change);
       }
     }
@@ -58,10 +50,10 @@ export default async function handler(
       await insertScanpaySeq(db, scanpaySeq);
     }
 
-    res.status(200).json({ message: "OK" });
+    return Response.json({ message: "OK" });
   } catch (err) {
     console.error("api/ping:", err);
-    res.status(500).json({ message: "Something went wrong" });
+    return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     if (db) {
       await unlockScanpaySeq(db);
