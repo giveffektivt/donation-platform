@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     // Validate that the request comes from Scanpay
     await scanpay.sync.parsePing(
-      JSON.stringify(req.body),
+      await req.text(),
       req.headers.get("X-Signature"),
     );
 
