@@ -12,12 +12,18 @@ export const cors = util.promisify(
   }),
 );
 
-export const corsHeaders = {
-  "Access-Control-Allow-Methods": "GET,POST",
-  "Access-Control-Allow-Origin": [
+export const corsHeaders = (origin: string | null) => {
+  const allowed = [
     "https://giveffektivt.dk",
     ...(process.env.DEV_WEBSITE_DOMAINS
       ? process.env.DEV_WEBSITE_DOMAINS.split(",")
       : []),
-  ].join(","),
+  ];
+
+  return {
+    "Access-Control-Allow-Methods": "GET,POST",
+    ...(origin && allowed.includes(origin)
+      ? { "Access-Control-Allow-Origin": origin }
+      : {}),
+  };
 };

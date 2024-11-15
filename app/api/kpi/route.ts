@@ -8,13 +8,13 @@ import {
   corsHeaders,
 } from "src";
 
-export async function OPTIONS(_: Request) {
+export async function OPTIONS(req: Request) {
   return new Response(null, {
-    headers: corsHeaders,
+    headers: corsHeaders(req.headers.get("Origin")),
   });
 }
 
-export async function GET(_: Request) {
+export async function GET(req: Request) {
   let db = null;
 
   try {
@@ -28,7 +28,10 @@ export async function GET(_: Request) {
     };
 
     return new Response(JSON.stringify(result, null, 4), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders(req.headers.get("Origin")),
+        "Content-Type": "application/json",
+      },
     });
   } catch (e) {
     console.error("api/kpi: ", e);
