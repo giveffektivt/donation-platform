@@ -44,7 +44,7 @@ export const loadKpi = (Component: any): ComponentType => {
         console.error(err.message);
 
         try {
-          await reportError("prod");
+          await notifyAboutClientSideError("prod");
         } catch (e) {
           console.error(e);
         }

@@ -502,7 +502,7 @@ export const withFundraiser = (Component: any): ComponentType => {
         console.error(err.message);
 
         try {
-          await reportError(store.env);
+          await notifyAboutClientSideError(store.env);
         } catch (e) {
           console.error(e);
         }

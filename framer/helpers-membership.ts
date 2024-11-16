@@ -82,7 +82,7 @@ const submitMembership = async (store: any, setStore: any) => {
     console.error(err);
 
     try {
-      await reportError(store.env);
+      await notifyAboutClientSideError(store.env);
     } catch (e) {
       console.error(e);
     }

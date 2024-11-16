@@ -42,7 +42,7 @@ const submitForm = async (
   return await response.json();
 };
 
-const reportError = async (env: string) => {
+const notifyAboutClientSideError = async (env: string) => {
   const response = await fetch(apiUrl(env, "report-error"), { method: "POST" });
 
   if (!response.ok) {
