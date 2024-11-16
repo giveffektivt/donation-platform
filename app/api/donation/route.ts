@@ -1,13 +1,11 @@
-import type { NextApiRequest, NextApiResponse } from "next";
 import {
-  cors,
   parsePaymentMethod,
   PaymentGateway,
   PaymentMethod,
   processBankTransferDonation,
   processQuickpayDonation,
   processScanpayDonation,
-  SubmitDataDonation,
+  type SubmitDataDonation,
   validationSchemaDonation,
 } from "src";
 import * as yup from "yup";
@@ -18,26 +16,12 @@ type Data = {
   bank?: { account: string; message: string };
 };
 
-const firstElementOrString = (x: any) => {
-  if (typeof x === "object") {
-    return x[0];
-  } else {
-    return x;
-  }
-};
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>,
-) {
+export async function POST(req: Request) {
   try {
-    await cors(req, res);
-
     // Trust the usual proxy headers (assumes we are running on a reverse proxy that promises to overwrite these values).
     const ip: string =
-      firstElementOrString(req.headers["x-real-ip"]) ||
-      firstElementOrString(req.headers["x-forwarded-for"]) ||
-      req.socket.remoteAddress ||
+      req.headers.get("X-Real-IP") ??
+      req.headers.get("X-Forwarded-for") ??
       "no ip";
 
     const blockedIps = process.env.BLOCKED_IPS
@@ -45,10 +29,10 @@ export default async function handler(
       : [];
 
     if (blockedIps.includes(ip)) {
-      throw new Error("Blocked IP address: " + ip);
+      throw new Error(`Blocked IP address: ${ip}`);
     }
 
-    let submitData: SubmitDataDonation = await yup
+    const submitData: SubmitDataDonation = await yup
       .object()
       .shape(validationSchemaDonation)
       .validate(req.body);
@@ -56,13 +40,17 @@ export default async function handler(
     const [response, donorId] = await processPayment(submitData, ip);
 
     if (submitData.subscribeToNewsletter) {
-      await subscribeToNewsletter(submitData, donorId);
+      try {
+        await subscribeToNewsletter(submitData, donorId);
+      } catch (err) {
+        console.error("api/donation: Error subscribing to newsletter: ", err);
+      }
     }
 
-    res.status(200).json(response);
+    return Response.json(response);
   } catch (err) {
     console.error("api/donation:", err);
-    res.status(500).json({ message: "Something went wrong" });
+    return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
 
@@ -144,10 +132,9 @@ async function subscribeToNewsletter(
   );
 
   if (!searchResult.ok) {
-    console.error(
+    throw new Error(
       `Error subscribing ${donorId} to newsletter: search failed, ${searchResult.statusText}`,
     );
-    return;
   }
 
   const id = (await searchResult.json())?.data?.items?.[0]?.item?.id;
@@ -163,15 +150,14 @@ async function subscribeToNewsletter(
     );
 
     if (!response.ok) {
-      console.error(
+      throw new Error(
         `Error subscribing ${donorId} to newsletter: get failed, ${response.statusText}`,
       );
-      return;
     }
 
     const status = (await response.json())?.data?.marketing_status;
     if (status !== "subscribed") {
-      console.error(
+      throw new Error(
         `Donor ${donorId} previously unsubscribed but now wants to subscribe to newsletter again, this required manual action`,
       );
     }
@@ -195,7 +181,7 @@ async function subscribeToNewsletter(
   );
 
   if (!response.ok) {
-    console.error(
+    throw new Error(
       `Error subscribing ${donorId} to newsletter: post failed, ${response.statusText}`,
     );
   }
