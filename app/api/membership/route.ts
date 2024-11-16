@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const submitData: SubmitDataMembership = await yup
       .object()
       .shape(validationSchemaMembership)
-      .validate(req.body);
+      .validate(await req.json());
 
     const [redirect] = await processQuickpayMembership(submitData);
 

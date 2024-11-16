@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       submitData = await yup
         .object()
         .shape(validationSchemaGavebrev)
-        .validate(req.body);
+        .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         return Response.json(
@@ -78,7 +78,7 @@ export async function PATCH(req: Request) {
       submitData = await yup
         .object()
         .shape(validationSchemaGavebrevStatus)
-        .validate(req.body);
+        .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         return Response.json(
@@ -111,7 +111,7 @@ export async function DELETE(req: Request) {
       submitData = await yup
         .object()
         .shape(validationSchemaGavebrevStop)
-        .validate(req.body);
+        .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         return Response.json(

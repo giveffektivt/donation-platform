@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     const submitData: SubmitDataDonation = await yup
       .object()
       .shape(validationSchemaDonation)
-      .validate(req.body);
+      .validate(await req.json());
 
     const [response, donorId] = await processPayment(submitData, ip);
 

@@ -12,7 +12,7 @@ export async function POST(req: Request) {
       submitData = await yup
         .object()
         .shape(validationSchemaRenewPayment)
-        .validate(req.body);
+        .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         console.error(
