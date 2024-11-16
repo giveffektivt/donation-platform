@@ -1,4 +1,3 @@
-import moment from "moment";
 import { GavebrevStatus } from "src/gavebrev/types";
 import * as yup from "yup";
 
@@ -23,7 +22,7 @@ export const validationSchemaGavebrev = {
   startYear: yup
     .number()
     .required("Start år skal udfyldes")
-    .min(moment().year(), "Start år kan ikke være i fortiden")
+    .min(new Date().getFullYear(), "Start år kan ikke være i fortiden")
     .integer("Skriv et heltal")
     .typeError("Skriv et heltal"),
   percentage: yup.number().min(1, "Mindst 1%").max(100, "Mest 100%"),
