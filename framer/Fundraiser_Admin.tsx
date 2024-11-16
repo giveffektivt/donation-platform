@@ -34,12 +34,9 @@ export const loadData = (Component: any): ComponentType => {
           throw new Error("Unable to find key in the URL");
         }
 
-        const response = await fetch(
-          `${apiUrl("prod", "fundraiser-kpi")}?id=${id}`,
-          {
-            headers: { Authorization: `Bearer ${key}` },
-          },
-        );
+        const response = await fetch(apiUrl("prod", `fundraiser-kpi/${id}`), {
+          headers: { Authorization: `Bearer ${key}` },
+        });
 
         if (!response.ok) {
           throw new Error(response.statusText);
