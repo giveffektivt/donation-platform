@@ -481,9 +481,7 @@ export const withFundraiser = (Component: any): ComponentType => {
 
         setStore({ fundraiserId: id });
 
-        const response = await fetch(
-          `${apiUrl(store.env, "fundraiser")}?id=${id}`,
-        );
+        const response = await fetch(apiUrl("prod", `fundraiser/${id}`));
 
         if (!response.ok) {
           throw new Error(response.statusText);

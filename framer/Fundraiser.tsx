@@ -26,9 +26,7 @@ export const loadData = (Component: any): ComponentType => {
           throw new Error("Unable to find ID in the URL");
         }
 
-        const response = await fetch(
-          `${apiUrl("prod", "fundraiser")}?id=${id}`,
-        );
+        const response = await fetch(apiUrl("prod", `fundraiser/${id}`));
 
         if (!response.ok) {
           throw new Error(response.statusText);
