@@ -21,6 +21,7 @@ export const corsHeaders = (origin: string | null) => {
   ];
 
   return {
+    "Access-Control-Allow-Headers": "Authorization",
     "Access-Control-Allow-Methods": "GET,POST",
     ...(origin && allowed.includes(origin)
       ? { "Access-Control-Allow-Origin": origin }
