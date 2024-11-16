@@ -269,7 +269,7 @@ const submitForm = async (
 };
 
 const reportError = async (env: string) => {
-  const response = await fetch(apiUrl(env, "reportError"), { method: "POST" });
+  const response = await fetch(apiUrl(env, "report-error"), { method: "POST" });
 
   if (!response.ok) {
     throw new Error("Unable to submit report about the critical error");
