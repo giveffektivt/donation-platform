@@ -4,8 +4,6 @@ import { useEffect } from "react";
 // @ts-ignore
 import { createStore } from "https://framer.com/m/framer/store.js@^1.0.0";
 
-const apiProd = "https://donation-platform.vercel.app";
-
 const useStore = createStore({
   dkk_total: null,
   dkk_last_30_days: null,
@@ -19,7 +17,7 @@ export const loadKpi = (Component: any): ComponentType => {
 
     useEffect(() => {
       const request = async () => {
-        const response = await fetch(`${apiProd}/api/kpi`, {
+        const response = await fetch(apiUrl("prod", "kpi"), {
           method: "GET",
         });
 
@@ -30,21 +28,27 @@ export const loadKpi = (Component: any): ComponentType => {
         const body = await response.json();
 
         setStore({
-          dkk_total:
-            (Math.floor(body.kpi.dkk_total / 1e5) / 10).toLocaleString(
-              "da-DK",
-              {
-                minimumFractionDigits: 1,
-                maximumFractionDigits: 1,
-              },
-            ) + "M",
+          dkk_total: `${(
+            Math.floor(body.kpi.dkk_total / 1e5) / 10
+          ).toLocaleString("da-DK", {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}M`,
           dkk_last_30_days: body.kpi.dkk_last_30_days.toLocaleString("da-DK"),
           monthly_donors: body.kpi.monthly_donors.toLocaleString("da-DK"),
           members_confirmed: body.kpi.members_confirmed.toLocaleString("da-DK"),
         });
       };
 
-      request().catch((err) => console.error(err.message));
+      request().catch(async (err) => {
+        console.error(err.message);
+
+        try {
+          await reportError("prod");
+        } catch (e) {
+          console.error(e);
+        }
+      });
     }, []);
 
     return <Component {...props} />;

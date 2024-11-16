@@ -4,10 +4,6 @@ import { useEffect } from "react";
 // @ts-ignore
 import { createStore } from "https://framer.com/m/framer/store.js@^1.0.0";
 
-const apiProd = "https://donation-platform.vercel.app";
-const apiDev =
-  "https://donation-platform-info-giveffektivt-giv-effektivts-projects.vercel.app";
-
 const useStore = createStore({
   data: [],
   hasError: false,
@@ -50,9 +46,15 @@ export const loadData = (Component: any): ComponentType => {
         });
       };
 
-      request().catch((err) => {
+      request().catch(async (err) => {
         setStore({ data: null, hasError: true, isLoading: false });
         console.error(err.message);
+
+        try {
+          await reportError("prod");
+        } catch (e) {
+          console.error(e);
+        }
       });
     }, []);
 
@@ -125,8 +127,4 @@ export const showData = (Component: any): ComponentType => {
       </div>
     ) : null;
   };
-};
-
-const apiUrl = (env: string, path: string): string => {
-  return `${env === "prod" ? apiProd : apiDev}/api/${path}`;
 };

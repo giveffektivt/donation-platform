@@ -1,5 +1,17 @@
 donation:
-    @cat Donation_Form.tsx helpers.ts
+    @cat Donation_Form.tsx helpers.ts helpers-donation.ts
 
 membership:
-    @cat Membership_Form.tsx helpers.ts
+    @cat Membership_Form.tsx helpers.ts helpers-membership.ts
+
+fundraiser-admin:
+    @cat Fundraiser_Admin.tsx helpers.ts
+
+fundraiser:
+    @cat Fundraiser.tsx helpers.ts
+
+renew-payment:
+    @cat Renew_Payment.tsx helpers.ts
+
+stats:
+    @cat Stats.tsx helpers.ts

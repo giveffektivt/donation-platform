@@ -465,7 +465,7 @@ export const showCprCvrWarning = (Component: any): ComponentType => {
 
 export const withFundraiser = (Component: any): ComponentType => {
   return (props: any) => {
-    const [_, setStore] = useStore();
+    const [store, setStore] = useStore();
 
     useEffect(() => {
       setStore({ frequency: "Giv en gang" });
@@ -482,7 +482,7 @@ export const withFundraiser = (Component: any): ComponentType => {
         setStore({ fundraiserId: id });
 
         const response = await fetch(
-          `${apiUrl("prod", "fundraiser")}?id=${id}`,
+          `${apiUrl(store.env, "fundraiser")}?id=${id}`,
         );
 
         if (!response.ok) {
@@ -498,8 +498,14 @@ export const withFundraiser = (Component: any): ComponentType => {
         });
       };
 
-      request().catch((err) => {
+      request().catch(async (err) => {
         console.error(err.message);
+
+        try {
+          await reportError(store.env);
+        } catch (e) {
+          console.error(e);
+        }
       });
     }, []);
 
