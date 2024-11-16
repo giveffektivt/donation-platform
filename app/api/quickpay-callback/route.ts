@@ -1,17 +1,8 @@
-import crypto from "crypto";
-import type { NextApiRequest, NextApiResponse } from "next";
-import getRawBody from "raw-body";
+import crypto from "node:crypto";
 import { dbClient, dbRelease, PaymentGateway, quickpayHandleChange } from "src";
 import { insertGatewayWebhook } from "src/gateways/repository";
 
-type Data = {
-  message: string;
-};
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<Data>
-) {
+export async function POST(req: Request) {
   let db = null;
   try {
     if (
@@ -21,11 +12,7 @@ export default async function handler(
       throw new Error("Quickpay private keys are not defined");
     }
 
-    const body = await getRawBody(req, {
-      length: req.headers["content-length"],
-      limit: "1mb",
-      encoding: "utf-8",
-    });
+    const body = await req.text();
 
     // Validate that the request comes from Quickpay
     const donationHash = crypto
@@ -38,7 +25,7 @@ export default async function handler(
       .update(body)
       .digest("hex");
 
-    const bodyHash = req.headers["quickpay-checksum-sha256"];
+    const bodyHash = req.headers.get("Quickpay-Checksum-Sha256");
 
     if (bodyHash !== donationHash && bodyHash !== membershipHash) {
       throw new Error("Quickpay callback has invalid signature");
@@ -52,17 +39,11 @@ export default async function handler(
     // Process the change
     await quickpayHandleChange(db, JSON.parse(body));
 
-    res.status(200).json({ message: "OK" });
+    return Response.json({ message: "OK" });
   } catch (err) {
     console.error("api/quickpay-callback:", err);
-    res.status(500).json({ message: "Something went wrong" });
+    return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false, // To verify the raw body of a webhook request
-  },
-};
