@@ -36,14 +36,22 @@ const submitForm = async (
   });
 
   if (!response.ok) {
-    throw new Error(response.statusText);
+    throw new Error(`${response.status}`);
   }
 
   return await response.json();
 };
 
-const notifyAboutClientSideError = async (env: string) => {
-  const response = await fetch(apiUrl(env, "report-error"), { method: "POST" });
+const notifyAboutClientSideError = async (
+  env: string,
+  action: string,
+  error: any,
+) => {
+  const response = await fetch(apiUrl(env, "report-error"), {
+    method: "POST",
+    headers: { "Content-type": "application/json;charset=UTF-8" },
+    body: JSON.stringify({ action, error }),
+  });
 
   if (!response.ok) {
     throw new Error("Unable to submit report about the critical error");

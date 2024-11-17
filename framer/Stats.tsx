@@ -22,7 +22,7 @@ export const loadKpi = (Component: any): ComponentType => {
         });
 
         if (!response.ok) {
-          throw new Error(response.statusText);
+          throw new Error(`${response.status}`);
         }
 
         const body = await response.json();
@@ -40,11 +40,11 @@ export const loadKpi = (Component: any): ComponentType => {
         });
       };
 
-      request().catch(async (err) => {
-        console.error(err.message);
+      request().catch(async (err: Error) => {
+        console.error(err?.toString());
 
         try {
-          await notifyAboutClientSideError("prod");
+          await notifyAboutClientSideError("prod", "loadKpi", err?.toString());
         } catch (e) {
           console.error(e);
         }

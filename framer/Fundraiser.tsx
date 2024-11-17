@@ -29,7 +29,7 @@ export const loadData = (Component: any): ComponentType => {
         const response = await fetch(apiUrl("prod", `fundraiser/${id}`));
 
         if (!response.ok) {
-          throw new Error(response.statusText);
+          throw new Error(`${response.status}`);
         }
 
         const body = await response.json();
@@ -40,12 +40,16 @@ export const loadData = (Component: any): ComponentType => {
         });
       };
 
-      request().catch(async (err) => {
+      request().catch(async (err: Error) => {
+        console.error(err?.toString());
         setStore({ data: null, hasError: true, isLoading: false });
-        console.error(err.message);
 
         try {
-          await notifyAboutClientSideError("prod");
+          await notifyAboutClientSideError(
+            "prod",
+            "fundraiser loadData",
+            err?.toString(),
+          );
         } catch (e) {
           console.error(e);
         }

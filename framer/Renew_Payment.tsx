@@ -29,19 +29,23 @@ export const loadUrl = (Component: any): ComponentType => {
         });
 
         if (!response.ok) {
-          throw new Error(response.statusText);
+          throw new Error(`${response.status}`);
         }
 
         const body = await response.json();
         setStore({ url: body.url, hasError: false });
       };
 
-      request().catch(async (err) => {
+      request().catch(async (err: Error) => {
+        console.error(err?.toString());
         setStore({ url: null, hasError: true });
-        console.error(err.message);
 
         try {
-          await notifyAboutClientSideError("prod");
+          await notifyAboutClientSideError(
+            "prod",
+            "renew-payment loadUrl",
+            err?.toString(),
+          );
         } catch (e) {
           console.error(e);
         }
