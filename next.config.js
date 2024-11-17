@@ -24,11 +24,11 @@ module.exports = {
         },
         {
           key: "Access-Control-Allow-Methods",
-          value: "GET,POST",
+          value: "GET,HEAD,OPTIONS,PATCH,PUT,POST,DELETE",
         },
         {
           key: "Access-Control-Allow-Headers",
-          value: "Authorization, Content-Type",
+          value: "X-CSRF-Token,X-Requested-With,Accept,Accept-Version,Authorization,Content-Length,Content-MD5,Content-Type,Date,X-Api-Version",
         },
       ],
     }));
