@@ -188,9 +188,7 @@ export const Input: React.ComponentType = withCSS<Props>(
           direction: isRTL ? "rtl" : "ltr",
           overflow: "show",
           textOverflow: truncate ? "ellipsis" : "unset",
-          boxShadow: `inset 0 0 0 ${borderWidth}px ${
-            isError ? borderError : border
-          }`,
+          border: `${borderWidth}px solid ${isError ? borderError : border}`,
           ...inputStyle,
           ...style,
           fontFamily: "'Satoshi Regular', sans-serif",
@@ -205,7 +203,7 @@ export const Input: React.ComponentType = withCSS<Props>(
   },
   [
     ".framer-default-input { --framer-default-input-border-width: 1px; --framer-default-input-border-color: #09f; --framer-default-input-placeholder-color: #aaa; }",
-    ".framer-default-input:focus { box-shadow: inset 0 0 0 var(--framer-default-input-border-width) var(--framer-default-input-border-color) !important; }",
+    ".framer-default-input:focus { border: var(--framer-default-input-border-width) solid var(--framer-default-input-border-color) !important; }",
     ".framer-default-input::placeholder { color: var(--framer-default-input-placeholder-color) !important; }",
 
     // Hide +/- buttons on input type number
