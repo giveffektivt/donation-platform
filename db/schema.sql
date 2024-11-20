@@ -1411,7 +1411,8 @@ CREATE VIEW giveffektivt.transfer AS
     created_at,
     updated_at
    FROM giveffektivt._transfer
-  WHERE (deleted_at IS NULL);
+  WHERE (deleted_at IS NULL)
+  ORDER BY created_at;
 
 
 --
@@ -1429,6 +1430,26 @@ CREATE VIEW giveffektivt.transfer_overview AS
      JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
   GROUP BY t.id, t.recipient, t.created_at
   ORDER BY t.created_at, (sum(d.amount)) DESC;
+
+
+--
+-- Name: transfer_pending; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer_pending AS
+ WITH data AS (
+         SELECT c.created_at,
+            d.amount,
+            sum(d.amount) OVER (ORDER BY c.created_at) AS potential_cutoff
+           FROM (giveffektivt.donation d
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NULL))
+        )
+ SELECT created_at,
+    amount,
+    potential_cutoff
+   FROM data
+  ORDER BY created_at;
 
 
 --
@@ -1855,4 +1876,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20240923191628'),
     ('20241009084603'),
     ('20241108133243'),
-    ('20241113220928');
+    ('20241113220928'),
+    ('20241120215013');
