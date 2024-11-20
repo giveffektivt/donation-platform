@@ -152,9 +152,14 @@ export async function sendFailedRecurringDonationEmail(
   const suffix =
     info.recipient === DonationRecipient.GivEffektivt ? " (medlemskab)" : "";
 
+  const bcc = process.env.BCC_FAILED_RECURRING_DONATION_EMAIL
+    ? `<${process.env.BCC_FAILED_RECURRING_DONATION_EMAIL}>`
+    : undefined;
+
   const letter: any = {
     from: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
     to: `<${info.donor_email}>`,
+    bcc,
     subject: `${prefix}Betalingskort udløbet${suffix}`,
     text,
   };
