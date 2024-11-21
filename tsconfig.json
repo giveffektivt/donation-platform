@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "target": "ESNext",
+    "lib": ["dom", "dom.iterable", "ESNext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -20,24 +16,8 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "comps": [
-        "./components"
-      ],
-      "comps/*": [
-        "./components/*"
-      ],
-      "src": [
-        "src"
-      ],
-      "src/*": [
-        "src/*"
-      ],
-      "aggregates": [
-        "aggregates"
-      ],
-      "aggregates/*": [
-        "aggregates/*"
-      ]
+      "src": ["src"],
+      "src/*": ["src/*"],
     },
     "plugins": [
       {
@@ -52,7 +32,5 @@
     "src/scanpay.d.tsy.d.ts",
     ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
