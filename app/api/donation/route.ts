@@ -67,7 +67,7 @@ async function processPayment(
           message: "OK",
           bank: {
             account: "5351-0000242661",
-            message: `d-${bankTransferId}`,
+            message: bankTransferId,
           },
         },
         donorId,

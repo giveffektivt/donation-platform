@@ -51,7 +51,8 @@ test("Insert charge for a donation", async () => {
     status: ChargeStatus.Created,
   });
 
-  expect(charge.short_id).toHaveLength(4);
+  expect(charge.short_id.substring(0, 2)).toEqual("c-");
+  expect(charge.short_id).toHaveLength(6);
 });
 
 test("Insert initial charge for a donation via Scanpay only once", async () => {
@@ -79,7 +80,8 @@ test("Insert initial charge for a donation via Scanpay only once", async () => {
     status: ChargeStatus.Created,
   });
 
-  expect(charge.short_id).toHaveLength(4);
+  expect(charge.short_id.substring(0, 2)).toEqual("c-");
+  expect(charge.short_id).toHaveLength(6);
 
   expect(await findAllCharges(db)).toHaveLength(1);
 
@@ -104,7 +106,7 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
 
   const charge = await insertInitialChargeQuickpay(
     db,
-    donation.gateway_metadata.quickpay_order
+    donation.gateway_metadata.quickpay_order,
   );
 
   expect(charge).toMatchObject({
@@ -112,13 +114,14 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
     status: ChargeStatus.Created,
   });
 
-  expect(charge.short_id).toHaveLength(4);
+  expect(charge.short_id.substring(0, 2)).toEqual("c-");
+  expect(charge.short_id).toHaveLength(6);
 
   expect(await findAllCharges(db)).toHaveLength(1);
 
   await insertInitialChargeQuickpay(
     db,
-    donation.gateway_metadata.quickpay_order
+    donation.gateway_metadata.quickpay_order,
   );
 
   expect(await findAllCharges(db)).toHaveLength(1);
@@ -138,12 +141,12 @@ test("Do not insert initial charge for a matching donation", async () => {
     recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Match,
     tax_deductible: false,
-    fundraiser_id: "00000000-0000-0000-0000-000000000000"
+    fundraiser_id: "00000000-0000-0000-0000-000000000000",
   });
 
   const charge = await insertInitialChargeQuickpay(
     db,
-    donation.gateway_metadata.quickpay_order
+    donation.gateway_metadata.quickpay_order,
   );
 
   expect(charge).toBeUndefined();

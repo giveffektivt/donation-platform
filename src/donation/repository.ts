@@ -91,7 +91,7 @@ export async function insertDonationViaQuickpay(
   return (
     await client.query(
       `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -115,7 +115,7 @@ export async function insertMembershipViaQuickpay(
   return (
     await client.query(
       `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order'''))::jsonb)
+       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -137,7 +137,7 @@ export async function insertDonationViaBankTransfer(
   return (
     await client.query(
       `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''bank_msg'''))::jsonb)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -215,10 +215,7 @@ export async function insertFundraiser(
       `insert into fundraiser (email, title)
        values ($1, $2)
        returning *`,
-      [
-        fundraiser.email,
-        fundraiser.title,
-      ],
+      [fundraiser.email, fundraiser.title],
     )
   ).rows[0];
 }

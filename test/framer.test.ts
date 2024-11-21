@@ -1,4 +1,4 @@
-import { _test } from "framer/helpers";
+import { _test } from "framer/helpers-donation";
 import { expect, test } from "vitest";
 
 test("CPR validation", async () => {

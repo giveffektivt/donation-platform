@@ -185,7 +185,8 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
 
   const insertedDonation = insertedDonations[0];
   const quickpayOrder = insertedDonation.gateway_metadata.quickpay_order;
-  expect(quickpayOrder).toHaveLength(4);
+  expect(quickpayOrder.substring(0, 2)).toEqual("d-");
+  expect(quickpayOrder).toHaveLength(6);
 
   const quickpayId = "some-id";
   insertedDonation.gateway_metadata.quickpay_id = quickpayId;

@@ -151,10 +151,10 @@ $$;
 
 
 --
--- Name: gen_short_id(text, text, integer, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: gen_short_id(text, text, text, integer, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.gen_short_id(table_name text, column_name text, min_length integer DEFAULT 4, chars text DEFAULT '23456789abcdefghjkmnpqrstuvwxyz'::text) RETURNS text
+CREATE FUNCTION giveffektivt.gen_short_id(table_name text, column_name text, prefix text DEFAULT ''::text, min_length integer DEFAULT 4, chars text DEFAULT '23456789abcdefghjkmnpqrstuvwxyz'::text) RETURNS text
     LANGUAGE plpgsql STRICT
     AS $_$
 declare
@@ -168,7 +168,7 @@ declare
 begin
     sql := format('select %s from giveffektivt.%I where %s = $1', column_name, table_name, column_name);
     loop
-        random_id := gen_random_string (current_len, chars);
+        random_id := prefix || gen_random_string(current_len, chars);
         advisory_2 := hashtext(random_id);
         advisory_ok := pg_try_advisory_xact_lock(advisory_1, advisory_2);
         if advisory_ok then
@@ -209,7 +209,7 @@ SET default_table_access_method = heap;
 CREATE TABLE giveffektivt._charge (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     donation_id uuid NOT NULL,
-    short_id text DEFAULT giveffektivt.gen_short_id('_charge'::text, 'short_id'::text) NOT NULL,
+    short_id text DEFAULT giveffektivt.gen_short_id('_charge'::text, 'short_id'::text, 'c-'::text) NOT NULL,
     status giveffektivt.charge_status NOT NULL,
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
@@ -1877,4 +1877,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20241009084603'),
     ('20241108133243'),
     ('20241113220928'),
-    ('20241120215013');
+    ('20241120215013'),
+    ('20241121213227');
