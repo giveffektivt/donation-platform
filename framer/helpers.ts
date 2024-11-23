@@ -45,8 +45,12 @@ const submitForm = async (
 const notifyAboutClientSideError = async (
   env: string,
   action: string,
-  error: any,
+  error?: string,
 ) => {
+  if (error?.includes("NetworkError")) {
+    return;
+  }
+
   const response = await fetch(apiUrl(env, "report-error"), {
     method: "POST",
     headers: { "Content-type": "application/json;charset=UTF-8" },
