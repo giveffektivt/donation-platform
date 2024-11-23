@@ -1160,6 +1160,51 @@ CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
 
 
 --
+-- Name: ignored_renewals; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.ignored_renewals AS
+ WITH last_charge AS (
+         SELECT DISTINCT ON (p.id) p.id,
+            p.email,
+            d.amount,
+            d.recipient,
+            c.status,
+            c.created_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+          WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
+          ORDER BY p.id, c.created_at DESC
+        ), never_activated AS (
+         SELECT DISTINCT ON (p.id) p.id,
+            d.created_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+          WHERE ((c.id IS NULL) AND (d.frequency <> 'once'::giveffektivt.donation_frequency))
+        ), last_payment_by_email AS (
+         SELECT DISTINCT ON (p.email, d.recipient) p.email,
+            d.recipient,
+            c.created_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+          WHERE (c.status = 'charged'::giveffektivt.charge_status)
+          ORDER BY p.email, d.recipient, c.created_at DESC
+        )
+ SELECT lc.email,
+    lc.amount,
+    lc.recipient,
+    ((now())::date - (na.created_at)::date) AS days_ago
+   FROM ((last_charge lc
+     JOIN never_activated na ON ((lc.id = na.id)))
+     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND (lc.recipient = lp.recipient))))
+  WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
+  ORDER BY na.created_at;
+
+
+--
 -- Name: kpi; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1878,4 +1923,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20241108133243'),
     ('20241113220928'),
     ('20241120215013'),
-    ('20241121213227');
+    ('20241121213227'),
+    ('20241123140526');

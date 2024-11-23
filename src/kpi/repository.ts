@@ -29,6 +29,10 @@ export async function getTimeDistribution(
   return (await client.query("select * from time_distribution")).rows;
 }
 
+export async function getIgnoredRenewals(client: PoolClient) {
+  return (await client.query("select * from ignored_renewals")).rows;
+}
+
 export async function getFundraiserKpi(
   client: PoolClient,
   id: string,
