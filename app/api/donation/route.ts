@@ -1,4 +1,5 @@
 import {
+  logError,
   parsePaymentMethod,
   PaymentGateway,
   PaymentMethod,
@@ -43,13 +44,13 @@ export async function POST(req: Request) {
       try {
         await subscribeToNewsletter(submitData, donorId);
       } catch (err) {
-        console.error("api/donation: Error subscribing to newsletter: ", err);
+        logError("api/donation: Error subscribing to newsletter: ", err);
       }
     }
 
     return Response.json(response);
   } catch (err) {
-    console.error("api/donation:", err);
+    logError("api/donation:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

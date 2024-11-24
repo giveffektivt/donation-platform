@@ -5,6 +5,7 @@ import {
   getPendingDistribution,
   getTransferredDistribution,
   getTimeDistribution,
+  logError,
 } from "src";
 
 export async function GET(_: Request) {
@@ -26,7 +27,7 @@ export async function GET(_: Request) {
       },
     });
   } catch (e) {
-    console.error("api/kpi: ", e);
+    logError("api/kpi: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

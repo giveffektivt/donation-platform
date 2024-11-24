@@ -1,27 +1,28 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
-  BankTransferInfo,
+  type BankTransferInfo,
   dbClient,
   dbExecuteInTransaction,
   dbRelease,
-  DonationToEmail,
-  DonationWithGatewayInfoBankTransfer,
-  DonorWithSensitiveInfo,
+  type DonationToEmail,
+  type DonationWithGatewayInfoBankTransfer,
+  type DonorWithSensitiveInfo,
   EmailedStatus,
   insertDonationViaBankTransfer,
   insertDonorWithSensitiveInfo,
+  logError,
   parseDonationFrequency,
   parseDonationRecipient,
   sendPaymentEmail,
   setDonationEmailed,
-  SubmitDataDonation,
+  type SubmitDataDonation,
 } from "src";
 
 export async function processBankTransferDonation(
-  submitData: SubmitDataDonation
+  submitData: SubmitDataDonation,
 ): Promise<[string, string]> {
   const [donor, donation] = await dbExecuteInTransaction(
-    async (db) => await insertBankTransferData(db, submitData)
+    async (db) => await insertBankTransferData(db, submitData),
   );
   await sendEmails(donor, donation);
   return [donation.gateway_metadata.bank_msg, donor.id];
@@ -29,7 +30,7 @@ export async function processBankTransferDonation(
 
 export async function insertBankTransferData(
   db: PoolClient,
-  submitData: SubmitDataDonation
+  submitData: SubmitDataDonation,
 ): Promise<[DonorWithSensitiveInfo, DonationWithGatewayInfoBankTransfer]> {
   const donor = await insertDonorWithSensitiveInfo(db, {
     email: submitData.email,
@@ -52,7 +53,7 @@ export async function insertBankTransferData(
 
 async function sendEmails(
   donor: DonorWithSensitiveInfo,
-  donation: DonationWithGatewayInfoBankTransfer
+  donation: DonationWithGatewayInfoBankTransfer,
 ) {
   console.log(`Sending bank transfer donation email: ${donation.id}`);
 
@@ -78,7 +79,7 @@ async function sendEmails(
     await sendPaymentEmail(donationToEmail, bankTransferInfo);
     await setDonationEmailed(db, donationToEmail, EmailedStatus.Yes);
   } catch (err) {
-    console.error(`Error sending payment email for ID "${donation.id}":`, err);
+    logError(`Error sending payment email for ID "${donation.id}":`, err);
   } finally {
     dbRelease(db);
   }

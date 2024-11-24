@@ -9,6 +9,7 @@ import {
   type SubmitDataGavebrevStop,
   validationSchemaGavebrevStop,
   stopGavebrev,
+  logError,
 } from "src";
 import * as yup from "yup";
 
@@ -26,12 +27,13 @@ function authorize(req: Request): boolean {
 export async function GET(req: Request) {
   try {
     if (!authorize(req)) {
+      logError("GET api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     return Response.json({ message: "OK", data: await listGavebrev() });
   } catch (err) {
-    console.error("api/gavebrev:", err);
+    logError("api/gavebrev:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
@@ -39,6 +41,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     if (!authorize(req)) {
+      logError("POST api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -50,6 +53,10 @@ export async function POST(req: Request) {
         .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
+        logError(
+          "POST api/gavebrev: Validation failed for request body: ",
+          err,
+        );
         return Response.json(
           { message: "Validation failed", errors: err.errors },
           { status: 400 },
@@ -62,7 +69,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK", agreementId });
   } catch (err) {
-    console.error("api/gavebrev:", err);
+    logError("api/gavebrev:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
@@ -70,6 +77,7 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   try {
     if (!authorize(req)) {
+      logError("PATCH api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -81,6 +89,10 @@ export async function PATCH(req: Request) {
         .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
+        logError(
+          "PATCH api/gavebrev: Validation failed for request body: ",
+          err,
+        );
         return Response.json(
           { message: "Validation failed", errors: err.errors },
           { status: 400 },
@@ -90,12 +102,13 @@ export async function PATCH(req: Request) {
     }
 
     const found = await updateGavebrevStatus(submitData);
-    if (found) {
-      return Response.json({ message: "OK" });
+    if (!found) {
+      logError(`PATCH api/gavebrev: agreement ${submitData.id} not found`);
+      return Response.json({ message: "Not found" }, { status: 404 });
     }
-    return Response.json({ message: "Not found" }, { status: 404 });
+    return Response.json({ message: "OK" });
   } catch (err) {
-    console.error("api/gavebrev:", err);
+    logError("api/gavebrev:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
@@ -103,6 +116,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   try {
     if (!authorize(req)) {
+      logError("DELETE api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -114,6 +128,10 @@ export async function DELETE(req: Request) {
         .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
+        logError(
+          "DELETE api/gavebrev: Validation failed for request body: ",
+          err,
+        );
         return Response.json(
           { message: "Validation failed", errors: err.errors },
           { status: 400 },
@@ -123,12 +141,13 @@ export async function DELETE(req: Request) {
     }
 
     const found = await stopGavebrev(submitData);
-    if (found) {
-      return Response.json({ message: "OK" });
+    if (!found) {
+      logError(`DELETE api/gavebrev: agreement ${submitData.id} not found`);
+      return Response.json({ message: "Not found" }, { status: 404 });
     }
-    return Response.json({ message: "Not found" }, { status: 404 });
+    return Response.json({ message: "OK" });
   } catch (err) {
-    console.error("api/gavebrev:", err);
+    logError("api/gavebrev:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

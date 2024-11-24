@@ -1,49 +1,49 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
   dbClient,
   dbExecuteInTransaction,
   dbRelease,
   findAllGavebrev,
-  Gavebrev,
+  type Gavebrev,
   GavebrevType,
   insertGavebrevDonor,
   insertGavebrev,
   parseGavebrevStatus,
   setGavebrevStatus,
-  SubmitDataGavebrev,
-  SubmitDataGavebrevStatus,
+  type SubmitDataGavebrev,
+  type SubmitDataGavebrevStatus,
   setGavebrevStopped,
-  SubmitDataGavebrevStop,
+  type SubmitDataGavebrevStop,
 } from "src";
 
 export async function createGavebrev(
-  submitData: SubmitDataGavebrev
+  submitData: SubmitDataGavebrev,
 ): Promise<string> {
   const gavebrev = await dbExecuteInTransaction(
-    async (db) => await insertGavebrevData(db, submitData)
+    async (db) => await insertGavebrevData(db, submitData),
   );
   return gavebrev.id;
 }
 
 export async function updateGavebrevStatus(
-  submitData: SubmitDataGavebrevStatus
+  submitData: SubmitDataGavebrevStatus,
 ): Promise<boolean> {
   return await dbExecuteInTransaction(
-    async (db) => await doUpdateGavebrevStatus(db, submitData)
+    async (db) => await doUpdateGavebrevStatus(db, submitData),
   );
 }
 
 export async function stopGavebrev(
-  submitData: SubmitDataGavebrevStop
+  submitData: SubmitDataGavebrevStop,
 ): Promise<boolean> {
   return await dbExecuteInTransaction(
-    async (db) => await doStopGavebrev(db, submitData)
+    async (db) => await doStopGavebrev(db, submitData),
   );
 }
 
 export async function insertGavebrevData(
   db: PoolClient,
-  submitData: SubmitDataGavebrev
+  submitData: SubmitDataGavebrev,
 ): Promise<Gavebrev> {
   const donor = await insertGavebrevDonor(db, {
     name: submitData.name,
@@ -65,21 +65,21 @@ export async function insertGavebrevData(
 
 export async function doUpdateGavebrevStatus(
   db: PoolClient,
-  submitData: SubmitDataGavebrevStatus
+  submitData: SubmitDataGavebrevStatus,
 ): Promise<boolean> {
   return (
     1 ===
     (await setGavebrevStatus(
       db,
       submitData.id,
-      parseGavebrevStatus(submitData.status)
+      parseGavebrevStatus(submitData.status),
     ))
   );
 }
 
 export async function doStopGavebrev(
   db: PoolClient,
-  submitData: SubmitDataGavebrevStop
+  submitData: SubmitDataGavebrevStop,
 ): Promise<boolean> {
   return 1 === (await setGavebrevStopped(db, submitData.id, new Date()));
 }

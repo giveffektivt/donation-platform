@@ -1,4 +1,4 @@
-import { charge, sendNewEmails } from "src";
+import { charge, logError, sendNewEmails } from "src";
 
 export async function POST(req: Request) {
   try {
@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     if (
       req.headers.get("Authorization") !== `Bearer ${process.env.CRON_API_KEY}`
     ) {
+      logError("api/cron: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    console.error("api/cron:", err);
+    logError("api/cron:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

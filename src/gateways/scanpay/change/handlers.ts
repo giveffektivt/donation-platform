@@ -1,9 +1,10 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
   ChargeStatus,
   getDonationIdsByOldDonorId,
   insertInitialChargeScanpay,
-  ScanpayChange,
+  logError,
+  type ScanpayChange,
   setChargeStatusByShortId,
   setDonationScanpayId,
 } from "src";
@@ -18,7 +19,7 @@ async function handleSubscriber(db: PoolClient, change: ScanpayChange) {
       // updates to those might still be coming, so we need to keep code to support them
       change.ref.split("_");
 
-  for (let donationId of donationIds) {
+  for (const donationId of donationIds) {
     await setDonationScanpayId(db, {
       id: donationId,
       gateway_metadata: {
@@ -61,9 +62,8 @@ const getChargeStatusFromLatestAct = (change: ScanpayChange) => {
     case "void":
       return ChargeStatus.Error;
     default:
-      console.error(
-        "Unexpected latest act in Scanpay change (assuming it was charged):",
-        change.acts
+      logError(
+        `Unexpected latest act in Scanpay change (assuming it was charged): ${JSON.stringify(change.acts)}`,
       );
       return ChargeStatus.Charged;
   }

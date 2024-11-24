@@ -1,15 +1,16 @@
 import { htmlToText } from "html-to-text";
 import juice from "juice";
-import path from "path";
+import path from "node:path";
 import {
-  BankTransferInfo,
+  type BankTransferInfo,
   dbExecuteInTransaction,
   DonationRecipient,
-  DonationToEmail,
+  type DonationToEmail,
   EmailedStatus,
   failedRecurringDonationTemplate,
-  FailedRecurringDonationToEmail,
+  type FailedRecurringDonationToEmail,
   getDonationsToEmail,
+  logError,
   membershipReceipt,
   paymentReceipt,
   sendDonationEmail,
@@ -28,7 +29,7 @@ export async function sendNewEmails() {
       `Sending ${donationsToEmail.length} donation email(s):`,
       donationsToEmail.map((d) => d.id),
     );
-    for (let donation of donationsToEmail) {
+    for (const donation of donationsToEmail) {
       try {
         await setDonationEmailed(db, donation, EmailedStatus.Attempted);
         if (donation.recipient === DonationRecipient.GivEffektivt) {
@@ -38,7 +39,7 @@ export async function sendNewEmails() {
         }
         await setDonationEmailed(db, donation, EmailedStatus.Yes);
       } catch (err) {
-        console.error(`Error sending email for ID "${donation.id}":`, err);
+        logError(`Error sending email for ID "${donation.id}":`, err);
       }
     }
   });
@@ -55,7 +56,7 @@ export async function sendMembershipEmail(
   const html = juice(htmlNoInline);
   const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
 
-  const letter: any = {
+  const letter = {
     from: '"Giv Effektivt" <kvittering@giveffektivt.dk>',
     replyTo: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
     to: `<${email}>`,
@@ -109,7 +110,7 @@ export async function sendPaymentEmail(
       ? `<${process.env.BCC_DONATION_LARGE_EMAIL}>`
       : undefined;
 
-  const letter: any = {
+  const letter = {
     from: '"Giv Effektivt" <kvittering@giveffektivt.dk>',
     replyTo: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
     to: `<${email}>`,
@@ -156,7 +157,7 @@ export async function sendFailedRecurringDonationEmail(
     ? `<${process.env.BCC_FAILED_RECURRING_DONATION_EMAIL}>`
     : undefined;
 
-  const letter: any = {
+  const letter = {
     from: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
     to: `<${info.donor_email}>`,
     bcc,

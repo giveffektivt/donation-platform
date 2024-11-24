@@ -1,5 +1,6 @@
 import {
   getRenewPaymentLink,
+  logError,
   type SubmitDataRenewPayment,
   validationSchemaRenewPayment,
 } from "src";
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
         .validate(await req.json());
     } catch (err) {
       if (err instanceof yup.ValidationError) {
-        console.error(
+        logError(
           "api/renew-payment: Validation failed for request body: ",
           err,
         );
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     const url = await getRenewPaymentLink(submitData.id);
 
     if (url == null) {
-      console.error(
+      logError(
         `api/renew-payment: attempted to renew payment on donation '${submitData.id}' that doesn't allow it`,
       );
       return Response.json({ message: "Not found" }, { status: 404 });
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK", url });
   } catch (err) {
-    console.error("api/renew-payment:", err);
+    logError("api/renew-payment:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

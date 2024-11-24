@@ -5,6 +5,7 @@ import {
   handleChange,
   insertScanpaySeq,
   lockScanpaySeq,
+  logError,
   unlockScanpaySeq,
 } from "src";
 
@@ -52,7 +53,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    console.error("api/ping:", err);
+    logError("api/ping:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     if (db) {

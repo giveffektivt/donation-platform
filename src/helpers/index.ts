@@ -1,4 +1,5 @@
 export * from "./payment";
+export * from "./rollbar";
 export * from "./submitForm";
 export * from "./texts";
 export * from "./validationSchemaDonation";

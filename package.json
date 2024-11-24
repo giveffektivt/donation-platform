@@ -24,6 +24,7 @@
     "pg": "^8.13.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "rollbar": "^2.26.4",
     "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
     "yup": "^1.4.0"
   },

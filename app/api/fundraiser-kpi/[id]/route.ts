@@ -1,4 +1,4 @@
-import { dbClient, dbRelease, getFundraiserKpi } from "src";
+import { dbClient, dbRelease, getFundraiserKpi, logError } from "src";
 
 const isUUIDv4 =
   /^([0-9a-fA-F]{8})-([0-9a-fA-F]{4})-([1-5][0-9a-fA-F]{3})-([89abAB][0-9a-fA-F]{3})-([0-9a-fA-F]{12})$/;
@@ -13,7 +13,7 @@ export async function GET(
     const id = (await params).id;
 
     if (!isUUIDv4.test(id)) {
-      console.error(`api/fundraiser-kpi: ID '${id}' is not UUID`);
+      logError(`api/fundraiser-kpi: ID '${id}' is not UUID`);
       return Response.json({ message: "Invalid ID" }, { status: 400 });
     }
 
@@ -26,7 +26,7 @@ export async function GET(
 
     return Response.json(result);
   } catch (e) {
-    console.error("api/fundraiser-kpi: ", e);
+    logError("api/fundraiser-kpi: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

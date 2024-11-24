@@ -1,10 +1,11 @@
 import { addDays } from "date-fns";
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
   ChargeStatus,
-  ChargeToChargeQuickpay,
+  type ChargeToChargeQuickpay,
   DonationRecipient,
-  DonationWithGatewayInfoQuickpay,
+  type DonationWithGatewayInfoQuickpay,
+  logError,
   PaymentMethod,
   setChargeStatus,
 } from "src";
@@ -12,7 +13,7 @@ import {
 /** Make a request to Quickpay API to get Quickpay ID for a one time payment */
 export async function quickpayCreatePayment(
   charge_short_id: string,
-  donation: DonationWithGatewayInfoQuickpay
+  donation: DonationWithGatewayInfoQuickpay,
 ): Promise<string> {
   const response = await request(
     "POST",
@@ -31,7 +32,7 @@ export async function quickpayCreatePayment(
         },
       ],
       text_on_statement: "giveffektivt.dk",
-    }
+    },
   );
 
   return response.id;
@@ -39,7 +40,7 @@ export async function quickpayCreatePayment(
 
 /** Make a request to Quickpay API to get Quickpay ID for a subscription */
 export async function quickpayCreateSubscription(
-  donation: DonationWithGatewayInfoQuickpay
+  donation: DonationWithGatewayInfoQuickpay,
 ): Promise<string> {
   const description = `Giv Effektivt ${
     donation.recipient === DonationRecipient.GivEffektivt
@@ -60,7 +61,7 @@ export async function quickpayCreateSubscription(
       order_id: donation.gateway_metadata.quickpay_order,
       description,
       text_on_statement,
-    }
+    },
   );
 
   return response.id;
@@ -69,7 +70,7 @@ export async function quickpayCreateSubscription(
 /** Make a request to Quickpay API to get a one time payment link */
 export async function quickpayOneTimeUrl(
   donation: DonationWithGatewayInfoQuickpay,
-  successUrl: string
+  successUrl: string,
 ): Promise<string> {
   const isMobilePay = donation.method === PaymentMethod.MobilePay;
 
@@ -84,7 +85,7 @@ export async function quickpayOneTimeUrl(
       auto_capture: true,
       language: "da",
       payment_methods: isMobilePay ? "mobilepay" : "",
-    }
+    },
   );
 
   return response.url;
@@ -93,7 +94,7 @@ export async function quickpayOneTimeUrl(
 /** Make a request to Quickpay API to get a subscription link */
 export async function quickpaySubscriptionUrl(
   donation: DonationWithGatewayInfoQuickpay,
-  successUrl: string
+  successUrl: string,
 ): Promise<string> {
   const isMobilePay = donation.method === PaymentMethod.MobilePay;
 
@@ -107,7 +108,7 @@ export async function quickpaySubscriptionUrl(
       callback_url: process.env.QUICKPAY_CALLBACK_URL,
       language: "da",
       payment_methods: isMobilePay ? "mobilepay-subscriptions" : "",
-    }
+    },
   );
 
   return response.url;
@@ -116,11 +117,11 @@ export async function quickpaySubscriptionUrl(
 /** Make a request to Quickpay API to charge a subscription */
 export async function quickpayChargeSubscription(
   db: PoolClient,
-  charge: ChargeToChargeQuickpay
+  charge: ChargeToChargeQuickpay,
 ) {
   if (!charge.donation_gateway_metadata?.quickpay_id) {
-    console.error(
-      `Charge with ID '${charge.id}' does not have a corresponding Quickpay ID that is required for charging`
+    logError(
+      `Charge with ID '${charge.id}' does not have a corresponding Quickpay ID that is required for charging`,
     );
     await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
     return;
@@ -149,10 +150,10 @@ export async function quickpayChargeSubscription(
         text_on_statement,
         description: `Giv Effektivt ${charge.short_id}`,
       },
-      !isMobilePay // MobilePay Subscriptions sends empty response on success
+      !isMobilePay, // MobilePay Subscriptions sends empty response on success
     );
-  } catch (err: any) {
-    console.error(`Error while charging ID '${charge.id}':`, err);
+  } catch (err) {
+    logError(`Error while charging ID '${charge.id}':`, err);
     status = ChargeStatus.Error;
   }
 
@@ -164,7 +165,7 @@ async function request(
   endpoint: string,
   authorization: string,
   body: any,
-  parseResponse = true
+  parseResponse = true,
 ) {
   const response = await fetch(`https://api.quickpay.net/${endpoint}`, {
     method,

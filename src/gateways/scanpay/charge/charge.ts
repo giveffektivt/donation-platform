@@ -4,6 +4,7 @@ import {
   ChargeStatus,
   type ChargeToChargeScanpay,
   getDonorIdByChargeShortId,
+  logError,
   sendFailedRecurringDonationEmails,
   setChargeIdempotencyKey,
   setChargeStatus,
@@ -18,7 +19,7 @@ export async function scanpayChargeSubscription(
 ) {
   const scanpayId = charge.donation_gateway_metadata?.scanpay_id;
   if (!scanpayId) {
-    console.error(
+    logError(
       `Charge with ID '${charge.id}' does not have a corresponding Scanpay ID that is required for charging`,
     );
     await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
@@ -73,7 +74,7 @@ export async function scanpayChargeSubscription(
     }
     status = ChargeStatus.Error;
 
-    const log = isCardExpired ? console.log : console.error;
+    const log = isCardExpired ? console.log : logError;
     log(`Error while charging ID '${charge.id}':`, err);
 
     if (err?.type === "ScanpayError") {

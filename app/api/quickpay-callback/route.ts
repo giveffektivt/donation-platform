@@ -1,5 +1,11 @@
 import crypto from "node:crypto";
-import { dbClient, dbRelease, PaymentGateway, quickpayHandleChange } from "src";
+import {
+  dbClient,
+  dbRelease,
+  logError,
+  PaymentGateway,
+  quickpayHandleChange,
+} from "src";
 import { insertGatewayWebhook } from "src/gateways/repository";
 
 export async function POST(req: Request) {
@@ -41,7 +47,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    console.error("api/quickpay-callback:", err);
+    logError("api/quickpay-callback:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

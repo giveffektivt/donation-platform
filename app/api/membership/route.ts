@@ -1,4 +1,5 @@
 import {
+  logError,
   processQuickpayMembership,
   type SubmitDataMembership,
   validationSchemaMembership,
@@ -19,7 +20,7 @@ export async function POST(req: Request) {
       redirect,
     });
   } catch (err) {
-    console.error("api/membership:", err);
+    logError("api/membership:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
