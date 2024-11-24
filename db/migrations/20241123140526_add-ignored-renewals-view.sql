@@ -3,6 +3,7 @@ create view ignored_renewals as
 with last_charge as (
     select distinct on (p.id)
         p.id,
+        p.name,
         p.email,
         d.amount,
         d.recipient,
@@ -46,8 +47,18 @@ last_payment_by_email as (
         p.email,
         d.recipient,
         c.created_at desc
+),
+email_to_name as (
+    select distinct on (email)
+        name,
+        email
+    from
+        donor_with_contact_info p
+    where
+        name is not null
 )
 select
+    coalesce(lc.name, en.name) as name,
     lc.email,
     lc.amount,
     lc.recipient,
@@ -57,6 +68,7 @@ from
     join never_activated na on lc.id = na.id
     left join last_payment_by_email lp on lc.email = lp.email
         and lc.recipient = lp.recipient
+    left join email_to_name en on lc.email = en.email
 where
     lc.status = 'error'
     and (lp.created_at is null

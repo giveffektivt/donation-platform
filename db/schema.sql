@@ -1166,6 +1166,7 @@ CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
 CREATE VIEW giveffektivt.ignored_renewals AS
  WITH last_charge AS (
          SELECT DISTINCT ON (p.id) p.id,
+            p.name,
             p.email,
             d.amount,
             d.recipient,
@@ -1192,14 +1193,21 @@ CREATE VIEW giveffektivt.ignored_renewals AS
              JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
           WHERE (c.status = 'charged'::giveffektivt.charge_status)
           ORDER BY p.email, d.recipient, c.created_at DESC
+        ), email_to_name AS (
+         SELECT DISTINCT ON (p.email) p.name,
+            p.email
+           FROM giveffektivt.donor_with_contact_info p
+          WHERE (p.name IS NOT NULL)
         )
- SELECT lc.email,
+ SELECT COALESCE(lc.name, en.name) AS name,
+    lc.email,
     lc.amount,
     lc.recipient,
     ((now())::date - (na.created_at)::date) AS days_ago
-   FROM ((last_charge lc
+   FROM (((last_charge lc
      JOIN never_activated na ON ((lc.id = na.id)))
      LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND (lc.recipient = lp.recipient))))
+     LEFT JOIN email_to_name en ON ((lc.email = en.email)))
   WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
   ORDER BY na.created_at;
 
