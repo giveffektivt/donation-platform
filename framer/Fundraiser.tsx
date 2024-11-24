@@ -40,19 +40,9 @@ export const loadData = (Component: any): ComponentType => {
         });
       };
 
-      request().catch(async (err: Error) => {
-        console.error(err?.toString());
+      request().catch((err: Error) => {
         setStore({ data: null, hasError: true, isLoading: false });
-
-        try {
-          await notifyAboutClientSideError(
-            "prod",
-            "fundraiser loadData",
-            err?.toString(),
-          );
-        } catch (e) {
-          console.error(e);
-        }
+        notifyAboutClientSideError("fundraiser loadData", err?.toString());
       });
     }, []);
 

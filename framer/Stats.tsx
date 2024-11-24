@@ -40,14 +40,8 @@ export const loadKpi = (Component: any): ComponentType => {
         });
       };
 
-      request().catch(async (err: Error) => {
-        console.error(err?.toString());
-
-        try {
-          await notifyAboutClientSideError("prod", "loadKpi", err?.toString());
-        } catch (e) {
-          console.error(e);
-        }
+      request().catch((err: Error) => {
+        notifyAboutClientSideError("loadKpi", err?.toString());
       });
     }, []);
 

@@ -496,18 +496,8 @@ export const withFundraiser = (Component: any): ComponentType => {
         });
       };
 
-      request().catch(async (err: Error) => {
-        console.error(err?.toString());
-
-        try {
-          await notifyAboutClientSideError(
-            store.env,
-            "donation withFundraiser",
-            err?.toString(),
-          );
-        } catch (e) {
-          console.error(e);
-        }
+      request().catch((err: Error) => {
+        notifyAboutClientSideError("donation withFundraiser", err?.toString());
       });
     }, []);
 

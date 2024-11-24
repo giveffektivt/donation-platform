@@ -148,17 +148,7 @@ const submitDonation = async (store: any, setStore: any) => {
     }
   } catch (err) {
     alert(errorMessage);
-    console.error(err?.toString());
-
-    try {
-      await notifyAboutClientSideError(
-        store.env,
-        "submitDonation",
-        err?.toString(),
-      );
-    } catch (e) {
-      console.error(e);
-    }
+    notifyAboutClientSideError("submitDonation", err?.toString());
   }
 
   setStore({ isLoading: false });

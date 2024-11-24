@@ -36,19 +36,9 @@ export const loadUrl = (Component: any): ComponentType => {
         setStore({ url: body.url, hasError: false });
       };
 
-      request().catch(async (err: Error) => {
-        console.error(err?.toString());
+      request().catch((err: Error) => {
         setStore({ url: null, hasError: true });
-
-        try {
-          await notifyAboutClientSideError(
-            "prod",
-            "renew-payment loadUrl",
-            err?.toString(),
-          );
-        } catch (e) {
-          console.error(e);
-        }
+        notifyAboutClientSideError("renew-payment loadUrl", err?.toString());
       });
     }, []);
 

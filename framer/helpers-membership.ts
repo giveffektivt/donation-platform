@@ -79,17 +79,7 @@ const submitMembership = async (store: any, setStore: any) => {
     }
   } catch (err) {
     alert(errorMessage);
-    console.error(err?.toString());
-
-    try {
-      await notifyAboutClientSideError(
-        store.env,
-        "submitMembership",
-        err?.toString(),
-      );
-    } catch (e) {
-      console.error(e);
-    }
+    notifyAboutClientSideError("submitMembership", err?.toString());
   }
 
   setStore({ isLoading: false });

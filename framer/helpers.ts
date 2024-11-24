@@ -42,23 +42,16 @@ const submitForm = async (
   return await response.json();
 };
 
-const notifyAboutClientSideError = async (
-  env: string,
-  action: string,
-  error?: string,
-) => {
+const notifyAboutClientSideError = (action: string, error?: string) => {
+  console.error(`Client-side error in ${action}: ${error}`);
   if (error?.includes("NetworkError")) {
     return;
   }
 
-  const response = await fetch(apiUrl(env, "report-error"), {
-    method: "POST",
-    headers: { "Content-type": "application/json;charset=UTF-8" },
-    body: JSON.stringify({ action, error }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Unable to submit report about the critical error");
+  // @ts-ignore
+  if (typeof Rollbar !== "undefined") {
+    // @ts-ignore
+    Rollbar.error(`Client-side error in ${action}: ${error}`);
   }
 };
 
