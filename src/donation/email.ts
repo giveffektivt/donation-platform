@@ -1,22 +1,19 @@
-import { htmlToText } from "html-to-text";
-import juice from "juice";
-import path from "node:path";
+import { EmailParams, MailerSend, Recipient } from "mailersend";
 import {
   type BankTransferInfo,
   dbExecuteInTransaction,
   DonationRecipient,
   type DonationToEmail,
   EmailedStatus,
-  failedRecurringDonationTemplate,
   type FailedRecurringDonationToEmail,
   getDonationsToEmail,
   logError,
-  membershipReceipt,
-  paymentReceipt,
-  sendDonationEmail,
-  sendReceiptEmail,
   setDonationEmailed,
 } from "src";
+
+const mailerSend = new MailerSend({
+  apiKey: process.env.MAILERSEND_API_KEY,
+});
 
 export async function sendNewEmails() {
   await dbExecuteInTransaction(async (db) => {
@@ -45,125 +42,113 @@ export async function sendNewEmails() {
   });
 }
 
-export async function sendMembershipEmail(
-  donation: DonationToEmail,
-  bank?: BankTransferInfo,
-) {
-  const { email } = donation;
+export async function sendMembershipEmail(donation: DonationToEmail) {
+  const emailParams = new EmailParams()
+    .setTo([new Recipient(donation.email)])
+    .setTemplateId(process.env.MAILERSEND_TEMPLATE_MEMBERSHIP)
+    .setPersonalization([
+      {
+        email: donation.email,
+        data: {
+          donation_id: donation.id,
+          subject_prefix:
+            process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
+        },
+      },
+    ]);
 
-  const htmlNoInline = membershipReceipt(donation, bank);
-  const text = htmlToText(htmlNoInline);
-  const html = juice(htmlNoInline);
-  const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
+  const result = await mailerSend.email.send(emailParams);
+  if (result.statusCode !== 202) {
+    throw new Error(`Failed to send email: ${JSON.stringify(result)}`);
+  }
 
-  const letter = {
-    from: '"Giv Effektivt" <kvittering@giveffektivt.dk>',
-    replyTo: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
-    to: `<${email}>`,
-    subject: `${prefix}Dit medlemskab af Giv Effektivt`,
-    attachments: [
-      {
-        filename: "t.png",
-        path: path.join(process.cwd(), "public", "t.png"),
-        cid: "twitterLogo",
-      },
-      {
-        filename: "G.png",
-        path: path.join(process.cwd(), "public", "G.png"),
-        cid: "giveffektivtLogo",
-      },
-      {
-        filename: "f.png",
-        path: path.join(process.cwd(), "public", "f.png"),
-        cid: "facebookLogo",
-      },
-      {
-        filename: "in.png",
-        path: path.join(process.cwd(), "public", "in.png"),
-        cid: "linkedinLogo",
-      },
-    ],
-    text,
-    html,
-  };
-
-  await sendReceiptEmail(letter);
+  if (result.body) {
+    logError(
+      `Email for membership ID ${donation.id} was probably sent, but with possible errors or warnings: ${JSON.stringify(result.body)}`,
+    );
+  }
 }
 
 export async function sendPaymentEmail(
   donation: DonationToEmail,
   bank?: BankTransferInfo,
 ) {
-  const { email } = donation;
+  const emailParams = new EmailParams()
+    .setTo([new Recipient(donation.email)])
+    .setTemplateId(process.env.MAILERSEND_TEMPLATE_DONATION)
+    .setPersonalization([
+      {
+        email: donation.email,
+        data: {
+          amount: donation.amount.toLocaleString("da-DK"),
+          donation_id: donation.id,
+          frequency: donation.frequency,
+          tax_deductible: donation.tax_deductible,
+          recipient: donation.recipient,
+          bank_msg: bank?.msg ?? null,
+          subject_prefix:
+            process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
+        },
+      },
+    ]);
 
-  const htmlNoInline = paymentReceipt(donation, bank);
-  const text = htmlToText(htmlNoInline);
-  const html = juice(htmlNoInline);
-  const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
-  const bcc =
-    (donation.frequency === "once" &&
-      donation.amount >=
-        Number.parseInt(process.env.BCC_DONATION_ONCE_LARGE_AMOUNT ?? "0")) ||
-    (donation.frequency === "monthly" &&
-      donation.amount >=
-        Number.parseInt(process.env.BCC_DONATION_MONTHLY_LARGE_AMOUNT ?? "0"))
-      ? `<${process.env.BCC_DONATION_LARGE_EMAIL}>`
-      : undefined;
+  const isDonationOnceLarge =
+    donation.frequency === "once" &&
+    donation.amount >=
+      Number.parseInt(process.env.BCC_DONATION_ONCE_LARGE_AMOUNT ?? "0");
 
-  const letter = {
-    from: '"Giv Effektivt" <kvittering@giveffektivt.dk>',
-    replyTo: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
-    to: `<${email}>`,
-    bcc,
-    subject: `${prefix}Kvittering for donation via Giv Effektivt`,
-    attachments: [
-      {
-        filename: "t.png",
-        path: path.join(process.cwd(), "public", "t.png"),
-        cid: "twitterLogo",
-      },
-      {
-        filename: "G.png",
-        path: path.join(process.cwd(), "public", "G.png"),
-        cid: "giveffektivtLogo",
-      },
-      {
-        filename: "f.png",
-        path: path.join(process.cwd(), "public", "f.png"),
-        cid: "facebookLogo",
-      },
-      {
-        filename: "in.png",
-        path: path.join(process.cwd(), "public", "in.png"),
-        cid: "linkedinLogo",
-      },
-    ],
-    text,
-    html,
-  };
+  const isDonationMonthlyLarge =
+    donation.frequency === "monthly" &&
+    donation.amount >=
+      Number.parseInt(process.env.BCC_DONATION_MONTHLY_LARGE_AMOUNT ?? "0");
 
-  await sendReceiptEmail(letter);
+  if (
+    process.env.BCC_DONATION_LARGE_EMAIL &&
+    (isDonationOnceLarge || isDonationMonthlyLarge)
+  ) {
+    emailParams.setBcc([new Recipient(process.env.BCC_DONATION_LARGE_EMAIL)]);
+  }
+
+  const result = await mailerSend.email.send(emailParams);
+  if (result.statusCode !== 202) {
+    throw new Error(`Failed to send email: ${JSON.stringify(result)}`);
+  }
+
+  if (result.body) {
+    logError(
+      `Email for donation ID ${donation.id} was probably sent, but with possible errors or warnings: ${JSON.stringify(result.body)}`,
+    );
+  }
 }
 
 export async function sendFailedRecurringDonationEmail(
   info: FailedRecurringDonationToEmail,
 ) {
-  const text = failedRecurringDonationTemplate(info);
-  const prefix = process.env.VERCEL_ENV === "production" ? "" : "DEV: ";
-  const suffix =
-    info.recipient === DonationRecipient.GivEffektivt ? " (medlemskab)" : "";
+  const emailParams = new EmailParams()
+    .setTo([new Recipient(info.donor_email)])
+    .setTemplateId(process.env.MAILERSEND_TEMPLATE_MEMBERSHIP)
+    .setPersonalization([
+      {
+        email: info.donor_email,
+        data: {
+          amount: info.amount.toLocaleString("da-DK"),
+          name: info.donor_name ?? null,
+          recipient: info.recipient,
+          payment_link: info.payment_link,
+          subject_prefix:
+            process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
+        },
+      },
+    ]);
 
-  const bcc = process.env.BCC_FAILED_RECURRING_DONATION_EMAIL
-    ? `<${process.env.BCC_FAILED_RECURRING_DONATION_EMAIL}>`
-    : undefined;
+  const result = await mailerSend.email.send(emailParams);
+  if (result.statusCode !== 202) {
+    throw new Error(`Failed to send email: ${JSON.stringify(result)}`);
+  }
 
-  const letter = {
-    from: '"Giv Effektivt Donation" <donation@giveffektivt.dk>',
-    to: `<${info.donor_email}>`,
-    bcc,
-    subject: `${prefix}Betalingskort udløbet${suffix}`,
-    text,
-  };
-
-  await sendDonationEmail(letter);
+  if (result.body) {
+    logError(
+      `Email for failed recurring donation to donor ID ${info.donor_id} was probably sent, but with possible errors or warnings: ${JSON.stringify(result.body)}`,
+    );
+  }
 }
