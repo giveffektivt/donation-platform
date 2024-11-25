@@ -24,6 +24,10 @@ declare global {
       EMAIL_DONATION_USERNAME: string;
       EMAIL_DONATION_PASSWORD: string;
       DEV_WEBSITE_DOMAINS: string;
+      MAILERSEND_API_KEY: string;
+      MAILERSEND_TEMPLATE_DONATION: string;
+      MAILERSEND_TEMPLATE_MEMBERSHIP: string;
+      MAILERSEND_TEMPLATE_PAYMENT_EXPIRED: string;
     }
   }
 }

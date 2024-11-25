@@ -20,6 +20,7 @@ export async function sendFailedRecurringDonationEmails(
 
     try {
       await sendFailedRecurringDonationEmail({
+        donor_id: info.donor_id,
         donor_email: info.donor_email,
         donor_name: info.donor_name,
         recipient: info.recipient,
