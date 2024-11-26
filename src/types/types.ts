@@ -32,6 +32,10 @@ export type SubmitDataGavebrev = {
   minimalIncome?: number;
 };
 
+export type SubmitDataNewsletter = {
+  email: string;
+};
+
 export type SubmitDataGavebrevStatus = {
   id: string;
   status: string;
