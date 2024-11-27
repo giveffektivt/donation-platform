@@ -41,12 +41,7 @@ const setIncomeInput = (Component, adultNo: number): ComponentType => {
     const [store, setStore] = useStore();
     const field = `income${adultNo}`;
 
-    const onValueChange = (value: string) => {
-      const newNumber = Number.parseFloat(value);
-      if (value === "" || !Number.isNaN(newNumber)) {
-        setStore({ [field]: value });
-      }
-    };
+    const onValueChange = (value: string) => setStore({ [field]: value });
 
     return (
       <Component
@@ -316,7 +311,8 @@ const calculateDonationAmount = (store): number => {
   return calculateTotalPostTaxIncome(store) * (store.donationPct / 100);
 };
 
-const calculatePostTax = (income: number): number => {
+const calculatePostTax = (amount: string): number => {
+  const income = parseAmount(amount);
   const amBidrag = income * AM_BIDRAG_PCT;
   const taxable = Math.max(0, income - amBidrag - PERSONFRADRAG);
   const bundSkat = taxable * BUNDSKAT_PCT;
@@ -399,6 +395,9 @@ export const showDebug = (Component): ComponentType => {
         text={`${JSON.stringify(
           {
             ...store,
+            income1: parseAmount(store.income1),
+            income2: parseAmount(store.income2),
+            income3: parseAmount(store.income3),
             householdPostTaxIncome: roundNumber(
               calculateTotalPostTaxIncome(store),
             ),

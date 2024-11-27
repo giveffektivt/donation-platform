@@ -50,7 +50,9 @@ const setField = (Component: any, field: string): ComponentType => {
     const onTap = () => {
       const element = document.querySelector(`.${props.className}`);
       const value = element != null ? element.textContent : "";
-      setStore({ [field]: value });
+      setStore({
+        [field]: field === "amount" ? parseFormatAmount(value) : value,
+      });
     };
 
     return <Component {...props} onTap={onTap} />;
@@ -186,19 +188,33 @@ export const inputAmount = (Component: any): ComponentType => {
   return (props: any) => {
     const [store, setStore] = useStore();
 
-    const onValueChange = (amount: string) =>
-      setStore({ amount: toAmount(amount) });
+    const onValueChange = (amount: string) => setStore({ amount });
 
     const frequency = parseFrequency(store.frequency);
 
     return (
       <Component
         {...props}
-        value={parseAmount(store.amount)}
+        value={store.amount}
         placeholder={frequency === "match" ? "0,1" : "0"}
         onValueChange={onValueChange}
       />
     );
+  };
+};
+
+export const showDonateAmount = (Component: any): ComponentType => {
+  return (props) => {
+    const [store] = useStore();
+    const amount = parseFormatAmount(store.amount);
+    const frequency = parseFrequency(store.frequency);
+    const currency =
+      frequency === "match"
+        ? (store.fundraiserMatchCurrency ?? "kr.")
+        : frequency === "monthly"
+          ? "kr. pr. md."
+          : "kr.";
+    return <Component {...props} title={`Donér ${amount} ${currency}`} />;
   };
 };
 
@@ -207,7 +223,7 @@ export const showCurrency = (Component: any): ComponentType => {
     const [store] = useStore();
     const frequency = parseFrequency(store.frequency);
     const currency =
-      frequency === "match" ? (store.fundraiserMatchCurrency ?? "kr") : "kr";
+      frequency === "match" ? (store.fundraiserMatchCurrency ?? "kr.") : "kr.";
     return <Component {...props} text={`${currency}`} />;
   };
 };
@@ -341,7 +357,8 @@ export const withRecipientVaccinerTilSpædbørn = (
 export const showAmount = (Component: any): ComponentType => {
   return (props) => {
     const [store] = useStore();
-    return <Component {...props} text={`${store.amount}`} />;
+    const amount = parseFormatAmount(store.amount);
+    return <Component {...props} text={`${amount} kr.`} />;
   };
 };
 
@@ -374,7 +391,8 @@ const withVariant = (Component: any, getVariant: any): ComponentType => {
 export const withVariantAmount = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => {
     const frequency = parseFrequency(store.frequency);
-    return [`${frequency}/${store.amount}`, `${frequency}/None`];
+    const amount = parseFormatAmount(store.amount);
+    return [`${frequency}/${amount} kr`, `${frequency}/None`];
   });
 };
 

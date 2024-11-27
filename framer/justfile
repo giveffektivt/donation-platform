@@ -23,4 +23,4 @@ stats:
     @cat Stats.tsx helpers.ts
 
 wealth-calculator:
-    @cat Wealth_Calculator.tsx
+    @cat Wealth_Calculator.tsx helpers.ts

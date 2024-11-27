@@ -1,7 +1,10 @@
 const canSubmitStep1 = (store: any): boolean => {
+  const amount = parseAmount(store.amount);
+  const frequency = parseFrequency(store.frequency);
   return (
-    store.frequency !== "" &&
-    store.amount !== "" &&
+    frequency !== "" &&
+    amount !== "" &&
+    (frequency === "match" ? amount > 0 : amount >= 1) &&
     isCprCvrValid(store.taxDeductible, store.tin)
   );
 };
@@ -58,25 +61,8 @@ const isCprPlausible = (tin: string): boolean => {
   return sum % 11 === 0;
 };
 
-const toAmount = (value: string): string => {
-  const parsed = /^[\d\.]+$/.test(value)
-    ? parseInputAmount(value)
-    : parseAmount(value);
-  return parsed === "" ? "" : `${parsed.toLocaleString("da-DK")} kr`;
-};
-
-const parseInputAmount = (value: string): number | "" => {
-  return value === "" ? "" : Number.parseFloat(value);
-};
-
-const parseAmount = (value: string): number | "" => {
-  return value === ""
-    ? ""
-    : Number.parseFloat(value.replace(/\./g, "").replace(/,/g, "."));
-};
-
 const parseRecipient = (value: string): string => {
-  let index = value ? value.indexOf("(") : -1;
+  const index = value ? value.indexOf("(") : -1;
   return index > -1 ? value.slice(0, index).trim() : value;
 };
 
@@ -127,12 +113,17 @@ const prepareDonationPayload = (store: any) => {
   };
 };
 
+type DonationResponse = {
+  redirect?: string;
+  bank?: { account: string; message: string };
+};
+
 const submitDonation = async (store: any, setStore: any) => {
   try {
     setStore({ isLoading: true });
     track("Donation form step 2 submitted", parseAmount(store.amount));
 
-    const response = await submitForm(
+    const response: DonationResponse = await submitForm(
       store.env,
       "donation",
       prepareDonationPayload(store),

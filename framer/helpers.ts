@@ -17,18 +17,23 @@ const track = (event: string, amount?: number | "") => {
   }
 };
 
-// Server communication
+// Danish amount inputs
 
-type DonationResponse = {
-  redirect?: string;
-  bank?: { account: string; message: string };
+const parseAmount = (value: string): number | "" => {
+  const amount =
+    value === ""
+      ? ""
+      : Number.parseFloat(value.replace(/\./g, "").replace(/,/g, "."));
+  return Number.isNaN(amount) ? "" : amount;
 };
 
-const submitForm = async (
-  env: string,
-  path: string,
-  payload: any,
-): Promise<DonationResponse> => {
+const parseFormatAmount = (value: string): string => {
+  return parseAmount(value).toLocaleString("da-DK");
+};
+
+// Server communication
+
+const submitForm = async (env: string, path: string, payload: any) => {
   const response = await fetch(apiUrl(env, path), {
     method: "POST",
     headers: { "Content-type": "application/json;charset=UTF-8" },
