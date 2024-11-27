@@ -7,6 +7,9 @@ donation:
 membership:
     @cat Membership_Form.tsx helpers.ts helpers-membership.ts
 
+newsletter:
+    @cat Newsletter_Form.tsx helpers.ts helpers-newsletter.ts
+
 fundraiser-admin:
     @cat Fundraiser_Admin.tsx helpers.ts
 
