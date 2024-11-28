@@ -493,8 +493,17 @@ export const withFundraiser = (Component: any): ComponentType => {
           ? window.location.href.split("?")[0].replace(/\/+$/, "")
           : null;
         const id = cleanedUrl?.substring(cleanedUrl.lastIndexOf("/") + 1);
-        if (id == null) {
-          throw new Error("Unable to find ID in the URL");
+        if (id == null || !isUUIDv4.test(id)) {
+          // ignore framer preview
+          if (id?.endsWith(".html")) {
+            setStore({
+              raised: 0,
+              hasError: false,
+              isLoading: false,
+            });
+            return;
+          }
+          throw new Error(`Unable to find ID in the URL, '${id}' is not uuid`);
         }
 
         setStore({ fundraiserId: id });
@@ -571,7 +580,7 @@ export const showFundraiserName = (Component: any): ComponentType => {
   return (props) => {
     const [store] = useStore();
     return store.fundraiserName ? (
-      <Component {...props} text={store.fundraiserName} />
+      <Component {...props} text={`Indsamling: ${store.fundraiserName}`} />
     ) : null;
   };
 };

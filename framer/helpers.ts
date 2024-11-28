@@ -8,6 +8,9 @@ hvis problemet opstår igen. Hvis muligt, så fortæl gerne, hvordan \
 man kan fremprovokere fejlen.
 `;
 
+const isUUIDv4 =
+  /^([0-9a-fA-F]{8})-([0-9a-fA-F]{4})-([1-5][0-9a-fA-F]{3})-([89abAB][0-9a-fA-F]{3})-([0-9a-fA-F]{12})$/;
+
 const track = (event: string, amount?: number | "") => {
   // @ts-ignore
   if (typeof plausible !== "undefined") {

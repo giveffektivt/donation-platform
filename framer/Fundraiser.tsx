@@ -22,8 +22,17 @@ export const loadData = (Component: any): ComponentType => {
           ? window.location.href.split("?")[0].replace(/\/+$/, "")
           : null;
         const id = cleanedUrl?.substring(cleanedUrl.lastIndexOf("/") + 1);
-        if (id == null) {
-          throw new Error("Unable to find ID in the URL");
+        if (id == null || !isUUIDv4.test(id)) {
+          // ignore framer preview
+          if (id?.endsWith(".html")) {
+            setStore({
+              raised: 0,
+              hasError: false,
+              isLoading: false,
+            });
+            return;
+          }
+          throw new Error(`Unable to find ID in the URL, '${id}' is not uuid`);
         }
 
         const response = await fetch(apiUrl("prod", `fundraiser/${id}`));
