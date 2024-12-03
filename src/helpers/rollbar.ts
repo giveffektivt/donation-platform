@@ -6,12 +6,14 @@ const rollbar = new Rollbar({
   captureUnhandledRejections: true,
   environment: process.env.NODE_ENV,
   captureIp: false,
+  transform: (payload: any) => {
+    payload.custom = undefined;
+  },
 });
 
 export const logError = (message: string, error?: unknown) => {
-  const err = toError(error);
-  console.error(message, err);
-  rollbar.error(message, err);
+  console.error(message, error);
+  rollbar.error(message, toError(error));
 };
 
 const toError = (error: unknown) => {
@@ -20,12 +22,16 @@ const toError = (error: unknown) => {
   }
 
   if (error instanceof Error) {
-    return error;
+    return { error: error.message };
+  }
+
+  if (typeof error === "string" || error instanceof String) {
+    return { error: error.toString() };
   }
 
   try {
-    return new Error(JSON.stringify(error));
+    return { error: JSON.stringify(error) };
   } catch {
-    return new Error(String(error));
+    return { error: String(error) };
   }
 };

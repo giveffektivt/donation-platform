@@ -63,7 +63,8 @@ const getChargeStatusFromLatestAct = (change: ScanpayChange) => {
       return ChargeStatus.Error;
     default:
       logError(
-        `Unexpected latest act in Scanpay change (assuming it was charged): ${JSON.stringify(change.acts)}`,
+        "Unexpected latest act in Scanpay change (assuming it was charged)",
+        change.acts,
       );
       return ChargeStatus.Charged;
   }

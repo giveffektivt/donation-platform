@@ -36,7 +36,7 @@ export async function sendNewEmails() {
         }
         await setDonationEmailed(db, donation, EmailedStatus.Yes);
       } catch (err) {
-        logError(`Error sending email for ID "${donation.id}":`, err);
+        logError(`Error sending email for ID "${donation.id}"`, err);
       }
     }
   });
@@ -65,7 +65,8 @@ export async function sendMembershipEmail(donation: DonationToEmail) {
 
   if (result.body) {
     logError(
-      `Email for membership ID ${donation.id} was probably sent, but with possible errors or warnings: ${JSON.stringify(result.body)}`,
+      `Email for membership ID ${donation.id} was probably sent, but with possible errors or warnings`,
+      result.body,
     );
   }
 }
@@ -118,7 +119,8 @@ export async function sendPaymentEmail(
 
   if (result.body) {
     logError(
-      `Email for donation ID ${donation.id} was probably sent, but with possible errors or warnings: ${JSON.stringify(result.body)}`,
+      `Email for donation ID ${donation.id} was probably sent, but with possible errors or warnings`,
+      result.body,
     );
   }
 }
@@ -150,7 +152,8 @@ export async function sendFailedRecurringDonationEmail(
 
   if (result.body) {
     logError(
-      `Email for failed recurring donation to donor ID ${info.donor_id} was probably sent, but with possible errors or warnings: ${JSON.stringify(result.body)}`,
+      `Email for failed recurring donation to donor ID ${info.donor_id} was probably sent, but with possible errors or warnings`,
+      result.body,
     );
   }
 }
