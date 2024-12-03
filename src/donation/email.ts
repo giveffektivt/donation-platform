@@ -50,9 +50,10 @@ export async function sendMembershipEmail(donation: DonationToEmail) {
       {
         email: donation.email,
         data: {
-          donation_id: donation.id,
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
+          donation_id: donation.id,
+          recipient: donation.recipient,
         },
       },
     ]);
@@ -80,14 +81,15 @@ export async function sendPaymentEmail(
       {
         email: donation.email,
         data: {
-          amount: donation.amount.toLocaleString("da-DK"),
-          donation_id: donation.id,
-          frequency: donation.frequency,
-          tax_deductible: donation.tax_deductible,
-          recipient: donation.recipient,
-          bank_msg: bank?.msg ?? null,
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
+          donation_id: donation.id,
+          recipient: donation.recipient,
+
+          amount: donation.amount.toLocaleString("da-DK"),
+          frequency: donation.frequency,
+          tax_deductible: donation.tax_deductible,
+          bank_msg: bank?.msg ?? null,
         },
       },
     ]);
