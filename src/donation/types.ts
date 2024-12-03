@@ -121,9 +121,8 @@ export type Fundraiser = {
   id: string;
   email: string;
   title: string;
-  description: string;
-  media: string;
-  target: number;
+  has_match: boolean;
+  match_currency: string | null;
   key: string;
   created_at: Date;
   updated_at: Date;

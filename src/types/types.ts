@@ -32,6 +32,13 @@ export type SubmitDataGavebrev = {
   minimalIncome?: number;
 };
 
+export type SubmitDataNewFundraiser = {
+  title: string;
+  email: string;
+  has_activity_match: boolean;
+  activity_match_currency?: string;
+};
+
 export type SubmitDataNewsletter = {
   email: string;
 };

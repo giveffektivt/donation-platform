@@ -4,6 +4,7 @@ export * from "./submitForm";
 export * from "./texts";
 export * from "./newsletter";
 export * from "./validationSchemaDonation";
+export * from "./validationSchemaFundraiser";
 export * from "./validationSchemaGavebrev";
 export * from "./validationSchemaMembership";
 export * from "./validationSchemaNewsletter";

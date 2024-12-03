@@ -212,10 +212,15 @@ export async function insertFundraiser(
 ): Promise<Fundraiser> {
   return (
     await client.query(
-      `insert into fundraiser (email, title)
-       values ($1, $2)
+      `insert into fundraiser (email, title, has_match, match_currency)
+       values ($1, $2, $3, $4)
        returning *`,
-      [fundraiser.email, fundraiser.title],
+      [
+        fundraiser.email,
+        fundraiser.title,
+        fundraiser.has_match,
+        fundraiser.match_currency,
+      ],
     )
   ).rows[0];
 }
