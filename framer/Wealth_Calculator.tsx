@@ -138,7 +138,7 @@ export const impactValues = (Component: any): ComponentType => {
     );
     const myggenet = Math.round(donationAmount / 35).toLocaleString("da-DK");
     const vitaminA = Math.round(donationAmount / 7).toLocaleString("da-DK");
-    const vacciner = Math.round(donationAmount / 1000).toLocaleString("da-DK");
+    const vacciner = Math.round(donationAmount / 130).toLocaleString("da-DK");
 
     return (
       <Component
