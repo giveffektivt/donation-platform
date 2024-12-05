@@ -43,9 +43,12 @@ export async function POST(req: Request) {
 
     if (submitData.subscribeToNewsletter) {
       try {
-        await SubscribeToNewsletter(submitData.email, donorId);
+        await SubscribeToNewsletter(submitData.email);
       } catch (err) {
-        logError("api/donation: Error subscribing to newsletter: ", err);
+        logError(
+          `api/donation: Error subscribing ${donorId} to newsletter`,
+          err,
+        );
       }
     }
 

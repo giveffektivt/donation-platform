@@ -14,9 +14,12 @@ export async function POST(req: Request) {
       .validate(await req.json());
 
     try {
-      await SubscribeToNewsletter(submitData.email, submitData.email);
+      await SubscribeToNewsletter(submitData.email);
     } catch (err) {
-      logError("api/newsletter: Error subscribing to newsletter: ", err);
+      logError(
+        `api/newsletter: Error subscribing ${submitData.email} to newsletter`,
+        err,
+      );
     }
 
     return Response.json({ message: "OK" });
