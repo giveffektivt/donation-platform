@@ -107,6 +107,7 @@ export async function sendPaymentEmail(
 
   if (
     process.env.BCC_DONATION_LARGE_EMAIL &&
+    process.env.BCC_DONATION_LARGE_EMAIL !== donation.email &&
     (isDonationOnceLarge || isDonationMonthlyLarge)
   ) {
     emailParams.setBcc([new Recipient(process.env.BCC_DONATION_LARGE_EMAIL)]);
