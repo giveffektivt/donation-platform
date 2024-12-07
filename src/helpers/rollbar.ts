@@ -12,8 +12,9 @@ const rollbar = new Rollbar({
 });
 
 export const logError = (message: string, error?: unknown) => {
-  console.error(message, error);
-  rollbar.error(message, toError(error));
+  const err = toError(error);
+  console.error(message, ...(err !== undefined ? [err] : []));
+  rollbar.error(message, ...(err !== undefined ? [err] : []));
 };
 
 const toError = (error: unknown) => {
