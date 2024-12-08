@@ -4,7 +4,7 @@ const rollbar = new Rollbar({
   accessToken: process.env.ROLLBAR_SERVER_TOKEN,
   captureUncaught: true,
   captureUnhandledRejections: true,
-  environment: process.env.NODE_ENV,
+  environment: process.env.VERCEL_ENV,
   captureIp: false,
   transform: (payload: any) => {
     payload.custom = undefined;
