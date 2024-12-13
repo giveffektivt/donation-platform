@@ -17,6 +17,12 @@ export async function getPendingDistribution(
   return (await client.query("select * from pending_distribution")).rows;
 }
 
+export async function getTransferOverview(
+  client: PoolClient,
+): Promise<TransferredDistribution[]> {
+  return (await client.query("select * from transfer_overview")).rows;
+}
+
 export async function getTransferredDistribution(
   client: PoolClient,
 ): Promise<TransferredDistribution[]> {

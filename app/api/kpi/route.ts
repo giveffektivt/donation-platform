@@ -6,6 +6,7 @@ import {
   getTransferredDistribution,
   getTimeDistribution,
   logError,
+  getTransferOverview,
 } from "src";
 
 export async function GET(_: Request) {
@@ -18,6 +19,7 @@ export async function GET(_: Request) {
       kpi: await getKpi(db),
       pending: await getPendingDistribution(db),
       transferred: await getTransferredDistribution(db),
+      transfer_overview: await getTransferOverview(db),
       collected: await getTimeDistribution(db),
     };
 
