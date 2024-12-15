@@ -1,3 +1,4 @@
+import { addYears, differenceInDays, startOfYear } from "date-fns";
 import { EmailParams, MailerSend, Recipient } from "mailersend";
 import {
   type BankTransferInfo,
@@ -75,6 +76,11 @@ export async function sendPaymentEmail(
   donation: DonationToEmail,
   bank?: BankTransferInfo,
 ) {
+  const days_until_next_year = differenceInDays(
+    startOfYear(addYears(new Date(), 1)),
+    new Date(),
+  );
+
   const emailParams = new EmailParams()
     .setTo([new Recipient(donation.email)])
     .setTemplateId(process.env.MAILERSEND_TEMPLATE_DONATION)
@@ -91,6 +97,7 @@ export async function sendPaymentEmail(
           frequency: donation.frequency,
           tax_deductible: donation.tax_deductible,
           bank_msg: bank?.msg ?? null,
+          days_until_next_year,
         },
       },
     ]);
@@ -136,12 +143,12 @@ export async function sendFailedRecurringDonationEmail(
       {
         email: info.donor_email,
         data: {
+          subject_prefix:
+            process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           amount: info.amount.toLocaleString("da-DK"),
           name: info.donor_name ?? null,
           recipient: info.recipient,
           payment_link: info.payment_link,
-          subject_prefix:
-            process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
         },
       },
     ]);
