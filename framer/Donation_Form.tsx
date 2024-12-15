@@ -585,6 +585,15 @@ export const showFundraiserName = (Component: any): ComponentType => {
   };
 };
 
+export const showNearNewYear = (Component: any): ComponentType => {
+  return (props: any) => {
+    const now = new Date();
+    const newYear = new Date(now.getFullYear() + 1, 0, 1);
+    const daysUntilNewYear = (newYear - now) / (1000 * 60 * 60 * 24);
+    return daysUntilNewYear > 7 ? null : <Component {...props} />;
+  };
+};
+
 export const inputMessage = (Component: any): ComponentType => {
   return (props: any) => {
     const [store, setStore] = useStore();
