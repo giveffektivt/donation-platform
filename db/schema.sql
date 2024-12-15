@@ -1,6 +1,7 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -382,7 +383,12 @@ CREATE TABLE giveffektivt._transfer (
     recipient giveffektivt.transfer_recipient NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
+    deleted_at timestamp with time zone,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    unit_cost_conversion numeric,
+    unit_cost_external numeric,
+    life_cost_external numeric,
+    exchange_rate numeric
 );
 
 
@@ -452,81 +458,75 @@ CREATE VIEW giveffektivt.annual_email_report AS
  WITH const AS (
          SELECT date_trunc('year'::text, (now() - '9 mons'::interval)) AS year_from,
             date_trunc('year'::text, (now() + '3 mons'::interval)) AS year_to
+        ), data AS (
+         SELECT p.tin,
+            p.email,
+            d_1.tax_deductible,
+            c_1.transfer_id,
+            sum(d_1.amount) AS total
+           FROM (((const
+             CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+             JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
+             JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+          GROUP BY p.tin, p.email, d_1.tax_deductible, c_1.transfer_id
         ), members_confirmed AS (
          SELECT DISTINCT ON (p.tin) p.tin,
-            p.email,
-            p.id AS donor_id
-           FROM ((giveffektivt.donor_with_sensitive_info p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= date_trunc('year'::text, now())))
-        ), data AS (
-         SELECT (array_agg(p.id))[1] AS donor_id,
-            p.tin,
-            p.email,
-            d.tax_deductible,
-            sum(d.amount) AS total,
-                CASE
-                    WHEN (m.tin IS NOT NULL) THEN true
-                    ELSE false
-                END AS is_member
-           FROM ((((const
+            p.email
+           FROM (((const
              CROSS JOIN giveffektivt.donor_with_sensitive_info p)
-             LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-             LEFT JOIN members_confirmed m ON ((m.tin = p.tin)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
-          GROUP BY p.tin, m.tin, p.email, d.tax_deductible
+             JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
+             JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+        ), email_to_tin_guess AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            p.tin
+           FROM (((const
+             CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+             JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
+             JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (p.tin IS NOT NULL))
+          ORDER BY p.email, p.tin, c_1.created_at DESC
         ), with_tax AS (
-         SELECT data.donor_id,
-            data.tin,
+         SELECT data.tin,
             data.email,
             data.tax_deductible,
-            data.total,
-            data.is_member
+            data.transfer_id,
+            data.total
            FROM data
           WHERE data.tax_deductible
         ), with_tin_no_tax AS (
-         SELECT data.donor_id,
-            data.tin,
+         SELECT data.tin,
             data.email,
             data.tax_deductible,
-            data.total,
-            data.is_member
+            data.transfer_id,
+            data.total
            FROM data
           WHERE ((NOT data.tax_deductible) AND (data.tin IS NOT NULL))
         ), with_no_tin_no_tax AS (
-         SELECT data.donor_id,
-            data.tin,
+         SELECT data.tin,
             data.email,
             data.tax_deductible,
-            data.total,
-            data.is_member
+            data.transfer_id,
+            data.total
            FROM data
           WHERE ((NOT data.tax_deductible) AND (data.tin IS NULL))
         )
- SELECT COALESCE(a.donor_id, b.donor_id, c.donor_id) AS donor_id,
-    COALESCE(a.tin, b.tin) AS tin,
+ SELECT COALESCE(a.tin, b.tin, d.tin) AS tin,
     COALESCE(a.email, b.email, c.email) AS email,
-    COALESCE(a.is_member, b.is_member, c.is_member) AS is_member,
-    a.total AS tax_deductible,
-    NULLIF((COALESCE(b.total, (0)::numeric) + COALESCE(c.total, (0)::numeric)), (0)::numeric) AS not_deductible,
-    ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS total
-   FROM ((with_tax a
-     FULL JOIN with_tin_no_tax b ON (((a.tin = b.tin) AND (a.email = b.email))))
-     FULL JOIN with_no_tin_no_tax c ON ((COALESCE(a.email, b.email) = c.email)))
-UNION ALL
- SELECT m.donor_id,
-    m.tin,
-    m.email,
-    true AS is_member,
-    NULL::numeric AS tax_deductible,
-    NULL::numeric AS not_deductible,
-    NULL::numeric AS total
-   FROM (members_confirmed m
-     LEFT JOIN data d ON ((d.tin = m.tin)))
-  WHERE (d.tin IS NULL)
-  ORDER BY 3;
+    ((COALESCE(a.tin, b.tin) IS NULL) AND (d.tin IS NOT NULL)) AS is_tin_guessed,
+    (length(COALESCE(a.tin, b.tin, d.tin, ''::text)) = 8) AS is_company,
+    (e.tin IS NOT NULL) AS is_member,
+    COALESCE(a.transfer_id, b.transfer_id, c.transfer_id) AS transfer_id,
+    a.total AS amount_tax_deductible,
+    NULLIF((COALESCE(b.total, (0)::numeric) + COALESCE(c.total, (0)::numeric)), (0)::numeric) AS amount_not_tax_deductible,
+    ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS amount_total
+   FROM ((((with_tax a
+     FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.transfer_id IS DISTINCT FROM b.transfer_id)))))
+     FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.transfer_id, b.transfer_id) IS DISTINCT FROM c.transfer_id)))))
+     LEFT JOIN email_to_tin_guess d ON ((COALESCE(a.email, b.email, c.email) = d.email)))
+     LEFT JOIN members_confirmed e ON ((COALESCE(a.tin, b.tin, d.tin) = e.tin)))
+  ORDER BY COALESCE(a.email, b.email, c.email), COALESCE(a.tin, b.tin, d.tin), COALESCE(a.transfer_id, b.transfer_id, c.transfer_id);
 
 
 --
@@ -1460,7 +1460,12 @@ CREATE VIEW giveffektivt.time_distribution AS
 
 CREATE VIEW giveffektivt.transfer AS
  SELECT id,
+    earmark,
     recipient,
+    unit_cost_external,
+    unit_cost_conversion,
+    life_cost_external,
+    exchange_rate,
     created_at,
     updated_at
    FROM giveffektivt._transfer
@@ -1474,14 +1479,39 @@ CREATE VIEW giveffektivt.transfer AS
 
 CREATE VIEW giveffektivt.transfer_overview AS
  SELECT t.id,
-    t.recipient,
-    round(sum(d.amount)) AS dkk_total,
-    max(c.created_at) AS computed,
-    t.created_at AS transferred
+    t.earmark,
+    (
+        CASE
+            WHEN (t.created_at > now()) THEN 'Forventet: '::text
+            ELSE ''::text
+        END || t.recipient) AS recipient,
+        CASE
+            WHEN (t.recipient = 'Against Malaria Foundation'::giveffektivt.transfer_recipient) THEN 'Antimalaria myggenet udleveret'::text
+            WHEN (t.recipient = 'Malaria Consortium'::giveffektivt.transfer_recipient) THEN 'Malariamedicin udleveret'::text
+            WHEN (t.recipient = 'Helen Keller International'::giveffektivt.transfer_recipient) THEN 'A-vitamintilskud udleveret'::text
+            WHEN (t.recipient = 'New Incentives'::giveffektivt.transfer_recipient) THEN 'Vaccinationsprogrammer motiveret'::text
+            WHEN (t.recipient = 'Give Directly'::giveffektivt.transfer_recipient) THEN 'Dollars modtaget'::text
+            WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure udleveret'::text
+            ELSE NULL::text
+        END AS unit,
+    round(sum(d.amount)) AS total_dkk,
+    round(max(t.unit_cost_external), 2) AS unit_cost_external,
+    round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
+    round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
+    round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
+    round(max(t.life_cost_external), 2) AS life_cost_external,
+    round((max(t.life_cost_external) * max(t.exchange_rate)), 2) AS life_cost_dkk,
+    round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
+    max(c.created_at) AS computed_at,
+        CASE
+            WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
+            ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
+        END AS transferred_at
    FROM ((giveffektivt.donation d
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-     JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-  GROUP BY t.id, t.recipient, t.created_at
+     JOIN giveffektivt.transfer t ON (((c.transfer_id = t.id) OR ((c.transfer_id IS NULL) AND (d.recipient = t.earmark) AND (t.created_at > now())))))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+  GROUP BY t.id, t.earmark, t.recipient, t.created_at
   ORDER BY t.created_at, (sum(d.amount)) DESC;
 
 
@@ -1932,4 +1962,6 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20241113220928'),
     ('20241120215013'),
     ('20241121213227'),
-    ('20241123140526');
+    ('20241123140526'),
+    ('20241211133732'),
+    ('20241212214448');
