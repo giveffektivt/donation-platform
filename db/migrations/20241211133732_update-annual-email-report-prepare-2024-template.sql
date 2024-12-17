@@ -43,6 +43,19 @@ members_confirmed as (
         and d.recipient = 'Giv Effektivt'
         and c.created_at <@ tstzrange(year_from, year_to, '[)')
 ),
+active_gavebrev as (
+    select
+        tin
+    from
+        const
+        cross join gavebrev g
+        inner join donor_with_sensitive_info p on g.donor_id = p.id
+    where
+        started_at <= year_from
+        and stopped_at > year_from
+    group by
+        tin
+),
 email_to_tin_guess as (
     select distinct on (email)
         p.email,
@@ -93,6 +106,7 @@ select
     and d.tin is not null as is_tin_guessed,
     length(coalesce(a.tin, b.tin, d.tin, '')) = 8 as is_company,
     e.tin is not null as is_member,
+    f.tin is not null as has_gavebrev,
     coalesce(a.transfer_id, b.transfer_id, c.transfer_id) as transfer_id,
     a.total as amount_tax_deductible,
     nullif(coalesce(b.total, 0) + coalesce(c.total, 0), 0) as amount_not_tax_deductible,
@@ -106,6 +120,7 @@ from
         and coalesce(a.transfer_id, b.transfer_id) is not distinct from c.transfer_id
     left join email_to_tin_guess d on coalesce(a.email, b.email, c.email) = d.email
     left join members_confirmed e on coalesce(a.tin, b.tin, d.tin) = e.tin
+    left join active_gavebrev f on coalesce(a.tin, b.tin) = f.tin
 order by
     email,
     tin,

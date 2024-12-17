@@ -451,6 +451,25 @@ CREATE VIEW giveffektivt.donor_with_sensitive_info AS
 
 
 --
+-- Name: gavebrev; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.gavebrev AS
+ SELECT id,
+    donor_id,
+    status,
+    type,
+    amount,
+    minimal_income,
+    started_at,
+    stopped_at,
+    created_at,
+    updated_at
+   FROM giveffektivt._gavebrev
+  WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: annual_email_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -478,6 +497,13 @@ CREATE VIEW giveffektivt.annual_email_report AS
              JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
              JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
           WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+        ), active_gavebrev AS (
+         SELECT p.tin
+           FROM ((const
+             CROSS JOIN giveffektivt.gavebrev g)
+             JOIN giveffektivt.donor_with_sensitive_info p ON ((g.donor_id = p.id)))
+          WHERE ((g.started_at <= const.year_from) AND (g.stopped_at > const.year_from))
+          GROUP BY p.tin
         ), email_to_tin_guess AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.tin
@@ -517,15 +543,17 @@ CREATE VIEW giveffektivt.annual_email_report AS
     ((COALESCE(a.tin, b.tin) IS NULL) AND (d.tin IS NOT NULL)) AS is_tin_guessed,
     (length(COALESCE(a.tin, b.tin, d.tin, ''::text)) = 8) AS is_company,
     (e.tin IS NOT NULL) AS is_member,
+    (f.tin IS NOT NULL) AS has_gavebrev,
     COALESCE(a.transfer_id, b.transfer_id, c.transfer_id) AS transfer_id,
     a.total AS amount_tax_deductible,
     NULLIF((COALESCE(b.total, (0)::numeric) + COALESCE(c.total, (0)::numeric)), (0)::numeric) AS amount_not_tax_deductible,
     ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS amount_total
-   FROM ((((with_tax a
+   FROM (((((with_tax a
      FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.transfer_id IS DISTINCT FROM b.transfer_id)))))
      FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.transfer_id, b.transfer_id) IS DISTINCT FROM c.transfer_id)))))
      LEFT JOIN email_to_tin_guess d ON ((COALESCE(a.email, b.email, c.email) = d.email)))
      LEFT JOIN members_confirmed e ON ((COALESCE(a.tin, b.tin, d.tin) = e.tin)))
+     LEFT JOIN active_gavebrev f ON ((COALESCE(a.tin, b.tin) = f.tin)))
   ORDER BY COALESCE(a.email, b.email, c.email), COALESCE(a.tin, b.tin, d.tin), COALESCE(a.transfer_id, b.transfer_id, c.transfer_id);
 
 
@@ -552,25 +580,6 @@ CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND d.tax_deductible)
   GROUP BY p.tin;
-
-
---
--- Name: gavebrev; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.gavebrev AS
- SELECT id,
-    donor_id,
-    status,
-    type,
-    amount,
-    minimal_income,
-    started_at,
-    stopped_at,
-    created_at,
-    updated_at
-   FROM giveffektivt._gavebrev
-  WHERE (deleted_at IS NULL);
 
 
 --
