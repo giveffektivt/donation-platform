@@ -384,11 +384,11 @@ CREATE TABLE giveffektivt._transfer (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
-    earmark giveffektivt.donation_recipient NOT NULL,
-    unit_cost_conversion numeric,
     unit_cost_external numeric,
     life_cost_external numeric,
-    exchange_rate numeric
+    exchange_rate numeric,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    unit_cost_conversion numeric
 );
 
 
@@ -1158,13 +1158,13 @@ CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
  SELECT donor_id,
     year,
     income_inferred
-   FROM ( SELECT DISTINCT ON (c.donor_id) c.donor_id,
-            (c.year + (1)::numeric) AS year,
-            COALESCE(c.income_verified, COALESCE(c.income_preliminary, c.income_inferred)) AS income_inferred
-           FROM (giveffektivt.gavebrev_checkin c
-             JOIN giveffektivt.gavebrev g ON ((g.donor_id = c.donor_id)))
+   FROM ( SELECT DISTINCT ON (g.donor_id) g.donor_id,
+            COALESCE((c.year + (1)::numeric), (date_part('year'::text, g.created_at))::numeric) AS year,
+            COALESCE(c.income_verified, COALESCE(c.income_preliminary, COALESCE(c.income_inferred, (0)::numeric))) AS income_inferred
+           FROM (giveffektivt.gavebrev g
+             LEFT JOIN giveffektivt.gavebrev_checkin c ON ((g.donor_id = c.donor_id)))
           WHERE ((g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.stopped_at >= now()))
-          ORDER BY c.donor_id, c.year DESC) s
+          ORDER BY g.donor_id, c.year DESC) s
   WHERE ((year)::double precision <= date_part('year'::text, now()));
 
 
@@ -1973,4 +1973,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20241121213227'),
     ('20241123140526'),
     ('20241211133732'),
-    ('20241212214448');
+    ('20241212214448'),
+    ('20241230123042');
