@@ -8,7 +8,7 @@ const useStore = createStore({
   dkk_total: null,
   dkk_last_30_days: null,
   monthly_donors: null,
-  members_confirmed: null,
+  members: null,
 });
 
 export const loadKpi = (Component: any): ComponentType => {
@@ -36,7 +36,9 @@ export const loadKpi = (Component: any): ComponentType => {
           })}M`,
           dkk_last_30_days: body.kpi.dkk_last_30_days.toLocaleString("da-DK"),
           monthly_donors: body.kpi.monthly_donors.toLocaleString("da-DK"),
-          members_confirmed: body.kpi.members_confirmed.toLocaleString("da-DK"),
+          members: (
+            body.kpi.members_confirmed + body.kpi.members_pending_renewal
+          ).toLocaleString("da-DK"),
         });
       };
 
@@ -62,7 +64,7 @@ export const showMonthlyDonors = (Component: any): ComponentType => {
 };
 
 export const showMembersConfirmed = (Component: any): ComponentType => {
-  return showKpi(Component, "members_confirmed");
+  return showKpi(Component, "members");
 };
 
 const showKpi = (Component: any, kpi: string): ComponentType => {
