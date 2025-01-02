@@ -15,7 +15,10 @@ export async function GET(req: Request) {
     db = await dbClient();
 
     const result = {
-      ignored_renewals: await getIgnoredRenewals(db),
+      ignored_renewals: (await getIgnoredRenewals(db)).map((r) => ({
+        ...r,
+        renewal_link: `${process.env.RENEW_PAYMENT_INFO_URL}?id=${r.donation_id}`,
+      })),
     };
 
     return Response.json(result);

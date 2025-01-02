@@ -1188,6 +1188,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
           ORDER BY p.id, c.created_at DESC
         ), never_activated AS (
          SELECT DISTINCT ON (p.id) p.id,
+            d.id AS donation_id,
             d.created_at
            FROM ((giveffektivt.donor_with_contact_info p
              LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
@@ -1212,6 +1213,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
     lc.email,
     lc.amount,
     lc.recipient,
+    na.donation_id,
     ((now())::date - (na.created_at)::date) AS days_ago
    FROM (((last_charge lc
      JOIN never_activated na ON ((lc.id = na.id)))
@@ -1974,4 +1976,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20241123140526'),
     ('20241211133732'),
     ('20241212214448'),
-    ('20241230123042');
+    ('20241230123042'),
+    ('20250102125637');
