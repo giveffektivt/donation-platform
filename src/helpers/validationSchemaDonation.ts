@@ -24,9 +24,9 @@ export const validationSchemaDonation = {
       DonationRecipient.GivEffektivtsAnbefaling,
       DonationRecipient.MedicinModMalaria,
       DonationRecipient.MyggenetModMalaria,
-      DonationRecipient.StorOgVelkendtEffekt,
       DonationRecipient.VaccinerTilSpædbørn,
       DonationRecipient.VitaminModMangelsygdomme,
+      DonationRecipient.KontanterOverførslerTilVerdensFattigste,
     ]),
   frequency: yup
     .string()
