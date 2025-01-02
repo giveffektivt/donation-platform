@@ -235,11 +235,11 @@ export const textImpact = (Component): ComponentType => {
 const PPP_FACTOR = 6.9;
 // since 2017 till now - same year as data in wealthMountainGraphData below https://www.dst.dk/da/Statistik/emner/oekonomi/prisindeks/forbrugerprisindeks
 const CUMULATIVE_INFLATION_PCT = 0.2;
-// 2024 https://skat.dk/hjaelp/satser
-const PERSONFRADRAG = 49700;
+// 2025 https://skat.dk/hjaelp/satser
+const PERSONFRADRAG = 51600;
 const AM_BIDRAG_PCT = 0.08;
 const TOP_SKAT_PCT = 0.15;
-const TOP_SKAT_THRESHOLD = 588900;
+const TOP_SKAT_THRESHOLD = 611800;
 const KOMMUNE_SKAT_PCT = 0.251;
 const BUNDSKAT_PCT = 0.1201;
 const SKATTELOFT_PCT = 0.5207;
