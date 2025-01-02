@@ -153,6 +153,15 @@ export async function sendFailedRecurringDonationEmail(
       },
     ]);
 
+  if (
+    process.env.BCC_FAILED_RECURRING_DONATION_EMAIL &&
+    process.env.BCC_FAILED_RECURRING_DONATION_EMAIL !== info.donor_email
+  ) {
+    emailParams.setBcc([
+      new Recipient(process.env.BCC_FAILED_RECURRING_DONATION_EMAIL),
+    ]);
+  }
+
   const result = await mailerSend.email.send(emailParams);
   if (result.statusCode !== 202) {
     throw new Error(`Failed to send email: ${JSON.stringify(result)}`);
