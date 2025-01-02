@@ -1,6 +1,5 @@
 export * from "./payment";
 export * from "./rollbar";
-export * from "./submitForm";
 export * from "./newsletter";
 export * from "./validationSchemaDonation";
 export * from "./validationSchemaFundraiser";
