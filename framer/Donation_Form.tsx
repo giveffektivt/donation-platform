@@ -114,48 +114,6 @@ export const trackStotNu = (Component: any): ComponentType => {
   };
 };
 
-const preselectRecipient = (
-  Component: any,
-  preselectedRecipient: string,
-): ComponentType => {
-  return (props) => {
-    // const [_, setStore] = useStore()
-    // const onTap = () => setStore({ preselectedRecipient })
-    // return <Component {...props} onTap={onTap} />
-    return <Component {...props} />;
-  };
-};
-
-export const preselectRecipientGivEffektivtsAnbefaling = (
-  Component: any,
-): ComponentType => {
-  return preselectRecipient(Component, "Giv Effektivts anbefaling");
-};
-
-export const preselectRecipientMyggenetModMalaria = (
-  Component: any,
-): ComponentType => {
-  return preselectRecipient(Component, "Myggenet mod malaria");
-};
-
-export const preselectRecipientMedicinModMalaria = (
-  Component: any,
-): ComponentType => {
-  return preselectRecipient(Component, "Medicin mod malaria");
-};
-
-export const preselectRecipientVitaminModMangelsygdomme = (
-  Component: any,
-): ComponentType => {
-  return preselectRecipient(Component, "Vitamin mod mangelsygdomme");
-};
-
-export const preselectRecipientVaccinerTilSpædbørn = (
-  Component: any,
-): ComponentType => {
-  return preselectRecipient(Component, "Vacciner til spædbørn");
-};
-
 // Checkboxes
 
 export const toggleRulesAccepted = (Component: any): ComponentType => {
@@ -319,36 +277,42 @@ const withRecipient = (Component: any, init: any): ComponentType => {
 export const withRecipientMyggenetModMalaria = (
   Component: any,
 ): ComponentType => {
-  return withRecipient(
-    Component,
-    (setStore) => {}, // setStore({ preselectedRecipient: "Myggenet mod malaria" })
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Myggenet mod malaria" }),
   );
 };
 
 export const withRecipientMedicinModMalaria = (
   Component: any,
 ): ComponentType => {
-  return withRecipient(
-    Component,
-    (setStore) => {}, // setStore({ preselectedRecipient: "Medicin mod malaria" })
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Medicin mod malaria" }),
   );
 };
 
 export const withRecipientVitaminModMangelsygdomme = (
   Component: any,
 ): ComponentType => {
-  return withRecipient(
-    Component,
-    (setStore) => {}, // setStore({ preselectedRecipient: "Vitamin mod mangelsygdomme" })
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Vitamin mod mangelsygdomme" }),
   );
 };
 
 export const withRecipientVaccinerTilSpædbørn = (
   Component: any,
 ): ComponentType => {
-  return withRecipient(
-    Component,
-    (setStore) => {}, // setStore({ preselectedRecipient: "Vacciner til spædbørn" })
+  return withRecipient(Component, (setStore) =>
+    setStore({ preselectedRecipient: "Vacciner til spædbørn" }),
+  );
+};
+
+export const withRecipientKontantoverførslerTilVerdensFattigste = (
+  Component: any,
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({
+      preselectedRecipient: "Kontantoverførsler til verdens fattigste",
+    }),
   );
 };
 
