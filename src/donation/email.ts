@@ -138,7 +138,7 @@ export async function sendFailedRecurringDonationEmail(
 ) {
   const emailParams = new EmailParams()
     .setTo([new Recipient(info.donor_email)])
-    .setTemplateId(process.env.MAILERSEND_TEMPLATE_MEMBERSHIP)
+    .setTemplateId(process.env.MAILERSEND_TEMPLATE_PAYMENT_EXPIRED)
     .setPersonalization([
       {
         email: info.donor_email,
