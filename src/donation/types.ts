@@ -6,7 +6,7 @@ export enum DonationRecipient {
   MedicinModMalaria = "Medicin mod malaria",
   VitaminModMangelsygdomme = "Vitamin mod mangelsygdomme",
   VaccinerTilSpædbørn = "Vacciner til spædbørn",
-  KontanterOverførslerTilVerdensFattigste = "Kontanter overførsler til verdens fattigste",
+  KontantoverførslerTilVerdensFattigste = "Kontantoverførsler til verdens fattigste",
 }
 
 export enum DonationFrequency {
