@@ -6,17 +6,20 @@ export async function POST(req: Request) {
       throw new Error("CRON_API_KEY is not defined");
     }
 
-    if (
-      req.headers.get("Authorization") !== `Bearer ${process.env.CRON_API_KEY}`
-    ) {
+    const auth = req.headers.get("Authorization");
+    if (auth !== `Bearer ${process.env.CRON_API_KEY}`) {
       logError("api/cron: Unauthorized", {
         req: {
-          len: req.headers.get("Authorization")?.length,
-          pref: req.headers.get("Authorization")?.substring(0, 3),
+          len: auth?.length,
+          pref: auth?.substring(0, 10),
+          suf: auth?.substring(auth.length - 3),
         },
         env: {
           len: process.env.CRON_API_KEY?.length,
           pref: process.env.CRON_API_KEY?.substring(0, 3),
+          suf: process.env.CRON_API_KEY?.substring(
+            process.env.CRON_API_KEY.length - 3,
+          ),
         },
       });
       return Response.json({ message: "Unauthorized" }, { status: 401 });
