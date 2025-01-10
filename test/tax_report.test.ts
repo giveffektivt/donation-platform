@@ -1,5 +1,5 @@
 import { subMonths, subYears } from "date-fns";
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
   ChargeStatus,
   dbBeginTransaction,
@@ -7,8 +7,8 @@ import {
   dbRollbackTransaction,
   DonationFrequency,
   DonationRecipient,
-  DonorWithSensitiveInfo,
-  Gavebrev,
+  type DonorWithSensitiveInfo,
+  type Gavebrev,
   GavebrevType,
   insertDonationViaQuickpay,
   insertDonorWithSensitiveInfo,
@@ -43,12 +43,26 @@ test("Usual donations get reported as 'A' in full, regardless of maximum tax ded
 
   await donate(db, { tin: "111111-1111", amount: 10_000 });
   await donate(db, { tin: "222222-2222", amount: 100_000 });
-  await donate(db, { tin: "333333-3333", amount: 100_000, tax_deductible: false });
+  await donate(db, {
+    tin: "333333-3333",
+    amount: 100_000,
+    tax_deductible: false,
+  });
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 10_000, aconto_debt: 0 },
-    { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 100_000, aconto_debt: 0 },
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      aconto_debt: 0,
+    },
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "A",
+      total: 100_000,
+      aconto_debt: 0,
+    },
     // 333333-3333 does not get included in the tax report
   ]);
 });
@@ -58,32 +72,69 @@ test("Usual donations of the same TIN get all summed up and reported as 'A'", as
 
   await donate(db, { tin: "111111-1111", amount: 10_000 });
   await donate(db, { tin: "111111-1111", amount: 100_000 });
-  await donate(db, { tin: "111111-1111", amount: 100_000, tax_deductible: false });
+  await donate(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    tax_deductible: false,
+  });
 
   const taxReport = await findAnnualTaxReport(db);
-  expect(taxReport).toMatchObject([{ tin: "111111-1111", ll8a_or_gavebrev: "A", total: 110_000, aconto_debt: 0 }]);
+  expect(taxReport).toMatchObject([
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 110_000,
+      aconto_debt: 0,
+    },
+  ]);
 });
 
 test("Gavebrev donations get reported as 'L' in full when within limits set by the gavebrev agreement", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", amount: 100_000, when_income_over: 0 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 100_000,
+    when_income_over: 0,
+  });
   await gavebrev(db, { tin: "333333-3333", percentage: 10, of_income_over: 0 });
   await gavebrev(db, { tin: "444444-4444", percentage: 10, of_income_over: 0 });
 
   await incomeEveryone(db, { income_verified: 1_000_000 });
 
   await donate(db, { tin: "111111-1111", amount: 100_000 });
-  await donate(db, { tin: "222222-2222", amount: 100_000, tax_deductible: false });
+  await donate(db, {
+    tin: "222222-2222",
+    amount: 100_000,
+    tax_deductible: false,
+  });
   await donate(db, { tin: "333333-3333", amount: 100_000 });
-  await donate(db, { tin: "333333-3333", amount: 100_000, tax_deductible: false });
+  await donate(db, {
+    tin: "333333-3333",
+    amount: 100_000,
+    tax_deductible: false,
+  });
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 100_000, aconto_debt: 0 },
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 100_000,
+      aconto_debt: 0,
+    },
     // 222222-2222 does not get included in the tax report
-    { tin: "333333-3333", ll8a_or_gavebrev: "L", total: 100_000, aconto_debt: 0 },
+    {
+      tin: "333333-3333",
+      ll8a_or_gavebrev: "L",
+      total: 100_000,
+      aconto_debt: 0,
+    },
     // 444444-4444 does not get included in the tax report
   ]);
 });
@@ -91,8 +142,16 @@ test("Gavebrev donations get reported as 'L' in full when within limits set by t
 test("Gavebrev donations get reported as 'L', NOT in full, only up to a limit set by the gavebrev agreement", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 900_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 900_000,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000 });
 
@@ -101,20 +160,49 @@ test("Gavebrev donations get reported as 'L', NOT in full, only up to a limit se
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 100_000, aconto_debt: 10_000 }, // report max 100k
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 10_000, aconto_debt: 10_000 }, // report max 10% of 100k
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 100_000,
+      aconto_debt: 10_000,
+    }, // report max 100k
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 10_000,
+      aconto_debt: 10_000,
+    }, // report max 10% of 100k
   ]);
 });
 
 test("Gavebrev donations get reported as 'L' and 'A' when asked to maximize tax deductions with the excess", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 900_000 });
-  await gavebrev(db, { tin: "333333-3333", amount: 100_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "444444-4444", percentage: 10, of_income_over: 900_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 900_000,
+  });
+  await gavebrev(db, {
+    tin: "333333-3333",
+    amount: 100_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "444444-4444",
+    percentage: 10,
+    of_income_over: 900_000,
+  });
 
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 110_000 }); // donates 10k too much
   await donate(db, { tin: "222222-2222", amount: 20_000 }); // donates 10k too much
@@ -123,22 +211,72 @@ test("Gavebrev donations get reported as 'L' and 'A' when asked to maximize tax 
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 100_000, aconto_debt: 0 }, // report max 100k
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 10_000, aconto_debt: 0 }, // report the rest as normal donation
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 10_000, aconto_debt: 0 }, // report max 10% of 100k
-    { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 10_000, aconto_debt: 0 }, // report the rest as normal donation
-    { tin: "333333-3333", ll8a_or_gavebrev: "L", total: 100_000, aconto_debt: 3_000 }, // report max 100k, +3k aconto for next year
-    { tin: "333333-3333", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
-    { tin: "444444-4444", ll8a_or_gavebrev: "L", total: 10_000, aconto_debt: 3_000 }, // report max 10% of 100k, +3k aconto for next year
-    { tin: "444444-4444", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 100_000,
+      aconto_debt: 0,
+    }, // report max 100k
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      aconto_debt: 0,
+    }, // report the rest as normal donation
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 10_000,
+      aconto_debt: 0,
+    }, // report max 10% of 100k
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      aconto_debt: 0,
+    }, // report the rest as normal donation
+    {
+      tin: "333333-3333",
+      ll8a_or_gavebrev: "L",
+      total: 100_000,
+      aconto_debt: 3_000,
+    }, // report max 100k, +3k aconto for next year
+    {
+      tin: "333333-3333",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
+    {
+      tin: "444444-4444",
+      ll8a_or_gavebrev: "L",
+      total: 10_000,
+      aconto_debt: 3_000,
+    }, // report max 10% of 100k, +3k aconto for next year
+    {
+      tin: "444444-4444",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
   ]);
 });
 
 test("Gavebrev: donating too much in the previous year does NOT give extra tax deductions in the next year", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", years_ago: 1, amount: 10_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", years_ago: 1, percentage: 10, of_income_over: 900_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    years_ago: 1,
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    years_ago: 1,
+    percentage: 10,
+    of_income_over: 900_000,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
   await incomeEveryone(db, { income_verified: 1_000_000 });
@@ -151,16 +289,36 @@ test("Gavebrev: donating too much in the previous year does NOT give extra tax d
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 8_000, aconto_debt: 1_000 }, // report 10k minus 2k aconto, aconto does NOT accumulate
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 8_000, aconto_debt: 1_000 }, // report 10k minus 2k aconto, aconto does NOT accumulate
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 8_000,
+      aconto_debt: 1_000,
+    }, // report 10k minus 2k aconto, aconto does NOT accumulate
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 8_000,
+      aconto_debt: 1_000,
+    }, // report 10k minus 2k aconto, aconto does NOT accumulate
   ]);
 });
 
 test("Gavebrev: donating too little in the previous years DOES give extra tax deductions in the next year, excess goes to aconto", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", years_ago: 2, amount: 10_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", years_ago: 2, percentage: 10, of_income_over: 900_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    years_ago: 2,
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    years_ago: 2,
+    percentage: 10,
+    of_income_over: 900_000,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 2 });
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
@@ -177,22 +335,63 @@ test("Gavebrev: donating too little in the previous years DOES give extra tax de
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 13_000, aconto_debt: 1_000 }, // report accumulated debt + max 10k for this year, but not the excess 1k
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 13_000, aconto_debt: 1_000 }, // report accumulated debt + max 10k for this year, but not the excess 1k
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 13_000,
+      aconto_debt: 1_000,
+    }, // report accumulated debt + max 10k for this year, but not the excess 1k
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 13_000,
+      aconto_debt: 1_000,
+    }, // report accumulated debt + max 10k for this year, but not the excess 1k
   ]);
 });
 
 test("Gavebrev: donating too little in the previous years DOES give extra tax deductions in the next year, excess is reported as 'A' when asked to maximize tax deductions", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", years_ago: 2, amount: 10_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", years_ago: 2, percentage: 10, of_income_over: 900_000 });
-  await gavebrev(db, { tin: "333333-3333", years_ago: 2, amount: 10_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "444444-4444", years_ago: 2, percentage: 10, of_income_over: 900_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    years_ago: 2,
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    years_ago: 2,
+    percentage: 10,
+    of_income_over: 900_000,
+  });
+  await gavebrev(db, {
+    tin: "333333-3333",
+    years_ago: 2,
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "444444-4444",
+    years_ago: 2,
+    percentage: 10,
+    of_income_over: 900_000,
+  });
 
-  await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 2, maximize_tax_deduction: true });
-  await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1, maximize_tax_deduction: true });
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    years_ago: 2,
+    maximize_tax_deduction: true,
+  });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    years_ago: 1,
+    maximize_tax_deduction: true,
+  });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 8_000, years_ago: 2 }); // donates 2k too little 2 years ago
   await donate(db, { tin: "222222-2222", amount: 8_000, years_ago: 2 }); // donates 2k too little 2 years ago
@@ -211,23 +410,68 @@ test("Gavebrev: donating too little in the previous years DOES give extra tax de
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 13_000, aconto_debt: 0 }, // report accumulated debt + max 10k for this year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 13_000,
+      aconto_debt: 0,
+    }, // report accumulated debt + max 10k for this year
     { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 1_000, aconto_debt: 0 }, // report the rest as normal donation
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 13_000, aconto_debt: 0 }, // report accumulated debt + max 10k for this year
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 13_000,
+      aconto_debt: 0,
+    }, // report accumulated debt + max 10k for this year
     { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 1_000, aconto_debt: 0 }, // report the rest as normal donation
-    { tin: "333333-3333", ll8a_or_gavebrev: "L", total: 13_000, aconto_debt: 3_000 }, // report accumulated debt + max 10k for this year
-    { tin: "333333-3333", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
-    { tin: "444444-4444", ll8a_or_gavebrev: "L", total: 13_000, aconto_debt: 3_000 }, // report accumulated debt + max 10k for this year
-    { tin: "444444-4444", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "333333-3333",
+      ll8a_or_gavebrev: "L",
+      total: 13_000,
+      aconto_debt: 3_000,
+    }, // report accumulated debt + max 10k for this year
+    {
+      tin: "333333-3333",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
+    {
+      tin: "444444-4444",
+      ll8a_or_gavebrev: "L",
+      total: 13_000,
+      aconto_debt: 3_000,
+    }, // report accumulated debt + max 10k for this year
+    {
+      tin: "444444-4444",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
   ]);
 });
 
 test("Gavebrev can only give tax deduction for MAX 15% of the verified income, even with an accumulated debt", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "333333-3333", amount: 10_000, when_income_over: 0, years_ago: 1 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "333333-3333",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
   await incomeEveryone(db, { income_verified: 10_000 });
@@ -242,8 +486,18 @@ test("Gavebrev can only give tax deduction for MAX 15% of the verified income, e
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 1500, aconto_debt: 2_000 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 1500, aconto_debt: 2_000 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 1500,
+      aconto_debt: 2_000,
+    }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 1500,
+      aconto_debt: 2_000,
+    }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
     { tin: "333333-3333", ll8a_or_gavebrev: "L", total: 1500, aconto_debt: 0 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
   ]);
 });
@@ -251,14 +505,42 @@ test("Gavebrev can only give tax deduction for MAX 15% of the verified income, e
 test("Gavebrev donations above 15% of the verified income can report excess as normal donations, when asked to maximize tax deductions", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "333333-3333", amount: 100_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "444444-4444", percentage: 10, of_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "555555-5555", amount: 10_000, when_income_over: 0, years_ago: 1 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "333333-3333",
+    amount: 100_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "444444-4444",
+    percentage: 10,
+    of_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "555555-5555",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
-  await incomeEveryone(db, { income_verified: 10_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 10_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 99_000, years_ago: 1 }); // donates 1k too little 1 year ago
   await donate(db, { tin: "222222-2222", amount: 99_000, years_ago: 1 }); // donates 1k too little 1 year ago
@@ -275,14 +557,44 @@ test("Gavebrev donations above 15% of the verified income can report excess as n
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
     // We can't gift tax deductions, so only the money donated on top of (their agreement + debt) can be reported as 'A' instead of aconto for the next year
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 1_500, aconto_debt: 3_000 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 1_500, aconto_debt: 3_000 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
-    { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 1_500,
+      aconto_debt: 3_000,
+    }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 1_500,
+      aconto_debt: 3_000,
+    }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
     { tin: "333333-3333", ll8a_or_gavebrev: "L", total: 1_500, aconto_debt: 0 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
-    { tin: "333333-3333", ll8a_or_gavebrev: "A", total: 10_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "333333-3333",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
     { tin: "444444-4444", ll8a_or_gavebrev: "L", total: 1_500, aconto_debt: 0 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
-    { tin: "444444-4444", ll8a_or_gavebrev: "A", total: 10_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "444444-4444",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
     { tin: "555555-5555", ll8a_or_gavebrev: "L", total: 1_500, aconto_debt: 0 }, // report only 15% of 10k (this year's income), the diff is NOT aconto for next year
   ]);
 });
@@ -290,9 +602,23 @@ test("Gavebrev donations above 15% of the verified income can report excess as n
 test("Donations for a person having multiple gavebrev get all summed up and reported as 'L'", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 2 });
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 2,
+  });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 2 });
   await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
@@ -304,23 +630,67 @@ test("Donations for a person having multiple gavebrev get all summed up and repo
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 50_000, aconto_debt: 20_000 }, // report 20k debt + 30k as per all agreements, but not the excess 20k
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 50_000,
+      aconto_debt: 20_000,
+    }, // report 20k debt + 30k as per all agreements, but not the excess 20k
   ]);
 });
 
 test("Excess for donations for a person having multiple gavebrev is reported as 'A', when asked to maximize tax deductions", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 2 });
-  await gavebrev(db, { tin: "222222-2222", amount: 10_000, when_income_over: 0, years_ago: 2 });
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "222222-2222", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", amount: 10_000, when_income_over: 0 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 2,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 2,
+  });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 10_000,
+    when_income_over: 0,
+  });
 
-  await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 2, maximize_tax_deduction: true });
-  await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1, maximize_tax_deduction: true });
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    years_ago: 2,
+    maximize_tax_deduction: true,
+  });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    years_ago: 1,
+    maximize_tax_deduction: true,
+  });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 5_000, years_ago: 2 }); // donates 5k too little in the first year
   await donate(db, { tin: "222222-2222", amount: 5_000, years_ago: 2 }); // donates 5k too little in the first year
@@ -331,18 +701,47 @@ test("Excess for donations for a person having multiple gavebrev is reported as 
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 50_000, aconto_debt: 3_000 }, // report 20k debt + 30k as per all agreements
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 50_000, aconto_debt: 0 }, // report 20k debt + 30k as per all agreements
-    { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 10_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 50_000,
+      aconto_debt: 3_000,
+    }, // report 20k debt + 30k as per all agreements
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 50_000,
+      aconto_debt: 0,
+    }, // report 20k debt + 30k as per all agreements
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
   ]);
 });
 
 test("Multiple gavebrev can still only give tax deduction for MAX 15% of the verified income", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+  });
 
   await incomeEveryone(db, { income_verified: 100_000, years_ago: 1 });
   await incomeEveryone(db, { income_verified: 100_000 });
@@ -352,20 +751,50 @@ test("Multiple gavebrev can still only give tax deduction for MAX 15% of the ver
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 15_000, aconto_debt: 2_000 }, // report only 15% of 100k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 15_000,
+      aconto_debt: 2_000,
+    }, // report only 15% of 100k (this year's income), the diff is NOT aconto for next year
   ]);
 });
 
 test("Excess for donations for a person having multiple gavebrev over 15% of the verified income is reported as 'A', when asked to maximize tax deductions", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "222222-2222", amount: 10_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", amount: 10_000, when_income_over: 0 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 10_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 10_000,
+    when_income_over: 0,
+  });
 
-  await incomeEveryone(db, { income_verified: 100_000, years_ago: 1, maximize_tax_deduction: true });
-  await incomeEveryone(db, { income_verified: 100_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 100_000,
+    years_ago: 1,
+    maximize_tax_deduction: true,
+  });
+  await incomeEveryone(db, {
+    income_verified: 100_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 10_000, years_ago: 1 }); // donates 10k as per the agreement
   await donate(db, { tin: "222222-2222", amount: 10_000, years_ago: 1 }); // donates 10k as per the agreement
@@ -374,9 +803,24 @@ test("Excess for donations for a person having multiple gavebrev over 15% of the
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 15_000, aconto_debt: 3_000 }, // report only 15% of 100k (this year's income), the diff is NOT aconto for next year
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 15_000, aconto_debt: 0 }, // report only 15% of 100k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 15_000,
+      aconto_debt: 3_000,
+    }, // report only 15% of 100k (this year's income), the diff is NOT aconto for next year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 15_000,
+      aconto_debt: 0,
+    }, // report only 15% of 100k (this year's income), the diff is NOT aconto for next year
     { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 2_000, aconto_debt: 0 }, // report up to 17k max tax deduction
   ]);
 });
@@ -384,11 +828,28 @@ test("Excess for donations for a person having multiple gavebrev over 15% of the
 test("Gavebrev donations respect different tax deduction limits in different years", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 0, years_ago: 1 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 900_000, years_ago: 1 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 900_000,
+    years_ago: 1,
+  });
 
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true, years_ago: 1 });
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+    years_ago: 1,
+  });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+  });
 
   // set different tax deduction in a previous year
   await setMaxTaxDeduction(db, { value: 16_000, years_ago: 1 });
@@ -400,17 +861,42 @@ test("Gavebrev donations respect different tax deduction limits in different yea
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 96_000, aconto_debt: 3_000 }, // report max 100k - 4k aconto from last year
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 6_000, aconto_debt: 3_000 }, // report max 10% of 100k - 4k aconto from last year
-    { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // report up to 17k max tax deduction
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 96_000,
+      aconto_debt: 3_000,
+    }, // report max 100k - 4k aconto from last year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 6_000,
+      aconto_debt: 3_000,
+    }, // report max 10% of 100k - 4k aconto from last year
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // report up to 17k max tax deduction
   ]);
 });
 
 test("Having a stopped gavebrev does not affect reporting usual donations as 'A'", async () => {
   const db = await client;
 
-  const g = await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 0, years_ago: 1 });
+  const g = await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 0,
+    years_ago: 1,
+  });
   await setGavebrevStopped(db, g.id, new Date(Date.UTC(getYear(0), 0, 1)));
 
   await incomeEveryone(db, { income_verified: 1_000_000 });
@@ -418,14 +904,29 @@ test("Having a stopped gavebrev does not affect reporting usual donations as 'A'
   await donate(db, { tin: "111111-1111", amount: 100_000 });
 
   const taxReport = await findAnnualTaxReport(db);
-  expect(taxReport).toMatchObject([{ tin: "111111-1111", ll8a_or_gavebrev: "A", total: 100_000, aconto_debt: 0 }]);
+  expect(taxReport).toMatchObject([
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 100_000,
+      aconto_debt: 0,
+    },
+  ]);
 });
 
 test("Gavebrev donations don't get reported when gavebrev conditions are not met, but go to aconto", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 1_000_000 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 1_000_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 1_000_000,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 1_000_000,
+  });
 
   await incomeEveryone(db, { income_verified: 1_000_000 });
 
@@ -434,35 +935,80 @@ test("Gavebrev donations don't get reported when gavebrev conditions are not met
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 0, aconto_debt: 100_000 }, // nothing is reported, donations go to aconto
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 0, aconto_debt: 100_000 }, // nothing is reported, donations go to aconto
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 0,
+      aconto_debt: 100_000,
+    }, // nothing is reported, donations go to aconto
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 0,
+      aconto_debt: 100_000,
+    }, // nothing is reported, donations go to aconto
   ]);
 });
 
 test("Gavebrev donations get reported 'A' when gavebrev conditions are not met and when asked to maximize tax deductions with the excess", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 100_000, when_income_over: 1_000_000 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 1_000_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 100_000,
+    when_income_over: 1_000_000,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 1_000_000,
+  });
 
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 100_000 }); // donates 100k but gavebrev conditions are not fulfilled in this year
   await donate(db, { tin: "222222-2222", amount: 100_000 }); // donates 100k but gavebrev conditions are not fulfilled in this year
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 0, aconto_debt: 83_000 }, // nothing is reported, excess above 'A' goes to aconto
-    { tin: "111111-1111", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // gets max deduction for usual donations that year
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 0, aconto_debt: 83_000 }, // nothing is reported, excess above 'A' goes to aconto
-    { tin: "222222-2222", ll8a_or_gavebrev: "A", total: 17_000, aconto_debt: 0 }, // gets max deduction for usual donations that year
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 0,
+      aconto_debt: 83_000,
+    }, // nothing is reported, excess above 'A' goes to aconto
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // gets max deduction for usual donations that year
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 0,
+      aconto_debt: 83_000,
+    }, // nothing is reported, excess above 'A' goes to aconto
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "A",
+      total: 17_000,
+      aconto_debt: 0,
+    }, // gets max deduction for usual donations that year
   ]);
 });
 
 test("Gavebrev with missing income report is processed as if income is zero", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 0 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 0,
+  });
   await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 0 });
 
   // No income checkin
@@ -472,16 +1018,36 @@ test("Gavebrev with missing income report is processed as if income is zero", as
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 0, aconto_debt: 20_000 }, // nothing is reported, donations go to aconto
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 0, aconto_debt: 20_000 }, // nothing is reported, donations go to aconto
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 0,
+      aconto_debt: 20_000,
+    }, // nothing is reported, donations go to aconto
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 0,
+      aconto_debt: 20_000,
+    }, // nothing is reported, donations go to aconto
   ]);
 });
 
 test("Gavebrev debt (but not aconto!) carries over when gavebrev conditions are not met and no donations were made in a year", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 10_000, when_income_over: 100_000, years_ago: 2 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 100_000, years_ago: 2 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 10_000,
+    when_income_over: 100_000,
+    years_ago: 2,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 100_000,
+    years_ago: 2,
+  });
 
   await incomeEveryone(db, { income_verified: 200_000, years_ago: 2 }); // earned more than gavebrev conditions
   await incomeEveryone(db, { income_verified: 10_000, years_ago: 1 }); // earned less than gavebrev conditions
@@ -495,18 +1061,39 @@ test("Gavebrev debt (but not aconto!) carries over when gavebrev conditions are 
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
-    { tin: "111111-1111", ll8a_or_gavebrev: "L", total: 10_000, aconto_debt: 1_000 }, // report 10k as per agreement, remember: aconto does NOT accumulate, so only the last year aconto gets carried over
-    { tin: "222222-2222", ll8a_or_gavebrev: "L", total: 9_000, aconto_debt: -2_000 }, // report donated 9k, debt DOES accumulate, so it gets carried over in full
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 10_000,
+      aconto_debt: 1_000,
+    }, // report 10k as per agreement, remember: aconto does NOT accumulate, so only the last year aconto gets carried over
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 9_000,
+      aconto_debt: -2_000,
+    }, // report donated 9k, debt DOES accumulate, so it gets carried over in full
   ]);
 });
 
 test("Official tax report contains all the necessary fields in the expected format", async () => {
   const db = await client;
 
-  await gavebrev(db, { tin: "111111-1111", amount: 99_000, when_income_over: 0 });
-  await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 900_000 });
+  await gavebrev(db, {
+    tin: "111111-1111",
+    amount: 99_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    percentage: 10,
+    of_income_over: 900_000,
+  });
 
-  await incomeEveryone(db, { income_verified: 1_000_000, maximize_tax_deduction: true });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    maximize_tax_deduction: true,
+  });
 
   await donate(db, { tin: "111111-1111", amount: 109_000 });
   await donate(db, { tin: "222222-2222", amount: 20_000 });
@@ -515,11 +1102,61 @@ test("Official tax report contains all the necessary fields in the expected form
   const year = getYear();
   const taxReport = await findAnnualTaxReportOfficial(db);
   expect(taxReport).toMatchObject([
-    { donor_cpr: "1111111111", ll8a_or_gavebrev: "L", total: 99_000, year, const: 2262, blank: "", ge_cvr: 42490903, ge_notes: "", rettekode: 0 },
-    { donor_cpr: "1111111111", ll8a_or_gavebrev: "A", total: 10_000, year, const: 2262, blank: "", ge_cvr: 42490903, ge_notes: "", rettekode: 0 },
-    { donor_cpr: "2222222222", ll8a_or_gavebrev: "L", total: 10_000, year, const: 2262, blank: "", ge_cvr: 42490903, ge_notes: "", rettekode: 0 },
-    { donor_cpr: "2222222222", ll8a_or_gavebrev: "A", total: 10_000, year, const: 2262, blank: "", ge_cvr: 42490903, ge_notes: "", rettekode: 0 },
-    { donor_cpr: "3333333333", ll8a_or_gavebrev: "A", total: 20_000, year, const: 2262, blank: "", ge_cvr: 42490903, ge_notes: "", rettekode: 0 },
+    {
+      donor_cpr: "1111111111",
+      ll8a_or_gavebrev: "L",
+      total: 99_000,
+      year,
+      const: 2262,
+      blank: "",
+      ge_cvr: 42490903,
+      ge_notes: "",
+      rettekode: 0,
+    },
+    {
+      donor_cpr: "1111111111",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      year,
+      const: 2262,
+      blank: "",
+      ge_cvr: 42490903,
+      ge_notes: "",
+      rettekode: 0,
+    },
+    {
+      donor_cpr: "2222222222",
+      ll8a_or_gavebrev: "L",
+      total: 10_000,
+      year,
+      const: 2262,
+      blank: "",
+      ge_cvr: 42490903,
+      ge_notes: "",
+      rettekode: 0,
+    },
+    {
+      donor_cpr: "2222222222",
+      ll8a_or_gavebrev: "A",
+      total: 10_000,
+      year,
+      const: 2262,
+      blank: "",
+      ge_cvr: 42490903,
+      ge_notes: "",
+      rettekode: 0,
+    },
+    {
+      donor_cpr: "3333333333",
+      ll8a_or_gavebrev: "A",
+      total: 20_000,
+      year,
+      const: 2262,
+      blank: "",
+      ge_cvr: 42490903,
+      ge_notes: "",
+      rettekode: 0,
+    },
   ]);
 });
 
@@ -530,7 +1167,10 @@ type donateArgs = {
   years_ago?: number;
 };
 
-const donate = async (db: PoolClient, { tin, amount, tax_deductible = true, years_ago = 0 }: donateArgs) => {
+const donate = async (
+  db: PoolClient,
+  { tin, amount, tax_deductible = true, years_ago = 0 }: donateArgs,
+) => {
   const random = (Math.random() + 1).toString(36).substring(7);
 
   const donor = await insertDonorWithSensitiveInfo(db, {
@@ -565,7 +1205,14 @@ type gavebrevArgs = {
 
 const gavebrev = async (
   db: PoolClient,
-  { tin, amount, percentage, years_ago = 0, when_income_over, of_income_over }: gavebrevArgs,
+  {
+    tin,
+    amount,
+    percentage,
+    years_ago = 0,
+    when_income_over,
+    of_income_over,
+  }: gavebrevArgs,
 ): Promise<Gavebrev> => {
   const startYear = getYear(years_ago);
 
@@ -580,7 +1227,8 @@ const gavebrev = async (
       started_at: new Date(Date.UTC(startYear, 0, 1)),
       stopped_at: new Date(Date.UTC(startYear + 10, 0, 1)),
     });
-  } else if (percentage) {
+  }
+  if (percentage) {
     return await insertGavebrev(db, {
       donor_id: donor.id,
       type: GavebrevType.Percentage,
@@ -589,9 +1237,8 @@ const gavebrev = async (
       started_at: new Date(Date.UTC(startYear, 0, 1)),
       stopped_at: new Date(Date.UTC(startYear + 10, 0, 1)),
     });
-  } else {
-    throw Error("Unable to create gavebrev: amount or percentage is required");
   }
+  throw Error("Unable to create gavebrev: amount or percentage is required");
 };
 
 type incomeEveryoneArgs = {
@@ -600,9 +1247,16 @@ type incomeEveryoneArgs = {
   maximize_tax_deduction?: boolean;
 };
 
-const incomeEveryone = async (db: PoolClient, { income_verified = 1_000_000, years_ago = 0, maximize_tax_deduction = false }: incomeEveryoneArgs) => {
+const incomeEveryone = async (
+  db: PoolClient,
+  {
+    income_verified = 1_000_000,
+    years_ago = 0,
+    maximize_tax_deduction = false,
+  }: incomeEveryoneArgs,
+) => {
   for (let i = 1; i <= 10; i++) {
-    const tin = `${i}`.repeat(6) + "-" + `${i}`.repeat(4);
+    const tin = `${`${i}`.repeat(6)}-${`${i}`.repeat(4)}`;
 
     const donor = await gavebrevDonor(db, tin);
 
@@ -620,11 +1274,17 @@ type maxTaxDeductionArgs = {
   years_ago?: number;
 };
 
-const setMaxTaxDeduction = async (db: PoolClient, { value = 0, years_ago = 0 }: maxTaxDeductionArgs) => {
+const setMaxTaxDeduction = async (
+  db: PoolClient,
+  { value = 0, years_ago = 0 }: maxTaxDeductionArgs,
+) => {
   await insertMaxTaxDeduction(db, getYear(years_ago), value);
 };
 
-const gavebrevDonor = async (db: PoolClient, tin: string): Promise<DonorWithSensitiveInfo> => {
+const gavebrevDonor = async (
+  db: PoolClient,
+  tin: string,
+): Promise<DonorWithSensitiveInfo> => {
   const random = (Math.random() + 1).toString(36).substring(7);
   return await insertGavebrevDonor(db, {
     name: "John Smith",
@@ -633,6 +1293,7 @@ const gavebrevDonor = async (db: PoolClient, tin: string): Promise<DonorWithSens
   });
 };
 
-const getDate = (years_ago = 0) => subYears(subMonths(new Date(), 9), years_ago);
+const getDate = (years_ago = 0) =>
+  subYears(subMonths(new Date(), 9), years_ago);
 
 const getYear = (years_ago = 0) => getDate(years_ago).getFullYear();
