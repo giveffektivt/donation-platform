@@ -920,12 +920,12 @@ test("Gavebrev donations don't get reported when gavebrev conditions are not met
   await gavebrev(db, {
     tin: "111111-1111",
     amount: 100_000,
-    when_income_over: 1_000_000,
+    when_income_over: 1_000_001,
   });
   await gavebrev(db, {
     tin: "222222-2222",
     percentage: 10,
-    of_income_over: 1_000_000,
+    of_income_over: 1_000_001,
   });
 
   await incomeEveryone(db, { income_verified: 1_000_000 });
@@ -956,12 +956,12 @@ test("Gavebrev donations get reported 'A' when gavebrev conditions are not met a
   await gavebrev(db, {
     tin: "111111-1111",
     amount: 100_000,
-    when_income_over: 1_000_000,
+    when_income_over: 1_000_001,
   });
   await gavebrev(db, {
     tin: "222222-2222",
     percentage: 10,
-    of_income_over: 1_000_000,
+    of_income_over: 1_000_001,
   });
 
   await incomeEveryone(db, {

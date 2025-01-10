@@ -482,7 +482,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
             p.email,
             d_1.tax_deductible,
             c_1.transfer_id,
-            sum(d_1.amount) AS total
+            sum(d_1.amount) AS total,
+            min(c_1.created_at) AS first_donated
            FROM (((const
              CROSS JOIN giveffektivt.donor_with_sensitive_info p)
              JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
@@ -518,7 +519,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data.email,
             data.tax_deductible,
             data.transfer_id,
-            data.total
+            data.total,
+            data.first_donated
            FROM data
           WHERE data.tax_deductible
         ), with_tin_no_tax AS (
@@ -526,7 +528,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data.email,
             data.tax_deductible,
             data.transfer_id,
-            data.total
+            data.total,
+            data.first_donated
            FROM data
           WHERE ((NOT data.tax_deductible) AND (data.tin IS NOT NULL))
         ), with_no_tin_no_tax AS (
@@ -534,7 +537,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data.email,
             data.tax_deductible,
             data.transfer_id,
-            data.total
+            data.total,
+            data.first_donated
            FROM data
           WHERE ((NOT data.tax_deductible) AND (data.tin IS NULL))
         )
@@ -547,7 +551,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
     COALESCE(a.transfer_id, b.transfer_id, c.transfer_id) AS transfer_id,
     a.total AS amount_tax_deductible,
     NULLIF((COALESCE(b.total, (0)::numeric) + COALESCE(c.total, (0)::numeric)), (0)::numeric) AS amount_not_tax_deductible,
-    ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS amount_total
+    ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS amount_total,
+    LEAST(a.first_donated, b.first_donated, c.first_donated) AS first_donated
    FROM (((((with_tax a
      FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.transfer_id IS DISTINCT FROM b.transfer_id)))))
      FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.transfer_id, b.transfer_id) IS DISTINCT FROM c.transfer_id)))))
@@ -684,7 +689,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
     round(sum(
         CASE
             WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
-            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, ((((c.income > COALESCE(g.minimal_income, (0)::numeric)))::integer)::numeric * g.amount))
+            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= COALESCE(g.minimal_income, (0)::numeric))))::integer)::numeric * g.amount))
             ELSE NULL::numeric
         END)) AS expected_total
    FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
@@ -1978,4 +1983,6 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20241212214448'),
     ('20241230123042'),
     ('20250102125637'),
-    ('20250103112739');
+    ('20250103112739'),
+    ('20250103221157'),
+    ('20250110151414');
