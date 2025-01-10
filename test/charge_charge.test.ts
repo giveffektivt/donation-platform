@@ -45,7 +45,7 @@ test("Find created charges to charge", async () => {
   const donation1 = await insertDonationViaScanpay(db, {
     donor_id: donor1.id,
     amount: 100,
-    recipient: DonationRecipient.StorOgVelkendtEffekt,
+    recipient: DonationRecipient.MedicinModMalaria,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
