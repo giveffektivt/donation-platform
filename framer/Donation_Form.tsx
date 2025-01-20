@@ -443,6 +443,13 @@ export const showCprCvrWarning = (Component: any): ComponentType => {
   };
 };
 
+export const showCpr = (Component: any): ComponentType => {
+  return (props) => {
+    const [store] = useStore();
+    return <Component {...props} text={`${store.tin}`} />;
+  };
+};
+
 // Fundraiser
 
 export const withFundraiser = (Component: any): ComponentType => {
