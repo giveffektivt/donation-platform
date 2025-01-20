@@ -470,6 +470,25 @@ CREATE VIEW giveffektivt.gavebrev AS
 
 
 --
+-- Name: transfer; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer AS
+ SELECT id,
+    earmark,
+    recipient,
+    unit_cost_external,
+    unit_cost_conversion,
+    life_cost_external,
+    exchange_rate,
+    created_at,
+    updated_at
+   FROM giveffektivt._transfer
+  WHERE (deleted_at IS NULL)
+  ORDER BY created_at;
+
+
+--
 -- Name: annual_email_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -481,15 +500,17 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT p.tin,
             p.email,
             d_1.tax_deductible,
-            c_1.transfer_id,
+            t.recipient,
+            round(((sum(d_1.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit,
             sum(d_1.amount) AS total,
             min(c_1.created_at) AS first_donated
-           FROM (((const
+           FROM ((((const
              CROSS JOIN giveffektivt.donor_with_sensitive_info p)
              JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
              JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
+             LEFT JOIN giveffektivt.transfer t ON ((c_1.transfer_id = t.id)))
           WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
-          GROUP BY p.tin, p.email, d_1.tax_deductible, c_1.transfer_id
+          GROUP BY p.tin, p.email, d_1.tax_deductible, t.recipient
         ), members_confirmed AS (
          SELECT DISTINCT ON (p.tin) p.tin,
             p.email
@@ -518,7 +539,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT data.tin,
             data.email,
             data.tax_deductible,
-            data.transfer_id,
+            data.recipient,
+            data.unit,
             data.total,
             data.first_donated
            FROM data
@@ -527,7 +549,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT data.tin,
             data.email,
             data.tax_deductible,
-            data.transfer_id,
+            data.recipient,
+            data.unit,
             data.total,
             data.first_donated
            FROM data
@@ -536,7 +559,8 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT data.tin,
             data.email,
             data.tax_deductible,
-            data.transfer_id,
+            data.recipient,
+            data.unit,
             data.total,
             data.first_donated
            FROM data
@@ -548,18 +572,19 @@ CREATE VIEW giveffektivt.annual_email_report AS
     (length(COALESCE(a.tin, b.tin, d.tin, ''::text)) = 8) AS is_company,
     (e.tin IS NOT NULL) AS is_member,
     (f.tin IS NOT NULL) AS has_gavebrev,
-    COALESCE(a.transfer_id, b.transfer_id, c.transfer_id) AS transfer_id,
+    COALESCE(a.recipient, b.recipient, c.recipient) AS recipient,
     a.total AS amount_tax_deductible,
     NULLIF((COALESCE(b.total, (0)::numeric) + COALESCE(c.total, (0)::numeric)), (0)::numeric) AS amount_not_tax_deductible,
     ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS amount_total,
+    ((COALESCE(a.unit, (0)::numeric) + COALESCE(b.unit, (0)::numeric)) + COALESCE(c.unit, (0)::numeric)) AS unit_total,
     LEAST(a.first_donated, b.first_donated, c.first_donated) AS first_donated
    FROM (((((with_tax a
-     FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.transfer_id IS DISTINCT FROM b.transfer_id)))))
-     FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.transfer_id, b.transfer_id) IS DISTINCT FROM c.transfer_id)))))
+     FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.recipient IS DISTINCT FROM b.recipient)))))
+     FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.recipient, b.recipient) IS DISTINCT FROM c.recipient)))))
      LEFT JOIN email_to_tin_guess d ON ((COALESCE(a.email, b.email, c.email) = d.email)))
      LEFT JOIN members_confirmed e ON ((COALESCE(a.tin, b.tin, d.tin) = e.tin)))
      LEFT JOIN active_gavebrev f ON ((COALESCE(a.tin, b.tin) = f.tin)))
-  ORDER BY COALESCE(a.email, b.email, c.email), COALESCE(a.tin, b.tin, d.tin), COALESCE(a.transfer_id, b.transfer_id, c.transfer_id);
+  ORDER BY COALESCE(a.email, b.email, c.email), COALESCE(a.tin, b.tin, d.tin), COALESCE(a.recipient, b.recipient, c.recipient);
 
 
 --
@@ -1650,25 +1675,6 @@ CREATE VIEW giveffektivt.time_distribution_2 AS
 
 
 --
--- Name: transfer; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.transfer AS
- SELECT id,
-    earmark,
-    recipient,
-    unit_cost_external,
-    unit_cost_conversion,
-    life_cost_external,
-    exchange_rate,
-    created_at,
-    updated_at
-   FROM giveffektivt._transfer
-  WHERE (deleted_at IS NULL)
-  ORDER BY created_at;
-
-
---
 -- Name: transfer_overview; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -2168,4 +2174,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250103221157'),
     ('20250110151414'),
     ('20250110190651'),
-    ('20250115215315');
+    ('20250115215315'),
+    ('20250120213832');
