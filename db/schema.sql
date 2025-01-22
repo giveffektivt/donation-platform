@@ -1276,9 +1276,9 @@ CREATE VIEW giveffektivt.kpi AS
         ), dkk_recurring_next_year AS (
          SELECT ((12)::numeric * sum(c1.amount)) AS dkk_recurring_next_year
            FROM ( SELECT DISTINCT ON (d.id) d.amount
-                   FROM (giveffektivt.donation d
-                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))) c1
+                   FROM (giveffektivt.charge c
+                     JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
+                  WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
         ), members_confirmed AS (
          SELECT (count(DISTINCT p.tin))::numeric AS members_confirmed
            FROM ((giveffektivt.donor_with_sensitive_info p
@@ -1296,11 +1296,10 @@ CREATE VIEW giveffektivt.kpi AS
                   ORDER BY p.tin, c.created_at DESC) a
           WHERE (a.created_at < date_trunc('year'::text, now()))
         ), monthly_donors AS (
-         SELECT (count(DISTINCT p.email))::numeric AS monthly_donors
-           FROM ((giveffektivt.donor_with_sensitive_info p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
+         SELECT count(DISTINCT c.donation_id) AS monthly_donors
+           FROM (giveffektivt.charge c
+             JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
+          WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
         )
  SELECT dkk_total.dkk_total,
     dkk_pending_transfer.dkk_pending_transfer,
@@ -2175,4 +2174,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250110151414'),
     ('20250110190651'),
     ('20250115215315'),
-    ('20250120213832');
+    ('20250120213832'),
+    ('20250122172829');
