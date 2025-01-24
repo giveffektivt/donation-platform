@@ -1541,139 +1541,6 @@ CREATE VIEW giveffektivt.time_distribution AS
 
 
 --
--- Name: time_distribution_2; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.time_distribution_2 AS
- WITH successful_charges AS (
-         SELECT date_trunc('month'::text, c_1.created_at) AS month,
-            sum(d.amount) AS dkk_total,
-            (count(*))::numeric AS payments_total
-           FROM (giveffektivt.charge c_1
-             JOIN giveffektivt.donation d ON ((c_1.donation_id = d.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-          GROUP BY (date_trunc('month'::text, c_1.created_at))
-        ), monthly_donations_charged_exactly_once AS (
-         SELECT unnamed_subquery.id,
-            unnamed_subquery.number_of_donations,
-            unnamed_subquery.last_donated_at
-           FROM ( SELECT d.id,
-                    count(c_1.id) AS number_of_donations,
-                    max(c_1.created_at) AS last_donated_at
-                   FROM (giveffektivt.donation d
-                     JOIN giveffektivt.charge c_1 ON ((d.id = c_1.donation_id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency))
-                  GROUP BY d.id) unnamed_subquery
-          WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.last_donated_at < (now() - '40 days'::interval)))
-        ), stopped_monthly_donations AS (
-         SELECT a_1.email,
-            date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval)) AS stop_month,
-            (- sum(a_1.amount)) AS amount,
-            a_1.frequency
-           FROM ( SELECT DISTINCT ON (d.id) p.email,
-                    c_1.created_at AS last_donated_at,
-                    d.amount,
-                    d.frequency
-                   FROM ((giveffektivt.donor_with_contact_info p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d.id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT (EXISTS ( SELECT 1
-                           FROM monthly_donations_charged_exactly_once m
-                          WHERE (d.id = m.id)))))
-                  ORDER BY d.id, c_1.created_at DESC) a_1
-          WHERE ((a_1.last_donated_at + '40 days'::interval) < now())
-          GROUP BY a_1.email, (date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval))), a_1.frequency
-          ORDER BY a_1.email, (date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval))) DESC
-        ), started_donations AS (
-         SELECT unnamed_subquery.email,
-            unnamed_subquery.start_month,
-            sum(unnamed_subquery.amount) AS amount,
-            unnamed_subquery.frequency
-           FROM ( SELECT DISTINCT ON (d.id) p.email,
-                    date_trunc('month'::text, c_1.created_at) AS start_month,
-                    d.amount,
-                        CASE
-                            WHEN (EXISTS ( SELECT 1
-                               FROM monthly_donations_charged_exactly_once m
-                              WHERE (d.id = m.id))) THEN 'once'::giveffektivt.donation_frequency
-                            ELSE d.frequency
-                        END AS frequency
-                   FROM ((giveffektivt.donor_with_contact_info p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d.id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-                  ORDER BY d.id, c_1.created_at) unnamed_subquery
-          GROUP BY unnamed_subquery.email, unnamed_subquery.start_month, unnamed_subquery.frequency
-          ORDER BY unnamed_subquery.email, unnamed_subquery.start_month DESC
-        ), changed_donations AS (
-         SELECT COALESCE(a_1.start_month, b_1.stop_month) AS month,
-            COALESCE(a_1.email, b_1.email) AS email,
-            COALESCE(a_1.frequency, b_1.frequency) AS frequency,
-            (sum(COALESCE(a_1.amount, (0)::numeric)) + sum(COALESCE(b_1.amount, (0)::numeric))) AS amount
-           FROM (started_donations a_1
-             FULL JOIN stopped_monthly_donations b_1 ON (((a_1.email = b_1.email) AND (a_1.frequency = b_1.frequency) AND (a_1.start_month = b_1.stop_month))))
-          GROUP BY COALESCE(a_1.email, b_1.email), COALESCE(a_1.frequency, b_1.frequency), COALESCE(a_1.start_month, b_1.stop_month)
-        ), value_added_lost AS (
-         SELECT changed_donations.month,
-            sum(((changed_donations.amount * (
-                CASE
-                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
-                    ELSE 0
-                END)::numeric) * (
-                CASE
-                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
-                    ELSE 1
-                END)::numeric)) AS value_added,
-            sum(((changed_donations.amount * (
-                CASE
-                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
-                    ELSE 0
-                END)::numeric) * (
-                CASE
-                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
-                    ELSE 0
-                END)::numeric)) AS value_added_monthly,
-            sum(((changed_donations.amount * (
-                CASE
-                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
-                    ELSE 0
-                END)::numeric) * (
-                CASE
-                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 0
-                    ELSE 1
-                END)::numeric)) AS value_added_once,
-            sum(((changed_donations.amount * (
-                CASE
-                    WHEN (changed_donations.amount < (0)::numeric) THEN 1
-                    ELSE 0
-                END)::numeric) * (18)::numeric)) AS value_lost
-           FROM changed_donations
-          GROUP BY changed_donations.month
-          ORDER BY changed_donations.month DESC
-        ), monthly_donors AS (
-         SELECT date_trunc('month'::text, c_1.created_at) AS month,
-            count(DISTINCT c_1.donation_id) AS monthly_donors
-           FROM (giveffektivt.charge c_1
-             JOIN giveffektivt.donation_with_contact_info d ON ((c_1.donation_id = d.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-          GROUP BY (date_trunc('month'::text, c_1.created_at))
-        )
- SELECT ((to_char(a.month, 'yyyy'::text) || '-'::text) || to_char(a.month, 'MM'::text)) AS date,
-    COALESCE(sum(a.dkk_total), (0)::numeric) AS dkk_total,
-    COALESCE(sum(a.payments_total), (0)::numeric) AS payments_total,
-    COALESCE(sum(b.value_added), (0)::numeric) AS value_added,
-    COALESCE(sum(b.value_added_monthly), (0)::numeric) AS value_added_monthly,
-    COALESCE(sum(b.value_added_once), (0)::numeric) AS value_added_once,
-    COALESCE(sum(b.value_lost), (0)::numeric) AS value_lost,
-    COALESCE(sum(c.monthly_donors), (0)::numeric) AS monthly_donors
-   FROM ((successful_charges a
-     FULL JOIN value_added_lost b ON ((a.month = b.month)))
-     FULL JOIN monthly_donors c ON ((a.month = c.month)))
-  GROUP BY a.month
-  ORDER BY a.month DESC;
-
-
---
 -- Name: transfer_overview; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1883,6 +1750,15 @@ CREATE RULE charge_soft_delete AS
 
 
 --
+-- Name: charge_with_gateway_info charge_with_gateway_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE charge_with_gateway_info_soft_delete AS
+    ON DELETE TO giveffektivt.charge_with_gateway_info DO INSTEAD  UPDATE giveffektivt._charge SET deleted_at = now()
+  WHERE ((_charge.deleted_at IS NULL) AND (_charge.id = old.id));
+
+
+--
 -- Name: donation donation_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
 --
 
@@ -1899,6 +1775,24 @@ CREATE RULE donation_soft_delete_cascade AS
     ON UPDATE TO giveffektivt._donation
    WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._charge SET deleted_at = now()
   WHERE ((_charge.deleted_at IS NULL) AND (_charge.donation_id = old.id));
+
+
+--
+-- Name: donation_with_contact_info donation_with_contact_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE donation_with_contact_info_soft_delete AS
+    ON DELETE TO giveffektivt.donation_with_contact_info DO INSTEAD  UPDATE giveffektivt._donation SET deleted_at = now()
+  WHERE ((_donation.deleted_at IS NULL) AND (_donation.id = old.id));
+
+
+--
+-- Name: donation_with_sensitive_info donation_with_sensitive_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE donation_with_sensitive_info_soft_delete AS
+    ON DELETE TO giveffektivt.donation_with_sensitive_info DO INSTEAD  UPDATE giveffektivt._donation SET deleted_at = now()
+  WHERE ((_donation.deleted_at IS NULL) AND (_donation.id = old.id));
 
 
 --
@@ -1941,6 +1835,33 @@ CREATE RULE donor_soft_delete_cascade_gavebrev_checkin AS
 
 
 --
+-- Name: donor_with_contact_info donor_with_contact_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE donor_with_contact_info_soft_delete AS
+    ON DELETE TO giveffektivt.donor_with_contact_info DO INSTEAD  UPDATE giveffektivt._donor SET deleted_at = now()
+  WHERE ((_donor.id = old.id) AND (_donor.deleted_at IS NULL));
+
+
+--
+-- Name: donor_with_sensitive_info donor_with_sensitive_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE donor_with_sensitive_info_soft_delete AS
+    ON DELETE TO giveffektivt.donor_with_sensitive_info DO INSTEAD  UPDATE giveffektivt._donor SET deleted_at = now()
+  WHERE ((_donor.id = old.id) AND (_donor.deleted_at IS NULL));
+
+
+--
+-- Name: fundraiser fundraiser_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE RULE fundraiser_soft_delete AS
+    ON DELETE TO giveffektivt.fundraiser DO INSTEAD  UPDATE giveffektivt._fundraiser SET deleted_at = now()
+  WHERE ((_fundraiser.id = old.id) AND (_fundraiser.deleted_at IS NULL));
+
+
+--
 -- Name: gavebrev_checkin gavebrev_checkin_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
 --
 
@@ -1977,10 +1898,10 @@ CREATE RULE skat_soft_delete AS
 
 
 --
--- Name: transfer transfers_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: transfer transfer_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE transfers_soft_delete AS
+CREATE RULE transfer_soft_delete AS
     ON DELETE TO giveffektivt.transfer DO INSTEAD  UPDATE giveffektivt._transfer SET deleted_at = now()
   WHERE ((_transfer.deleted_at IS NULL) AND (_transfer.id = old.id));
 
@@ -2175,4 +2096,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250110190651'),
     ('20250115215315'),
     ('20250120213832'),
-    ('20250122172829');
+    ('20250122172829'),
+    ('99999999999999');
