@@ -1412,52 +1412,34 @@ CREATE VIEW giveffektivt.skat_gaveskema AS
 --
 
 CREATE VIEW giveffektivt.time_distribution AS
- WITH successful_charges AS (
-         SELECT date_trunc('month'::text, c_1.created_at) AS month,
-            sum(d.amount) AS dkk_total,
-            (count(*))::numeric AS payments_total
-           FROM (giveffektivt.charge c_1
-             JOIN giveffektivt.donation d ON ((c_1.donation_id = d.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-          GROUP BY (date_trunc('month'::text, c_1.created_at))
+ WITH buckets AS (
+         SELECT bucket_table.frequency,
+            bucket_table.start,
+            bucket_table.stop,
+            bucket_table.bucket
+           FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
         ), monthly_donations_charged_exactly_once AS (
-         SELECT unnamed_subquery.id,
-            unnamed_subquery.number_of_donations,
-            unnamed_subquery.last_donated_at
+         SELECT unnamed_subquery.id
            FROM ( SELECT d.id,
-                    count(c_1.id) AS number_of_donations,
-                    max(c_1.created_at) AS last_donated_at
+                    count(c.id) AS number_of_donations,
+                    max(c.created_at) AS last_donated_at
                    FROM (giveffektivt.donation d
-                     JOIN giveffektivt.charge c_1 ON ((d.id = c_1.donation_id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency))
+                     JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency))
                   GROUP BY d.id) unnamed_subquery
           WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.last_donated_at < (now() - '40 days'::interval)))
-        ), stopped_monthly_donations AS (
-         SELECT a_1.email,
-            date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval)) AS stop_month,
-            (- sum(a_1.amount)) AS amount,
-            a_1.frequency
-           FROM ( SELECT DISTINCT ON (d.id) p.email,
-                    c_1.created_at AS last_donated_at,
-                    d.amount,
-                    d.frequency
-                   FROM ((giveffektivt.donor_with_contact_info p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d.id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT (EXISTS ( SELECT 1
-                           FROM monthly_donations_charged_exactly_once m
-                          WHERE (d.id = m.id)))))
-                  ORDER BY d.id, c_1.created_at DESC) a_1
-          WHERE ((a_1.last_donated_at + '40 days'::interval) < now())
-          GROUP BY a_1.email, (date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval))), a_1.frequency
-          ORDER BY a_1.email, (date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval))) DESC
-        ), started_donations AS (
-         SELECT unnamed_subquery.email,
-            unnamed_subquery.start_month,
-            sum(unnamed_subquery.amount) AS amount,
-            unnamed_subquery.frequency
-           FROM ( SELECT DISTINCT ON (d.id) p.email,
-                    date_trunc('month'::text, c_1.created_at) AS start_month,
+        ), successful_charges AS (
+         SELECT a_1.month,
+            a_1.created_at,
+            a_1.email,
+            a_1.donation_id,
+            a_1.amount,
+            a_1.frequency,
+            b_1.bucket
+           FROM (( SELECT date_trunc('month'::text, c.created_at) AS month,
+                    c.created_at,
+                    p.email,
+                    d.id AS donation_id,
                     d.amount,
                         CASE
                             WHEN (EXISTS ( SELECT 1
@@ -1466,22 +1448,52 @@ CREATE VIEW giveffektivt.time_distribution AS
                             ELSE d.frequency
                         END AS frequency
                    FROM ((giveffektivt.donor_with_contact_info p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d.id)))
-                  WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-                  ORDER BY d.id, c_1.created_at) unnamed_subquery
-          GROUP BY unnamed_subquery.email, unnamed_subquery.start_month, unnamed_subquery.frequency
-          ORDER BY unnamed_subquery.email, unnamed_subquery.start_month DESC
+                     JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))) a_1
+             JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (a_1.amount > (b_1.start)::numeric) AND (a_1.amount <= (b_1.stop)::numeric))))
+        ), stopped_monthly_donations AS (
+         SELECT a_1.email,
+            date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval)) AS stop_month,
+            (- sum(a_1.amount)) AS amount,
+            a_1.frequency
+           FROM ( SELECT DISTINCT ON (s.donation_id) s.email,
+                    s.created_at AS last_donated_at,
+                    s.amount,
+                    s.frequency
+                   FROM successful_charges s
+                  WHERE (s.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  ORDER BY s.donation_id, s.created_at DESC) a_1
+          WHERE ((a_1.last_donated_at + '40 days'::interval) < now())
+          GROUP BY a_1.email, (date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval))), a_1.frequency
+        ), started_donations AS (
+         SELECT unnamed_subquery.email,
+            unnamed_subquery.month AS start_month,
+            sum(unnamed_subquery.amount) AS amount,
+            unnamed_subquery.frequency
+           FROM ( SELECT DISTINCT ON (successful_charges.donation_id) successful_charges.email,
+                    successful_charges.month,
+                    successful_charges.amount,
+                    successful_charges.frequency
+                   FROM successful_charges
+                  ORDER BY successful_charges.donation_id, successful_charges.created_at) unnamed_subquery
+          GROUP BY unnamed_subquery.email, unnamed_subquery.month, unnamed_subquery.frequency
         ), changed_donations AS (
-         SELECT COALESCE(a_1.start_month, b_1.stop_month) AS month,
-            COALESCE(a_1.email, b_1.email) AS email,
-            COALESCE(a_1.frequency, b_1.frequency) AS frequency,
-            (sum(COALESCE(a_1.amount, (0)::numeric)) + sum(COALESCE(b_1.amount, (0)::numeric))) AS amount
-           FROM (started_donations a_1
-             FULL JOIN stopped_monthly_donations b_1 ON (((a_1.email = b_1.email) AND (a_1.frequency = b_1.frequency) AND (a_1.start_month = b_1.stop_month))))
-          GROUP BY COALESCE(a_1.email, b_1.email), COALESCE(a_1.frequency, b_1.frequency), COALESCE(a_1.start_month, b_1.stop_month)
+         SELECT a_1.month,
+            a_1.frequency,
+            a_1.amount,
+            b_1.bucket
+           FROM (( SELECT COALESCE(a_2.start_month, b_2.stop_month) AS month,
+                    COALESCE(a_2.frequency, b_2.frequency) AS frequency,
+                    (sum(COALESCE(a_2.amount, (0)::numeric)) + sum(COALESCE(b_2.amount, (0)::numeric))) AS amount
+                   FROM (started_donations a_2
+                     FULL JOIN stopped_monthly_donations b_2 ON (((a_2.email = b_2.email) AND (a_2.frequency = b_2.frequency) AND (a_2.start_month = b_2.stop_month))))
+                  GROUP BY COALESCE(a_2.email, b_2.email), COALESCE(a_2.frequency, b_2.frequency), COALESCE(a_2.start_month, b_2.stop_month)) a_1
+             JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (abs(a_1.amount) > (b_1.start)::numeric) AND (abs(a_1.amount) <= (b_1.stop)::numeric))))
         ), value_added_lost AS (
          SELECT changed_donations.month,
+            changed_donations.frequency,
+            changed_donations.bucket,
             sum(((changed_donations.amount * (
                 CASE
                     WHEN (changed_donations.amount > (0)::numeric) THEN 1
@@ -1493,51 +1505,185 @@ CREATE VIEW giveffektivt.time_distribution AS
                 END)::numeric)) AS value_added,
             sum(((changed_donations.amount * (
                 CASE
-                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
-                    ELSE 0
-                END)::numeric) * (
-                CASE
-                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
-                    ELSE 0
-                END)::numeric)) AS value_added_monthly,
-            sum(((changed_donations.amount * (
-                CASE
-                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
-                    ELSE 0
-                END)::numeric) * (
-                CASE
-                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 0
-                    ELSE 1
-                END)::numeric)) AS value_added_once,
-            sum(((changed_donations.amount * (
-                CASE
                     WHEN (changed_donations.amount < (0)::numeric) THEN 1
                     ELSE 0
                 END)::numeric) * (18)::numeric)) AS value_lost
            FROM changed_donations
-          GROUP BY changed_donations.month
-          ORDER BY changed_donations.month DESC
-        ), monthly_donors AS (
-         SELECT date_trunc('month'::text, c_1.created_at) AS month,
-            count(DISTINCT c_1.donation_id) AS monthly_donors
-           FROM (giveffektivt.charge c_1
-             JOIN giveffektivt.donation_with_contact_info d ON ((c_1.donation_id = d.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
-          GROUP BY (date_trunc('month'::text, c_1.created_at))
+          GROUP BY changed_donations.month, changed_donations.frequency, changed_donations.bucket
+        ), payments AS (
+         SELECT successful_charges.month,
+            sum(successful_charges.amount) AS amount,
+            count(DISTINCT successful_charges.donation_id) AS payments,
+            successful_charges.frequency,
+            successful_charges.bucket
+           FROM successful_charges
+          GROUP BY successful_charges.month, successful_charges.frequency, successful_charges.bucket
         )
- SELECT ((to_char(a.month, 'yyyy'::text) || '-'::text) || to_char(a.month, 'MM'::text)) AS date,
-    COALESCE(sum(a.dkk_total), (0)::numeric) AS dkk_total,
-    COALESCE(sum(a.payments_total), (0)::numeric) AS payments_total,
+ SELECT ((to_char(COALESCE(a.month, b.month), 'yyyy'::text) || '-'::text) || to_char(COALESCE(a.month, b.month), 'MM'::text)) AS date,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'small'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'medium'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'large'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'major'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'small'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'medium'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'large'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'major'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'small'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_small,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'medium'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_medium,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'large'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_large,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'major'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_major,
+    (COALESCE(sum(b.value_added), (0)::numeric) + COALESCE(sum(b.value_lost), (0)::numeric)) AS value_total,
+    COALESCE(sum(
+        CASE
+            WHEN (a.frequency = 'monthly'::giveffektivt.donation_frequency) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS monthly_donors,
+    COALESCE(sum(a.payments), (0)::numeric) AS payments_total,
+    COALESCE(sum(a.amount), (0)::numeric) AS dkk_total,
     COALESCE(sum(b.value_added), (0)::numeric) AS value_added,
-    COALESCE(sum(b.value_added_monthly), (0)::numeric) AS value_added_monthly,
-    COALESCE(sum(b.value_added_once), (0)::numeric) AS value_added_once,
-    COALESCE(sum(b.value_lost), (0)::numeric) AS value_lost,
-    COALESCE(sum(c.monthly_donors), (0)::numeric) AS monthly_donors
-   FROM ((successful_charges a
-     FULL JOIN value_added_lost b ON ((a.month = b.month)))
-     FULL JOIN monthly_donors c ON ((a.month = c.month)))
-  GROUP BY a.month
-  ORDER BY a.month DESC;
+    COALESCE(sum(
+        CASE
+            WHEN (b.frequency = 'once'::giveffektivt.donation_frequency) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once,
+    COALESCE(sum(
+        CASE
+            WHEN (b.frequency = 'monthly'::giveffektivt.donation_frequency) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly,
+    COALESCE(sum(b.value_lost), (0)::numeric) AS value_lost
+   FROM (payments a
+     FULL JOIN value_added_lost b ON (((a.month = b.month) AND (a.frequency = b.frequency) AND (a.bucket = b.bucket))))
+  GROUP BY COALESCE(a.month, b.month)
+  ORDER BY COALESCE(a.month, b.month) DESC;
 
 
 --

@@ -1532,23 +1532,25 @@ select
 --------------------------------------
 create view time_distribution as
 with
-    successful_charges as (
+    buckets as (
         select
-            date_trunc('month', c.created_at) as month,
-            sum(amount) as dkk_total,
-            count(*)::numeric as payments_total
+            *
         from
-            charge c
-            join donation d on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
-        group by
-            month
+            (
+                values
+                    ('once'::donation_frequency, 0, 1000, 'small'),
+                    ('once'::donation_frequency, 1000, 6000, 'medium'),
+                    ('once'::donation_frequency, 6000, 24000, 'large'),
+                    ('once'::donation_frequency, 24000, 999999999999, 'major'),
+                    ('monthly'::donation_frequency, 0, 200, 'small'),
+                    ('monthly'::donation_frequency, 200, 500, 'medium'),
+                    ('monthly'::donation_frequency, 500, 2000, 'large'),
+                    ('monthly'::donation_frequency, 2000, 999999999999, 'major')
+            ) as bucket_table (frequency, start, stop, bucket)
     ),
     monthly_donations_charged_exactly_once as (
         select
-            *
+            id
         from
             (
                 select
@@ -1569,60 +1571,17 @@ with
             number_of_donations = 1
             and last_donated_at < now() - interval '40 days'
     ),
-    stopped_monthly_donations as (
+    successful_charges as (
         select
-            email,
-            date_trunc('month', last_donated_at + interval '1 month') as stop_month,
-            - sum(amount) as amount,
-            frequency
+            a.*,
+            bucket
         from
             (
-                select distinct
-                    on (d.id) p.email,
-                    c.created_at as last_donated_at,
-                    amount,
-                    frequency
-                from
-                    donor_with_contact_info p
-                    inner join donation d on d.donor_id = p.id
-                    inner join charge c on c.donation_id = d.id
-                where
-                    c.status = 'charged'
-                    and recipient != 'Giv Effektivt'
-                    and frequency = 'monthly'
-                    and not exists (
-                        select
-                            1
-                        from
-                            monthly_donations_charged_exactly_once m
-                        where
-                            d.id = m.id
-                    )
-                order by
-                    d.id,
-                    c.created_at desc
-            ) a
-        where
-            last_donated_at + interval '40 days' < now()
-        group by
-            email,
-            date_trunc('month', last_donated_at + interval '1 month'),
-            frequency
-        order by
-            email,
-            stop_month desc
-    ),
-    started_donations as (
-        select
-            email,
-            start_month,
-            sum(amount) as amount,
-            frequency
-        from
-            (
-                select distinct
-                    on (d.id) email,
-                    date_trunc('month', c.created_at) as start_month,
+                select
+                    date_trunc('month', c.created_at) as month,
+                    c.created_at,
+                    p.email,
+                    d.id as donation_id,
                     amount,
                     case
                         when exists (
@@ -1637,127 +1596,171 @@ with
                     end as frequency
                 from
                     donor_with_contact_info p
-                    inner join donation d on d.donor_id = p.id
-                    inner join charge c on c.donation_id = d.id
+                    join donation d on p.id = d.donor_id
+                    join charge c on c.donation_id = d.id
                 where
                     c.status = 'charged'
-                    and recipient != 'Giv Effektivt'
+                    and d.recipient != 'Giv Effektivt'
+            ) a
+            join buckets b on a.frequency = b.frequency
+            and a.amount > b.start
+            and a.amount <= b.stop
+    ),
+    stopped_monthly_donations as (
+        select
+            email,
+            date_trunc('month', last_donated_at + interval '1 month') as stop_month,
+            - sum(amount) as amount,
+            frequency
+        from
+            (
+                select distinct
+                    on (donation_id) email,
+                    created_at as last_donated_at,
+                    amount,
+                    frequency
+                from
+                    successful_charges s
+                where
+                    frequency = 'monthly'
                 order by
-                    d.id,
-                    c.created_at
+                    donation_id,
+                    created_at desc
+            ) a
+        where
+            last_donated_at + interval '40 days' < now()
+        group by
+            email,
+            date_trunc('month', last_donated_at + interval '1 month'),
+            frequency
+    ),
+    started_donations as (
+        select
+            email,
+            month as start_month,
+            sum(amount) as amount,
+            frequency
+        from
+            (
+                select distinct
+                    on (donation_id) email,
+                    month,
+                    amount,
+                    frequency
+                from
+                    successful_charges
+                order by
+                    donation_id,
+                    created_at
             )
         group by
             email,
-            start_month,
+            month,
             frequency
-        order by
-            email,
-            start_month desc
     ),
     changed_donations as (
         select
-            coalesce(start_month, stop_month) as month,
-            coalesce(a.email, b.email) as email,
-            coalesce(a.frequency, b.frequency) as frequency,
-            sum(coalesce(a.amount, 0)) + sum(coalesce(b.amount, 0)) as amount
+            a.*,
+            bucket
         from
-            started_donations a
-            full outer join stopped_monthly_donations b on a.email = b.email
-            and a.frequency = b.frequency
-            and a.start_month = b.stop_month
-        group by
-            coalesce(a.email, b.email),
-            coalesce(a.frequency, b.frequency),
-            coalesce(start_month, stop_month)
+            (
+                select
+                    coalesce(start_month, stop_month) as month,
+                    coalesce(a.frequency, b.frequency) as frequency,
+                    sum(coalesce(a.amount, 0)) + sum(coalesce(b.amount, 0)) as amount
+                from
+                    started_donations a
+                    full outer join stopped_monthly_donations b on a.email = b.email
+                    and a.frequency = b.frequency
+                    and a.start_month = b.stop_month
+                group by
+                    coalesce(a.email, b.email),
+                    coalesce(a.frequency, b.frequency),
+                    coalesce(start_month, stop_month)
+            ) a
+            join buckets b on a.frequency = b.frequency
+            and abs(a.amount) > b.start
+            and abs(a.amount) <= b.stop
     ),
     value_added_lost as (
         select
             month,
-            sum(
-                amount * (
-                    case
-                        when amount > 0 then 1
-                        else 0
-                    end
-                ) * (
-                    case
-                        when frequency = 'monthly' then 18
-                        else 1
-                    end
-                )
-            )::numeric as value_added,
-            sum(
-                amount * (
-                    case
-                        when amount > 0 then 1
-                        else 0
-                    end
-                ) * (
-                    case
-                        when frequency = 'monthly' then 18
-                        else 0
-                    end
-                )
-            )::numeric as value_added_monthly,
-            sum(
-                amount * (
-                    case
-                        when amount > 0 then 1
-                        else 0
-                    end
-                ) * (
-                    case
-                        when frequency = 'monthly' then 0
-                        else 1
-                    end
-                )
-            )::numeric as value_added_once,
-            sum(
-                amount * (
-                    case
-                        when amount < 0 then 1
-                        else 0
-                    end
-                ) * 18
-            )::numeric as value_lost
+            frequency,
+            bucket,
+            /* sql-formatter-disable */
+            sum(amount * (case when amount > 0 then 1 else 0 end) * (case when frequency = 'monthly' then 18 else 1 end)) as value_added,
+            sum(amount * (case when amount < 0 then 1 else 0 end) * 18) as value_lost
+            /* sql-formatter-enable */
         from
             changed_donations
         group by
-            month
-        order by
-            month desc
+            month,
+            frequency,
+            bucket
     ),
-    monthly_donors as (
+    payments as (
         select
-            date_trunc('month', c.created_at) as month,
-            count(distinct c.donation_id) as monthly_donors
+            month,
+            sum(amount) as amount,
+            count(distinct donation_id) as payments,
+            frequency,
+            bucket
         from
-            charge c
-            join donation_with_contact_info d on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.frequency = 'monthly'
-            and d.recipient != 'Giv Effektivt'
+            successful_charges
         group by
-            date_trunc('month', c.created_at)
+            month,
+            frequency,
+            bucket
     )
 select
-    to_char(a.month, 'yyyy') || '-' || to_char(a.month, 'MM') as date,
-    coalesce(sum(dkk_total), 0) as dkk_total,
-    coalesce(sum(payments_total), 0) as payments_total,
-    coalesce(sum(value_added), 0) as value_added,
-    coalesce(sum(value_added_monthly), 0) as value_added_monthly,
-    coalesce(sum(value_added_once), 0) as value_added_once,
-    coalesce(sum(value_lost), 0) as value_lost,
-    coalesce(sum(monthly_donors), 0) as monthly_donors
+    to_char(coalesce(a.month, b.month), 'yyyy') || '-' || to_char(coalesce(a.month, b.month), 'MM') as date,
+    /* sql-formatter-disable */
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_once_small,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_once_medium,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'large'  then a.amount else 0 end), 0) as amount_once_large,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'major'  then a.amount else 0 end), 0) as amount_once_major,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_monthly_small,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_monthly_medium,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.amount else 0 end), 0) as amount_monthly_large,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.amount else 0 end), 0) as amount_monthly_major,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.payments else 0 end), 0) as payments_once_small,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_once_medium,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_once_large,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_once_major,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'small'  then a.payments else 0 end), 0) as payments_monthly_small,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_monthly_medium,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_monthly_large,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_monthly_major,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_once_small,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_once_medium,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_once_large,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'major'  then b.value_added else 0 end), 0) as value_added_once_major,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_monthly_small,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_monthly_medium,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_monthly_large,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'major'  then b.value_added else 0 end), 0) as value_added_monthly_major,
+    coalesce(sum(case when b.bucket = 'small'  then b.value_lost else 0 end), 0) as value_lost_small,
+    coalesce(sum(case when b.bucket = 'medium' then b.value_lost else 0 end), 0) as value_lost_medium,
+    coalesce(sum(case when b.bucket = 'large'  then b.value_lost else 0 end), 0) as value_lost_large,
+    coalesce(sum(case when b.bucket = 'major'  then b.value_lost else 0 end), 0) as value_lost_major,
+    coalesce(sum(b.value_added), 0) + coalesce(sum(b.value_lost), 0) as value_total,
+    coalesce(sum(case when a.frequency = 'monthly' then a.payments else 0 end), 0) as monthly_donors,
+    coalesce(sum(a.payments), 0) as payments_total,
+    coalesce(sum(a.amount), 0) as dkk_total,
+    coalesce(sum(b.value_added), 0) as value_added,
+    coalesce(sum(case when b.frequency = 'once' then b.value_added else 0 end), 0) as value_added_once,
+    coalesce(sum(case when b.frequency = 'monthly' then b.value_added else 0 end), 0) as value_added_monthly,
+    coalesce(sum(b.value_lost), 0) as value_lost
+    /* sql-formatter-enable */
 from
-    successful_charges a
-    full join value_added_lost b on a.month = b.month
-    full join monthly_donors c on a.month = c.month
+    payments a
+    full outer join value_added_lost b on a.month = b.month
+    and a.frequency = b.frequency
+    and a.bucket = b.bucket
 group by
-    a.month
+    coalesce(a.month, b.month)
 order by
-    a.month desc;
+    coalesce(a.month, b.month) desc;
 
 grant
 select
