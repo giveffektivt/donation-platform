@@ -26,6 +26,7 @@ export async function GET(_: Request) {
     return new Response(JSON.stringify(result, null, 4), {
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "s-maxage=10",
       },
     });
   } catch (e) {
