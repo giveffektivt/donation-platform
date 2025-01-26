@@ -510,11 +510,11 @@ create role app in role writer;
 
 create role dev in role writer;
 
-create user donation_platform login password 'CHANGEME' in role app;
+create user donation_platform login password CHANGEME in role app;
 
-create user max login password 'CHANGEME' in role dev;
+create user max login password CHANGEME in role dev;
 
-create user mikolaj login password 'CHANGEME' in role dev;
+create user mikolaj login password CHANGEME in role dev;
 
 alter user postgres set search_path to giveffektivt;
 
