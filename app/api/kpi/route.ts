@@ -23,9 +23,8 @@ export async function GET(_: Request) {
       collected: await getTimeDistribution(db),
     };
 
-    return new Response(JSON.stringify(result, null, 4), {
+    return Response.json(result, {
       headers: {
-        "Content-Type": "application/json",
         "Cache-Control": "s-maxage=10",
       },
     });
