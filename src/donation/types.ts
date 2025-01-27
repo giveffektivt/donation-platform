@@ -127,3 +127,16 @@ export type Fundraiser = {
   created_at: Date;
   updated_at: Date;
 };
+
+export type CrmExport = {
+  email: string;
+  registered_at: Date;
+  name: string;
+  total_donated: number;
+  last_donated_amount: number;
+  last_donated_method: string;
+  last_donated_frequency: DonationFrequency;
+  last_donated_recipient: DonationRecipient;
+  last_donated_at: Date;
+  is_member: boolean;
+};

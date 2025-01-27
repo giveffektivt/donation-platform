@@ -1,5 +1,6 @@
 import { PoolClient } from "pg";
 import {
+  CrmExport,
   Donation,
   DonationFrequency,
   DonationRecipient,
@@ -238,4 +239,8 @@ export async function getFundraiser(
       [id],
     )
   ).rows[0];
+}
+
+export async function getCrmExport(client: PoolClient): Promise<CrmExport[]> {
+  return (await client.query("select * from crm_export")).rows;
 }
