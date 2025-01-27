@@ -13,6 +13,7 @@ annual_tax_report_gaveskema,
 charge,
 charges_to_charge,
 charge_with_gateway_info,
+crm_export,
 donation,
 donations_to_create_charges,
 donations_to_email,
@@ -573,8 +574,8 @@ from
             c.created_at as last_charge,
             (
                 case
-                    when d.frequency = 'monthly' then c.created_at + interval '1' month
-                    when d.frequency = 'yearly' then c.created_at + interval '1' year
+                    when d.frequency = 'monthly' then c.created_at + interval '1 month'
+                    when d.frequency = 'yearly' then c.created_at + interval '1 year'
                 end
             ) as next_charge
         from
@@ -1911,5 +1912,114 @@ from
 grant
 select
     on kpi to everyone;
+
+--------------------------------------
+create view crm_export as
+with
+    emails as (
+        select distinct
+            on (p.email) p.email,
+            p.created_at as registered_at
+        from
+            donor_with_contact_info p
+            join donation d on d.donor_id = p.id
+            join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+        order by
+            p.email,
+            p.created_at
+    ),
+    names as (
+        select distinct
+            on (p.email) p.email,
+            p.name
+        from
+            donor_with_contact_info p
+        where
+            p.name is not null
+        order by
+            p.email,
+            p.created_at
+    ),
+    members as (
+        select distinct
+            on (p.email) p.email,
+            p.name
+        from
+            donor_with_sensitive_info p
+            join donation d on d.donor_id = p.id
+            join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient = 'Giv Effektivt'
+            and c.created_at >= now() - interval '1 year'
+    ),
+    donations as (
+        select
+            p.email,
+            sum(d.amount) as total_donated
+        from
+            donor_with_contact_info p
+            join donation d on d.donor_id = p.id
+            join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivt'
+        group by
+            p.email
+    ),
+    latest_donations as (
+        select distinct
+            on (p.email) p.email,
+            d.amount as last_donated_amount,
+            d.method as last_donated_method,
+            d.frequency as last_donated_frequency,
+            d.recipient as last_donated_recipient,
+            c.created_at as last_donated_at
+        from
+            donor_with_contact_info p
+            join donation d on d.donor_id = p.id
+            join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivt'
+        order by
+            p.email,
+            c.created_at desc
+    ),
+    data as (
+        select
+            e.email,
+            e.registered_at,
+            n.name,
+            d.total_donated,
+            l.last_donated_amount,
+            l.last_donated_method,
+            l.last_donated_frequency,
+            l.last_donated_recipient,
+            l.last_donated_at,
+            m.email is not null as is_member
+        from
+            emails e
+            left join names n on n.email = e.email
+            left join donations d on d.email = e.email
+            left join members m on m.email = e.email
+            left join latest_donations l on l.email = e.email
+    )
+select
+    *
+from
+    data
+where
+    email like '%@%'
+    and (
+        total_donated > 0
+        or is_member
+    );
+
+grant
+select
+    on crm_export to reader_contact;
 
 -- migrate:down

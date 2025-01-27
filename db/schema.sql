@@ -1000,6 +1000,83 @@ CREATE VIEW giveffektivt.charges_to_charge AS
 
 
 --
+-- Name: crm_export; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.crm_export AS
+ WITH emails AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            p.created_at AS registered_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE (c.status = 'charged'::giveffektivt.charge_status)
+          ORDER BY p.email, p.created_at
+        ), names AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            p.name
+           FROM giveffektivt.donor_with_contact_info p
+          WHERE (p.name IS NOT NULL)
+          ORDER BY p.email, p.created_at
+        ), members AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            p.name
+           FROM ((giveffektivt.donor_with_sensitive_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= (now() - '1 year'::interval)))
+        ), donations AS (
+         SELECT p.email,
+            sum(d.amount) AS total_donated
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          GROUP BY p.email
+        ), latest_donations AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            d.amount AS last_donated_amount,
+            d.method AS last_donated_method,
+            d.frequency AS last_donated_frequency,
+            d.recipient AS last_donated_recipient,
+            c.created_at AS last_donated_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          ORDER BY p.email, c.created_at DESC
+        ), data AS (
+         SELECT e.email,
+            e.registered_at,
+            n.name,
+            d.total_donated,
+            l.last_donated_amount,
+            l.last_donated_method,
+            l.last_donated_frequency,
+            l.last_donated_recipient,
+            l.last_donated_at,
+            (m.email IS NOT NULL) AS is_member
+           FROM ((((emails e
+             LEFT JOIN names n ON ((n.email = e.email)))
+             LEFT JOIN donations d ON ((d.email = e.email)))
+             LEFT JOIN members m ON ((m.email = e.email)))
+             LEFT JOIN latest_donations l ON ((l.email = e.email)))
+        )
+ SELECT email,
+    registered_at,
+    name,
+    total_donated,
+    last_donated_amount,
+    last_donated_method,
+    last_donated_frequency,
+    last_donated_recipient,
+    last_donated_at,
+    is_member
+   FROM data
+  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member));
+
+
+--
 -- Name: donation_with_contact_info; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1035,8 +1112,8 @@ CREATE VIEW giveffektivt.donations_to_create_charges AS
             d.frequency,
             c.created_at AS last_charge,
                 CASE
-                    WHEN (d.frequency = 'monthly'::giveffektivt.donation_frequency) THEN (c.created_at + '1 mon'::interval month)
-                    WHEN (d.frequency = 'yearly'::giveffektivt.donation_frequency) THEN (c.created_at + '1 year'::interval year)
+                    WHEN (d.frequency = 'monthly'::giveffektivt.donation_frequency) THEN (c.created_at + '1 mon'::interval)
+                    WHEN (d.frequency = 'yearly'::giveffektivt.donation_frequency) THEN (c.created_at + '1 year'::interval)
                     ELSE NULL::timestamp with time zone
                 END AS next_charge
            FROM (giveffektivt.donation d
