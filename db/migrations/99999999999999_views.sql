@@ -34,11 +34,12 @@ old_ids_map,
 pending_distribution,
 skat,
 skat_gaveskema,
-time_distribution,
 transfer,
 transfer_overview,
 transfer_pending,
 transferred_distribution cascade;
+
+drop function if exists time_distribution cascade;
 
 -- =========== table views ===========
 --
@@ -1531,7 +1532,54 @@ select
     on pending_distribution to everyone;
 
 --------------------------------------
-create view time_distribution as
+create function time_distribution (in time_from timestamptz, in time_to timestamptz) returns table (
+    date text,
+    amount_once_small numeric,
+    amount_once_medium numeric,
+    amount_once_large numeric,
+    amount_once_major numeric,
+    amount_monthly_small numeric,
+    amount_monthly_medium numeric,
+    amount_monthly_large numeric,
+    amount_monthly_major numeric,
+    payments_once_small numeric,
+    payments_once_medium numeric,
+    payments_once_large numeric,
+    payments_once_major numeric,
+    payments_monthly_small numeric,
+    payments_monthly_medium numeric,
+    payments_monthly_large numeric,
+    payments_monthly_major numeric,
+    value_added_once_small numeric,
+    value_added_once_medium numeric,
+    value_added_once_large numeric,
+    value_added_once_major numeric,
+    value_added_monthly_small numeric,
+    value_added_monthly_medium numeric,
+    value_added_monthly_large numeric,
+    value_added_monthly_major numeric,
+    value_lost_small numeric,
+    value_lost_medium numeric,
+    value_lost_large numeric,
+    value_lost_major numeric,
+    value_total numeric,
+    monthly_donors numeric,
+    payments_total numeric,
+    dkk_total numeric,
+    value_added numeric,
+    value_added_once numeric,
+    value_added_monthly numeric,
+    value_lost numeric
+) language plpgsql as $$
+declare
+  interval_type text;
+begin
+if time_to - time_from <= interval '3 month' then
+    interval_type := 'day';
+else
+    interval_type := 'month';
+end if;
+return query
 with
     buckets as (
         select
@@ -1579,6 +1627,7 @@ with
         from
             (
                 select
+                    date_trunc(interval_type, c.created_at) as period,
                     date_trunc('month', c.created_at) as month,
                     c.created_at,
                     p.email,
@@ -1602,6 +1651,8 @@ with
                 where
                     c.status = 'charged'
                     and d.recipient != 'Giv Effektivt'
+                    and (time_from is null or c.created_at >= time_from)
+                    and (time_to is null or c.created_at <= time_to)
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -1685,7 +1736,7 @@ with
     ),
     value_added_lost as (
         select
-            month,
+            month as period,
             frequency,
             bucket,
             /* sql-formatter-disable */
@@ -1701,7 +1752,7 @@ with
     ),
     payments as (
         select
-            month,
+            period,
             sum(amount) as amount,
             count(distinct donation_id) as payments,
             frequency,
@@ -1709,12 +1760,12 @@ with
         from
             successful_charges
         group by
-            month,
+            period,
             frequency,
             bucket
     )
 select
-    to_char(coalesce(a.month, b.month), 'yyyy') || '-' || to_char(coalesce(a.month, b.month), 'MM') as date,
+    to_char(coalesce(a.period, b.period), 'yyyy') || '-' || to_char(coalesce(a.period, b.period), 'MM') || '-' || to_char(coalesce(a.period, b.period), 'dd') as date,
     /* sql-formatter-disable */
     coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_once_small,
     coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_once_medium,
@@ -1755,18 +1806,20 @@ select
     /* sql-formatter-enable */
 from
     payments a
-    full outer join value_added_lost b on a.month = b.month
+    full outer join value_added_lost b on a.period = b.period
     and a.frequency = b.frequency
     and a.bucket = b.bucket
 group by
-    coalesce(a.month, b.month)
+    coalesce(a.period, b.period)
 order by
-    coalesce(a.month, b.month) desc;
+    coalesce(a.period, b.period) desc;
+end
+$$;
 
 grant
-select
-    on time_distribution to everyone;
+execute on function time_distribution (timestamptz, timestamptz) to everyone;
 
+--------------------------------------
 create view transfer_pending as
 with
     data as (
