@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import {
   dbClient,
   dbRelease,
@@ -9,7 +10,10 @@ import {
   getTransferOverview,
 } from "src";
 
-export async function GET(_: Request) {
+export async function GET(request: NextRequest) {
+  const from = toISO(request.nextUrl.searchParams.get("from"));
+  const to = toISO(request.nextUrl.searchParams.get("to"));
+
   let db = null;
 
   try {
@@ -20,7 +24,7 @@ export async function GET(_: Request) {
       pending: await getPendingDistribution(db),
       transferred: await getTransferredDistribution(db),
       transfer_overview: await getTransferOverview(db),
-      collected: await getTimeDistribution(db),
+      collected: await getTimeDistribution(db, from, to),
     };
 
     return Response.json(result, {
@@ -33,5 +37,17 @@ export async function GET(_: Request) {
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);
+  }
+}
+
+function toISO(timestamp: string | null): string | null {
+  if (!timestamp) {
+    return null;
+  }
+
+  try {
+    return new Date(Number.parseInt(timestamp, 10)).toISOString();
+  } catch {
+    return null;
   }
 }

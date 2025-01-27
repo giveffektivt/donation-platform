@@ -31,8 +31,12 @@ export async function getTransferredDistribution(
 
 export async function getTimeDistribution(
   client: PoolClient,
+  from: string | null,
+  to: string | null,
 ): Promise<TimeDistribution[]> {
-  return (await client.query("select * from time_distribution")).rows;
+  return (
+    await client.query("select * from time_distribution($1, $2)", [from, to])
+  ).rows;
 }
 
 export async function getIgnoredRenewals(client: PoolClient) {
