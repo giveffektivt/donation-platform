@@ -1604,6 +1604,7 @@ with
             (
                 select
                     d.id,
+                    bool_or(d.cancelled) as cancelled,
                     count(c.id) as number_of_donations,
                     max(c.created_at) as last_donated_at
                 from
@@ -1618,7 +1619,7 @@ with
             )
         where
             number_of_donations = 1
-            and last_donated_at < now() - interval '40 days'
+            and (cancelled or last_donated_at < now() - interval '40 days')
     ),
     successful_charges as (
         select
