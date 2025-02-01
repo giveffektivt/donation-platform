@@ -225,6 +225,7 @@ with
             (
                 select
                     d.id,
+                    bool_or(d.cancelled) as cancelled,
                     count(c.id) as number_of_donations,
                     max(c.created_at) as last_donated_at
                 from
@@ -239,7 +240,7 @@ with
             )
         where
             number_of_donations = 1
-            and last_donated_at < now() - interval '40 days'
+            and (cancelled or last_donated_at < now() - interval '40 days')
     ),
     successful_charges as (
         select
@@ -272,8 +273,6 @@ with
                 where
                     c.status = 'charged'
                     and d.recipient != 'Giv Effektivt'
-                    and (time_from is null or c.created_at >= time_from)
-                    and (time_to is null or c.created_at <= time_to)
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -282,7 +281,7 @@ with
     stopped_monthly_donations as (
         select
             email,
-            date_trunc('month', last_donated_at + interval '1 month') as stop_month,
+            date_trunc(interval_type, last_donated_at + interval '1 month') as stop_period,
             - sum(amount) as amount,
             frequency
         from
@@ -304,20 +303,20 @@ with
             last_donated_at + interval '40 days' < now()
         group by
             email,
-            date_trunc('month', last_donated_at + interval '1 month'),
+            date_trunc(interval_type, last_donated_at + interval '1 month'),
             frequency
     ),
     started_donations as (
         select
             email,
-            month as start_month,
+            period as start_period,
             sum(amount) as amount,
             frequency
         from
             (
                 select distinct
                     on (donation_id) email,
-                    month,
+                    period,
                     amount,
                     frequency
                 from
@@ -328,7 +327,7 @@ with
             )
         group by
             email,
-            month,
+            period,
             frequency
     ),
     changed_donations as (
@@ -338,26 +337,29 @@ with
         from
             (
                 select
-                    coalesce(start_month, stop_month) as month,
+                    coalesce(start_period, stop_period) as period,
                     coalesce(a.frequency, b.frequency) as frequency,
                     sum(coalesce(a.amount, 0)) + sum(coalesce(b.amount, 0)) as amount
                 from
                     started_donations a
                     full outer join stopped_monthly_donations b on a.email = b.email
                     and a.frequency = b.frequency
-                    and a.start_month = b.stop_month
+                    and date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
                 group by
                     coalesce(a.email, b.email),
                     coalesce(a.frequency, b.frequency),
-                    coalesce(start_month, stop_month)
+                    coalesce(start_period, stop_period)
             ) a
             join buckets b on a.frequency = b.frequency
             and abs(a.amount) > b.start
             and abs(a.amount) <= b.stop
+            where
+                (time_from is null or period >= time_from)
+                and (time_to is null or period <= time_to)
     ),
     value_added_lost as (
         select
-            month as period,
+            period,
             frequency,
             bucket,
             /* sql-formatter-disable */
@@ -367,7 +369,7 @@ with
         from
             changed_donations
         group by
-            month,
+            period,
             frequency,
             bucket
     ),
@@ -380,6 +382,9 @@ with
             bucket
         from
             successful_charges
+        where
+            (time_from is null or created_at >= time_from)
+            and (time_to is null or created_at <= time_to)
         group by
             period,
             frequency,
