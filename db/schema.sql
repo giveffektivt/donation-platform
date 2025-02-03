@@ -254,6 +254,7 @@ with
                     c.created_at,
                     p.email,
                     d.id as donation_id,
+                    d.cancelled,
                     amount,
                     case
                         when exists (
@@ -290,7 +291,8 @@ with
                     on (donation_id) email,
                     created_at as last_donated_at,
                     amount,
-                    frequency
+                    frequency,
+                    cancelled
                 from
                     successful_charges s
                 where
@@ -301,6 +303,7 @@ with
             ) a
         where
             last_donated_at + interval '40 days' < now()
+            or cancelled
         group by
             email,
             date_trunc(interval_type, last_donated_at + interval '1 month'),
