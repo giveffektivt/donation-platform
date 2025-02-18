@@ -1569,7 +1569,9 @@ create function time_distribution (in time_from timestamptz, in time_to timestam
     value_added numeric,
     value_added_once numeric,
     value_added_monthly numeric,
-    value_lost numeric
+    value_lost numeric,
+    amount_new numeric,
+    payments_new numeric
 ) language plpgsql as $$
 declare
   interval_type text;
@@ -1619,7 +1621,10 @@ with
             )
         where
             number_of_donations = 1
-            and (cancelled or last_donated_at < now() - interval '40 days')
+            and (
+                cancelled
+                or last_donated_at < now() - interval '40 days'
+            )
     ),
     successful_charges as (
         select
@@ -1657,6 +1662,41 @@ with
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
             and a.amount <= b.stop
+    ),
+    first_time_donations as (
+        select
+            period,
+            sum(amount) as amount,
+            count(1) as payments
+        from
+            (
+                select distinct
+                    on (email) email,
+                    amount,
+                    date_trunc(interval_type, c.created_at) as period,
+                    c.created_at
+                from
+                    donor_with_contact_info p
+                    join donation d on p.id = d.donor_id
+                    join charge c on d.id = c.donation_id
+                where
+                    c.status = 'charged'
+                    and d.recipient != 'Giv Effektivt'
+                order by
+                    email,
+                    c.created_at
+            )
+        where
+            (
+                time_from is null
+                or created_at >= time_from
+            )
+            and (
+                time_to is null
+                or created_at <= time_to
+            )
+        group by
+            period
     ),
     stopped_monthly_donations as (
         select
@@ -1735,9 +1775,15 @@ with
             join buckets b on a.frequency = b.frequency
             and abs(a.amount) > b.start
             and abs(a.amount) <= b.stop
-            where
-                (time_from is null or period >= time_from)
-                and (time_to is null or period <= time_to)
+        where
+            (
+                time_from is null
+                or period >= time_from
+            )
+            and (
+                time_to is null
+                or period <= time_to
+            )
     ),
     value_added_lost as (
         select
@@ -1765,8 +1811,14 @@ with
         from
             successful_charges
         where
-            (time_from is null or created_at >= time_from)
-            and (time_to is null or created_at <= time_to)
+            (
+                time_from is null
+                or created_at >= time_from
+            )
+            and (
+                time_to is null
+                or created_at <= time_to
+            )
         group by
             period,
             frequency,
@@ -1810,13 +1862,16 @@ select
     coalesce(sum(b.value_added), 0) as value_added,
     coalesce(sum(case when b.frequency = 'once' then b.value_added else 0 end), 0) as value_added_once,
     coalesce(sum(case when b.frequency = 'monthly' then b.value_added else 0 end), 0) as value_added_monthly,
-    coalesce(sum(b.value_lost), 0) as value_lost
+    coalesce(sum(b.value_lost), 0) as value_lost,
+    coalesce(max(c.amount), 0)::numeric as amount_new,
+    coalesce(max(c.payments), 0)::numeric as payments_new
     /* sql-formatter-enable */
 from
     payments a
     full outer join value_added_lost b on a.period = b.period
     and a.frequency = b.frequency
     and a.bucket = b.bucket
+    full outer join first_time_donations c on a.period = c.period
 group by
     coalesce(a.period, b.period)
 order by
