@@ -18,25 +18,25 @@
     "date-fns": "^4.1.0",
     "mailersend": "^2.3.0",
     "next": "^15.0.3",
-    "pg": "^8.13.1",
+    "pg": "^8.13.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rollbar": "^2.26.4",
     "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
-    "yup": "^1.4.0"
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
-    "@types/node": "^22.9.0",
-    "@types/pg": "^8.11.10",
+    "@types/node": "^22.13.4",
+    "@types/pg": "^8.11.11",
     "@types/react": "^18.3.12",
     "create-ts-index": "^1.14.0",
-    "eslint": "^9.15.0",
-    "eslint-config-next": "^15.0.3",
-    "prettier": "^3.3.3",
-    "typescript": "^5.6.3",
-    "vite-tsconfig-paths": "^5.1.2",
-    "vitest": "^2.1.5",
+    "eslint": "^9.20.1",
+    "eslint-config-next": "^15.1.7",
+    "prettier": "^3.5.1",
+    "typescript": "^5.7.3",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.0.6",
     "yarn-upgrade-all": "^0.7.4"
   }
 }
