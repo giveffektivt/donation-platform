@@ -1,8 +1,7 @@
 import type { PoolClient } from "pg";
-import { FetchSubscribers, getCrmExport } from "src";
+import { getCrmExport } from "src";
 
 export async function ExportToCrm(db: PoolClient) {
-  const subscribers = await FetchSubscribers();
   const entries = await getCrmExport(db);
 
   const toDate = (date: Date | null) => date?.toISOString()?.split("T")[0];
@@ -20,7 +19,6 @@ export async function ExportToCrm(db: PoolClient) {
       school: entry.last_donated_recipient,
       totalt_doneret: entry.total_donated,
       medlem: entry.is_member,
-      tilmeldt_nyhedsbrev: subscribers.has(entry.email),
     },
   }));
 
