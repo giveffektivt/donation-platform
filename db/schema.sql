@@ -1655,6 +1655,11 @@ CREATE VIEW giveffektivt.kpi AS
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
+        ), dkk_total_ops AS (
+         SELECT round(sum(d.amount)) AS dkk_total_ops
+           FROM (giveffektivt.donation d
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient))
         ), dkk_pending_transfer AS (
          SELECT COALESCE(round(sum(d.amount)), (0)::numeric) AS dkk_pending_transfer
            FROM (giveffektivt.donation d
@@ -1694,6 +1699,7 @@ CREATE VIEW giveffektivt.kpi AS
           WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
         )
  SELECT dkk_total.dkk_total,
+    dkk_total_ops.dkk_total_ops,
     dkk_pending_transfer.dkk_pending_transfer,
     dkk_last_30_days.dkk_last_30_days,
     dkk_recurring_next_year.dkk_recurring_next_year,
@@ -1701,6 +1707,7 @@ CREATE VIEW giveffektivt.kpi AS
     members_pending_renewal.members_pending_renewal,
     monthly_donors.monthly_donors
    FROM dkk_total,
+    dkk_total_ops,
     dkk_pending_transfer,
     dkk_last_30_days,
     dkk_recurring_next_year,

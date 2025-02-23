@@ -1926,6 +1926,16 @@ with
             c.status = 'charged'
             and d.recipient != 'Giv Effektivts medlemskab'
     ),
+    dkk_total_ops as (
+        select
+            round(sum(d.amount))::numeric as dkk_total_ops
+        from
+            donation d
+            inner join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient = 'Giv Effektivts arbejde og vækst'
+    ),
     dkk_pending_transfer as (
         select
             coalesce(round(sum(d.amount))::numeric, 0) as dkk_pending_transfer
@@ -2018,6 +2028,7 @@ select
     *
 from
     dkk_total,
+    dkk_total_ops,
     dkk_pending_transfer,
     dkk_last_30_days,
     dkk_recurring_next_year,
