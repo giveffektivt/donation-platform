@@ -2,12 +2,13 @@
 
 ## What is Giv Effektivt?
 
-Giv Effektivt is a regranting charity organisation enabling Danish users to donate to highly effective charities around the world and get a tax deduction (hopefully in a few months.)
-There is no easily adjustable and good-looking donation platforms available on the Danish market. This projects enables the charity organisation giveffektivt.dk to collect donations with a custom made payment system.
+Giv Effektivt is a charity organisation enabling people to donate from Denmark to highly effective charities around the world.
 
 ## Architecture
 
-The front end and back end are developed with NextJS framework and deployed using Vercel. The database is hosted on AWS.
+- API is written using NextJS framework.
+- Data in stored in a PostgreSQL database.
+- Frontend is hosted on Framer.
 
 ## How to run the local development environment?
 
@@ -54,42 +55,6 @@ To install, follow https://github.com/amacneil/dbmate
 7. Set values for corresponding payment gateways (leave `QUICKPAY_CALLBACK_URL` empty unless you want Quickpay to send you a callback).
 8. and `yarn dev` to run the app.
 
-### Database tools
-
-_All of those tools are optional!_
-
-#### direnv
-
-We use direnv to save us some time from typing the connection strings, users and passwords every time we want to use `dbmate`, `pgcli` or `psql`. Direnv will set your env variables based on `.envrc` when you enter the donation platform directory and unset them when you leave it.
-
-**To install, follow instructions here https://direnv.net/.** After that have a look at `.envrc.example` and copy contents to `.envrc`.
-
-#### psql
-
-psql is used to dump data from dev instance on AWS to local database.
-
-```
-sudo apt-get update
-sudo apt-get install postgresql-client
-```
-
-#### pgcli
-
-pgcli can be used to run queries from the terminal.
-
-```
-sudo apt-get update
-sudo apt-get install pgcli
-```
-
-`psql` and `pgcli` use the `PGHOST`, `PGDATABASE`, `PGPORT`, `PGUSER` and `PGPASSWORD` environment variables. Default values set in `.envrc.example` will enable you to connect to local database spun up with docker compose, but you need `direnv` to make it work! Otherwise check documentation..
-
-#### Adminer
-
-Adminer is a gui tool that makes the database management easier. It will be automatically available on port 8080 when you run `docker-compose up`
-
-Use `giveffektivt-db:5432` as the ip address when logging in to access local database. `giveffektivt-db:5432` is the ip address that points towards giveffektivt-db from inside of adminer container. The other credentials are in docker-compose.yml file. Leave the database field empty.
-
 ## Running tests
 
 There are integration tests validating database logic, which can be executed using `yarn test`. The tests require database to be present, as per documentation above. The tests will run in a separate database called `test`, which is fully recreated on every run.
@@ -98,11 +63,4 @@ There are integration tests validating database logic, which can be executed usi
 
 - _How to test the payment gateway?_
 
-There is no way to test the payment gateway locally, but for a development environment:
-
-- For Quickpay, use [Quickpay test cards](https://learn.quickpay.net/tech-talk/appendixes/test/#test-data) and these transactions would automatically be treated as test transactions.
-- For Scanpay, you can ask them for a test account. Then use `4111 1111 1111 1111` as the card number.
-
-## Credits
-
-Thanks to @maximbaz, @noverby, @lindeloev and @alimony for helping me to create this app :)
+Use [Quickpay test cards](https://learn.quickpay.net/tech-talk/appendixes/test/#test-data) and these transactions would automatically be treated as test transactions.
