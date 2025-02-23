@@ -1,4 +1,6 @@
 import {
+  DonationRecipient,
+  getBankAccount,
   logError,
   parsePaymentMethod,
   PaymentGateway,
@@ -71,7 +73,7 @@ async function processPayment(
         {
           message: "OK",
           bank: {
-            account: "5351-0000242661",
+            account: getBankAccount(submitData.recipient),
             message: bankTransferId,
           },
         },

@@ -36,3 +36,9 @@ export const parseGavebrevStatus = (value: string) => {
   }
   throw new Error(`Unrecognized gavebrev status: ${value}`);
 };
+
+export const getBankAccount = (recipient: string) =>
+  parseDonationRecipient(recipient) ===
+  DonationRecipient.GivEffektivtsArbejdeOgVækst
+    ? "5351-0000242653"
+    : "5351-0000242661";
