@@ -20,7 +20,6 @@ const emptyStore = {
   env: "prod",
   step: "Step 1",
   isLoading: false,
-  preselectedRecipient: "",
   fundraiserId: null,
   fundraiserName: null,
   fundraiserHasMatch: false,
@@ -210,7 +209,7 @@ export const inputCprCvr = (Component: any): ComponentType => {
         setHasTypedDash(true);
       }
 
-      if (tin.length == 10) {
+      if (tin.length === 10) {
         if (tin.indexOf("-") === -1) {
           tin = `${tin.slice(0, 6)}-${tin.slice(6)}`;
         } else if (!hasTypedDash) {
@@ -242,23 +241,29 @@ export const selectRecipient = (Component: any): ComponentType => {
     const [index, setIndex] = useState(0);
 
     useEffect(() => {
-      const idx =
-        store.preselectedRecipient !== ""
-          ? Math.max(
-              0,
-              findRecipientIndex(props.options, store.preselectedRecipient),
-            )
-          : index;
+      const recipient = parseRecipient(store.recipient);
+      const idx = Math.max(0, findRecipientIndex(props.options, recipient));
+      const frequency = parseFrequency(store.frequency);
+      const method = parseMethod(store.method);
 
       setIndex(idx);
-      setStore({
-        recipient: props.options[idx],
-        preselectedRecipient: "",
-      });
-    }, [store.preselectedRecipient]);
+
+      if (recipient === "Giv Effektivts arbejde og vækst") {
+        if (frequency === "match" && method !== "Bank transfer") {
+          setStore({ method: "Bank" }); // Variant name
+        } else if (store.method === "MobilePay") {
+          setStore({ method: "" });
+        }
+      }
+    }, [
+      props.options,
+      store.recipient,
+      store.method,
+      store.frequency,
+      setStore,
+    ]);
 
     const onChange = (idx: number) => {
-      setIndex(idx);
       setStore({ recipient: props.options[idx] });
     };
 
@@ -269,16 +274,24 @@ export const selectRecipient = (Component: any): ComponentType => {
 const withRecipient = (Component: any, init: any): ComponentType => {
   return (props) => {
     const [_, setStore] = useStore();
-    useEffect(() => init(setStore), []);
+    useEffect(() => init(setStore), [init, setStore]);
     return <Component {...props} />;
   };
+};
+
+export const withRecipientGivEffektivtsAnbefaling = (
+  Component: any,
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({ recipient: "Giv Effektivts anbefaling" }),
+  );
 };
 
 export const withRecipientMyggenetModMalaria = (
   Component: any,
 ): ComponentType => {
   return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Myggenet mod malaria" }),
+    setStore({ recipient: "Myggenet mod malaria" }),
   );
 };
 
@@ -286,7 +299,7 @@ export const withRecipientMedicinModMalaria = (
   Component: any,
 ): ComponentType => {
   return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Medicin mod malaria" }),
+    setStore({ recipient: "Medicin mod malaria" }),
   );
 };
 
@@ -294,7 +307,7 @@ export const withRecipientVitaminModMangelsygdomme = (
   Component: any,
 ): ComponentType => {
   return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Vitamin mod mangelsygdomme" }),
+    setStore({ recipient: "Vitamin mod mangelsygdomme" }),
   );
 };
 
@@ -302,7 +315,7 @@ export const withRecipientVaccinerTilSpædbørn = (
   Component: any,
 ): ComponentType => {
   return withRecipient(Component, (setStore) =>
-    setStore({ preselectedRecipient: "Vacciner til spædbørn" }),
+    setStore({ recipient: "Vacciner til spædbørn" }),
   );
 };
 
@@ -311,7 +324,7 @@ export const withRecipientKontantoverførslerTilVerdensFattigste = (
 ): ComponentType => {
   return withRecipient(Component, (setStore) =>
     setStore({
-      preselectedRecipient: "Kontantoverførsler til verdens fattigste",
+      recipient: "Kontantoverførsler til verdens fattigste",
     }),
   );
 };
@@ -369,14 +382,14 @@ export const withVariantFrequency = (Component: any): ComponentType => {
 export const withVariantMethod = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `${store.method}`,
-    `None`,
+    "None",
   ]);
 };
 
 export const withVariantMethodPhone = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `Phone/${store.method}`,
-    `Phone/None`,
+    "Phone/None",
   ]);
 };
 
@@ -389,14 +402,14 @@ export const withVariantRecipient = (Component: any): ComponentType => {
 export const withVariantTaxDeductible = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `${store.taxDeductible ? "Checked" : "Empty"}`,
-    `Empty`,
+    "Empty",
   ]);
 };
 
 export const withVariantRulesAccepted = (Component: any): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `${store.rulesAccepted ? "Checked" : "Empty"}`,
-    `Empty`,
+    "Empty",
   ]);
 };
 
@@ -405,7 +418,7 @@ export const withVariantSubscribeToNewsletter = (
 ): ComponentType => {
   return withVariant(Component, (store: any, setStore: any) => [
     `${store.subscribeToNewsletter ? "Checked" : "Empty"}`,
-    `Empty`,
+    "Empty",
   ]);
 };
 
@@ -415,7 +428,7 @@ export const withVariantStepDesktop = (Component: any): ComponentType => {
       setStore({
         env: location.host === "giveffektivt.dk" ? "prod" : "dev",
       });
-    }, []);
+    }, [setStore]);
     return [`Desktop/${store.step}`, `Desktop/Step 1`];
   });
 };
@@ -426,8 +439,8 @@ export const withVariantStepPhone = (Component: any): ComponentType => {
       setStore({
         env: location.host === "giveffektivt.dk" ? "prod" : "dev",
       });
-    }, []);
-    return [`Phone/${store.step}`, `Phone/Step 1`];
+    }, [setStore]);
+    return [`Phone/${store.step}`, "Phone/Step 1"];
   });
 };
 
@@ -436,6 +449,7 @@ export const showCprCvrWarning = (Component: any): ComponentType => {
     const [store] = useStore();
 
     const isCprCvrSuspicious =
+      store.taxDeductible &&
       isCprCvrValid(store.taxDeductible, store.tin) &&
       !isCprCvrPlausible(store.tin);
 
@@ -497,7 +511,7 @@ export const withFundraiser = (Component: any): ComponentType => {
       request().catch((err: Error) => {
         notifyAboutClientSideError("donation withFundraiser", err?.toString());
       });
-    }, []);
+    }, [setStore]);
 
     return <Component {...props} />;
   };
@@ -531,11 +545,15 @@ export const showHasNoMatch = (Component: any): ComponentType => {
   };
 };
 
-export const showMatch = (Component: any): ComponentType => {
+export const showMatchAndToCharities = (Component: any): ComponentType => {
   return (props: any) => {
     const [store] = useStore();
     const frequency = parseFrequency(store.frequency);
-    return frequency === "match" ? <Component {...props} /> : null;
+    const isToCharities =
+      parseRecipient(store.recipient) !== "Giv Effektivts arbejde og vækst";
+    return frequency === "match" && isToCharities ? (
+      <Component {...props} />
+    ) : null;
   };
 };
 
@@ -544,6 +562,24 @@ export const showNoMatch = (Component: any): ComponentType => {
     const [store] = useStore();
     const frequency = parseFrequency(store.frequency);
     return frequency === "match" ? null : <Component {...props} />;
+  };
+};
+
+export const showDonatingToCharities = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    const isToCharities =
+      parseRecipient(store.recipient) !== "Giv Effektivts arbejde og vækst";
+    return isToCharities ? <Component {...props} /> : null;
+  };
+};
+
+export const showDonatingToOurWork = (Component: any): ComponentType => {
+  return (props: any) => {
+    const [store] = useStore();
+    const isToOurWork =
+      parseRecipient(store.recipient) === "Giv Effektivts arbejde og vækst";
+    return isToOurWork ? <Component {...props} /> : null;
   };
 };
 
