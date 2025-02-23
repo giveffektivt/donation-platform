@@ -47,9 +47,10 @@ CREATE TYPE giveffektivt.donation_frequency AS ENUM (
 --
 
 CREATE TYPE giveffektivt.donation_recipient AS ENUM (
-    'Giv Effektivt',
+    'Giv Effektivts medlemskab',
     'Stor og velkendt effekt',
     'Giv Effektivts anbefaling',
+    'Giv Effektivts arbejde og vækst',
     'Myggenet mod malaria',
     'Kontantoverførsler til verdens fattigste',
     'Medicin mod malaria',
@@ -233,7 +234,7 @@ with
                     join charge c on d.id = c.donation_id
                 where
                     c.status = 'charged'
-                    and recipient != 'Giv Effektivt'
+                    and recipient != 'Giv Effektivts medlemskab'
                     and frequency = 'monthly'
                 group by
                     d.id
@@ -276,7 +277,7 @@ with
                     join charge c on c.donation_id = d.id
                 where
                     c.status = 'charged'
-                    and d.recipient != 'Giv Effektivt'
+                    and d.recipient != 'Giv Effektivts medlemskab'
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -300,7 +301,7 @@ with
                     join charge c on d.id = c.donation_id
                 where
                     c.status = 'charged'
-                    and d.recipient != 'Giv Effektivt'
+                    and d.recipient != 'Giv Effektivts medlemskab'
                 order by
                     email,
                     c.created_at
@@ -823,7 +824,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
              JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
              JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
              LEFT JOIN giveffektivt.transfer t ON ((c_1.transfer_id = t.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
           GROUP BY p.tin, p.email, d_1.tax_deductible, t.recipient
         ), members_confirmed AS (
          SELECT DISTINCT ON (p.tin) p.tin,
@@ -832,7 +833,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
              CROSS JOIN giveffektivt.donor_with_sensitive_info p)
              JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
              JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
         ), active_gavebrev AS (
          SELECT p.tin
            FROM ((const
@@ -922,7 +923,7 @@ CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
      CROSS JOIN giveffektivt.donor_with_sensitive_info p)
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND d.tax_deductible)
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND d.tax_deductible)
   GROUP BY p.tin;
 
 
@@ -952,7 +953,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
              JOIN giveffektivt.donor_with_sensitive_info p ON ((i_1.tin = p.tin)))
              JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
              JOIN giveffektivt.charge c ON (((c.donation_id = d_1.id) AND (i_1.year = EXTRACT(year FROM c.created_at)))))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND d_1.tax_deductible)
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND d_1.tax_deductible)
         )
  SELECT i.tin,
     i.year,
@@ -1207,7 +1208,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
             ((giveffektivt.donor_with_sensitive_info ds
              JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
+          WHERE ((d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
         ), donated_a AS (
          SELECT COALESCE(sum(report.total), (0)::numeric) AS amount_donated_a
            FROM report
@@ -1222,7 +1223,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
             ((giveffektivt.donor_with_sensitive_info ds
              JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
+          WHERE ((d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
         )
  SELECT EXTRACT(year FROM const.year_from) AS year,
     donors_200.count_donors_donated_min_200_kr,
@@ -1338,14 +1339,14 @@ CREATE VIEW giveffektivt.crm_export AS
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= (now() - '1 year'::interval)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= (now() - '1 year'::interval)))
         ), donations AS (
          SELECT p.email,
             sum(d.amount) AS total_donated
            FROM ((giveffektivt.donor_with_contact_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
           GROUP BY p.email
         ), latest_donations AS (
          SELECT DISTINCT ON (p.email) p.email,
@@ -1357,7 +1358,7 @@ CREATE VIEW giveffektivt.crm_export AS
            FROM ((giveffektivt.donor_with_contact_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
           ORDER BY p.email, c.created_at DESC
         ), data AS (
          SELECT e.email,
@@ -1653,29 +1654,29 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT round(sum(d.amount)) AS dkk_total
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
         ), dkk_pending_transfer AS (
          SELECT COALESCE(round(sum(d.amount)), (0)::numeric) AS dkk_pending_transfer
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NULL))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NULL))
         ), dkk_last_30_days AS (
          SELECT round(sum(d.amount)) AS dkk_last_30_days
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= (date_trunc('day'::text, now()) - '30 days'::interval)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= (date_trunc('day'::text, now()) - '30 days'::interval)))
         ), dkk_recurring_next_year AS (
          SELECT ((12)::numeric * sum(c1.amount)) AS dkk_recurring_next_year
            FROM ( SELECT DISTINCT ON (d.id) d.amount
                    FROM (giveffektivt.charge c
                      JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
+                  WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
         ), members_confirmed AS (
          SELECT (count(DISTINCT p.tin))::numeric AS members_confirmed
            FROM ((giveffektivt.donor_with_sensitive_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.created_at >= date_trunc('year'::text, now())))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= date_trunc('year'::text, now())))
         ), members_pending_renewal AS (
          SELECT (count(*))::numeric AS members_pending_renewal
            FROM ( SELECT DISTINCT ON (p.tin) p.tin,
@@ -1683,14 +1684,14 @@ CREATE VIEW giveffektivt.kpi AS
                    FROM ((giveffektivt.donor_with_sensitive_info p
                      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled))
                   ORDER BY p.tin, c.created_at DESC) a
           WHERE (a.created_at < date_trunc('year'::text, now()))
         ), monthly_donors AS (
          SELECT count(DISTINCT c.donation_id) AS monthly_donors
            FROM (giveffektivt.charge c
              JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
-          WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
+          WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
         )
  SELECT dkk_total.dkk_total,
     dkk_pending_transfer.dkk_pending_transfer,
@@ -1735,7 +1736,7 @@ CREATE VIEW giveffektivt.pending_distribution AS
     (count(*))::numeric AS payments_total
    FROM (giveffektivt.donation d
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NULL))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NULL))
   GROUP BY d.recipient
   ORDER BY (round(sum(d.amount))) DESC;
 
@@ -1835,7 +1836,7 @@ CREATE VIEW giveffektivt.transfer_overview AS
    FROM ((giveffektivt.donation d
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
      JOIN giveffektivt.transfer t ON (((c.transfer_id = t.id) OR ((c.transfer_id IS NULL) AND (d.recipient = t.earmark) AND (t.created_at > now())))))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])))
   GROUP BY t.id, t.earmark, t.recipient, t.created_at
   ORDER BY t.created_at, (sum(d.amount)) DESC;
 
@@ -1852,7 +1853,7 @@ CREATE VIEW giveffektivt.transfer_pending AS
             sum(d.amount) OVER (ORDER BY c.created_at) AS potential_cutoff
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NULL))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NULL))
         )
  SELECT donated_at,
     amount,
@@ -1873,7 +1874,7 @@ CREATE VIEW giveffektivt.transferred_distribution AS
    FROM ((giveffektivt.donation d
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
      JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivt'::giveffektivt.donation_recipient) AND (c.transfer_id IS NOT NULL))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NOT NULL))
   GROUP BY t.recipient
   ORDER BY (round(sum(d.amount))) DESC;
 
@@ -2356,4 +2357,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250120213832'),
     ('20250122172829'),
     ('20250127221911'),
+    ('20250223142559'),
     ('99999999999999');

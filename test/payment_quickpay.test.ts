@@ -157,7 +157,7 @@ test("Membership using Quickpay", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.Quickpay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.GivEffektivt,
+      recipient: DonationRecipient.GivEffektivtsMedlemskab,
       tax_deductible: false,
     },
   ]);

@@ -21,10 +21,10 @@ import {
 
 export async function processScanpayDonation(
   submitData: SubmitDataDonation,
-  customerIp: string
+  customerIp: string,
 ): Promise<[string, string]> {
   const [donor, donation, charge] = await dbExecuteInTransaction(
-    async (db) => await insertScanpayData(db, submitData)
+    async (db) => await insertScanpayData(db, submitData),
   );
   return [
     await generateRedirectUrl(donor, donation, charge, customerIp),
@@ -34,7 +34,7 @@ export async function processScanpayDonation(
 
 export async function insertScanpayData(
   db: PoolClient,
-  submitData: SubmitDataDonation
+  submitData: SubmitDataDonation,
 ): Promise<
   [DonorWithSensitiveInfo, DonationWithGatewayInfoScanpay, Charge | null]
 > {
@@ -70,10 +70,10 @@ async function generateRedirectUrl(
   donor: DonorWithSensitiveInfo,
   donation: DonationWithGatewayInfoScanpay,
   charge: Charge | null,
-  customerIp: string
+  customerIp: string,
 ) {
   const successUrl =
-    donation.recipient !== DonationRecipient.GivEffektivt
+    donation.recipient !== DonationRecipient.GivEffektivtsMedlemskab
       ? process.env.SUCCESS_URL
       : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
 

@@ -1,5 +1,4 @@
 export enum DonationRecipient {
-  GivEffektivt = "Giv Effektivt",
   GivEffektivtsMedlemskab = "Giv Effektivts medlemskab",
 
   GivEffektivtsAnbefaling = "Giv Effektivts anbefaling",

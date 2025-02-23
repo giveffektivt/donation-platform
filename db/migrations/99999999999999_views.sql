@@ -798,7 +798,7 @@ from
     inner join charge c on c.donation_id = d.id
 where
     c.status = 'charged'
-    and d.recipient != 'Giv Effektivt'
+    and d.recipient != 'Giv Effektivts medlemskab'
     and c.created_at <@ tstzrange (year_from, year_to, '[)')
     and d.tax_deductible
 group by
@@ -946,7 +946,7 @@ with
             )
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
             and d.tax_deductible
     )
 select
@@ -1153,7 +1153,7 @@ with
             inner join donation d on d.donor_id = ds.id
             inner join charge c on c.donation_id = d.id
         where
-            d.recipient = 'Giv Effektivt'
+            d.recipient = 'Giv Effektivts medlemskab'
             and c.status = 'charged'
             and c.created_at <@ tstzrange (year_from, year_to, '[)')
     ),
@@ -1182,7 +1182,7 @@ with
             inner join donation d on d.donor_id = ds.id
             inner join charge c on c.donation_id = d.id
         where
-            d.recipient != 'Giv Effektivt'
+            d.recipient != 'Giv Effektivts medlemskab'
             and c.status = 'charged'
             and c.created_at <@ tstzrange (year_from, year_to, '[)')
     )
@@ -1234,7 +1234,7 @@ with
             left join transfer t on c.transfer_id = t.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
             and c.created_at <@ tstzrange (year_from, year_to, '[)')
         group by
             p.tin,
@@ -1253,7 +1253,7 @@ with
             inner join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient = 'Giv Effektivt'
+            and d.recipient = 'Giv Effektivts medlemskab'
             and c.created_at <@ tstzrange (year_from, year_to, '[)')
     ),
     active_gavebrev as (
@@ -1472,7 +1472,7 @@ from
     )
 where
     c.status = 'charged'
-    and d.recipient != 'Giv Effektivt'
+    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
 group by
     t.id,
     t.earmark,
@@ -1498,7 +1498,7 @@ from
     inner join transfer t on c.transfer_id = t.id
 where
     c.status = 'charged'
-    and d.recipient != 'Giv Effektivt'
+    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
     and transfer_id is not null
 group by
     t.recipient
@@ -1520,7 +1520,7 @@ from
     inner join charge c on c.donation_id = d.id
 where
     c.status = 'charged'
-    and d.recipient != 'Giv Effektivt'
+    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
     and transfer_id is null
 group by
     d.recipient
@@ -1614,7 +1614,7 @@ with
                     join charge c on d.id = c.donation_id
                 where
                     c.status = 'charged'
-                    and recipient != 'Giv Effektivt'
+                    and recipient != 'Giv Effektivts medlemskab'
                     and frequency = 'monthly'
                 group by
                     d.id
@@ -1657,7 +1657,7 @@ with
                     join charge c on c.donation_id = d.id
                 where
                     c.status = 'charged'
-                    and d.recipient != 'Giv Effektivt'
+                    and d.recipient != 'Giv Effektivts medlemskab'
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -1681,7 +1681,7 @@ with
                     join charge c on d.id = c.donation_id
                 where
                     c.status = 'charged'
-                    and d.recipient != 'Giv Effektivt'
+                    and d.recipient != 'Giv Effektivts medlemskab'
                 order by
                     email,
                     c.created_at
@@ -1899,7 +1899,7 @@ with
             join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
             and c.transfer_id is null
     )
 select
@@ -1924,7 +1924,7 @@ with
             inner join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
     ),
     dkk_pending_transfer as (
         select
@@ -1934,7 +1934,7 @@ with
             inner join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
             and transfer_id is null
     ),
     dkk_last_30_days as (
@@ -1945,7 +1945,7 @@ with
             inner join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
             and c.created_at >= date_trunc('day', now()) - interval '30 days'
     ),
     dkk_recurring_next_year as (
@@ -1961,7 +1961,7 @@ with
                 where
                     c.status in ('charged', 'created')
                     and d.frequency = 'monthly'
-                    and d.recipient != 'Giv Effektivt'
+                    and d.recipient != 'Giv Effektivts medlemskab'
                     and not d.cancelled
                     and c.created_at >= date_trunc('month', now()) - interval '1 month'
             ) c1
@@ -1975,7 +1975,7 @@ with
             inner join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient = 'Giv Effektivt'
+            and d.recipient = 'Giv Effektivts medlemskab'
             and c.created_at >= date_trunc('year', now())
     ),
     members_pending_renewal as (
@@ -1992,7 +1992,7 @@ with
                     inner join charge c on c.donation_id = d.id
                 where
                     c.status = 'charged'
-                    and d.recipient = 'Giv Effektivt'
+                    and d.recipient = 'Giv Effektivts medlemskab'
                     and not d.cancelled
                 order by
                     p.tin,
@@ -2010,7 +2010,7 @@ with
         where
             c.status in ('charged', 'created')
             and d.frequency = 'monthly'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
             and not d.cancelled
             and c.created_at >= date_trunc('month', now()) - interval '1 month'
     )
@@ -2068,7 +2068,7 @@ with
             join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient = 'Giv Effektivt'
+            and d.recipient = 'Giv Effektivts medlemskab'
             and c.created_at >= now() - interval '1 year'
     ),
     donations as (
@@ -2081,7 +2081,7 @@ with
             join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
         group by
             p.email
     ),
@@ -2099,7 +2099,7 @@ with
             join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivt'
+            and d.recipient != 'Giv Effektivts medlemskab'
         order by
             p.email,
             c.created_at desc

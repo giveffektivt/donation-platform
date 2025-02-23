@@ -1,13 +1,13 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
-  Charge,
+  type Charge,
   ChargeStatus,
   dbExecuteInTransaction,
   DonationFrequency,
   DonationRecipient,
-  DonationWithGatewayInfoQuickpay,
-  Donor,
-  DonorWithSensitiveInfo,
+  type DonationWithGatewayInfoQuickpay,
+  type Donor,
+  type DonorWithSensitiveInfo,
   insertCharge,
   insertMembershipViaQuickpay,
   insertDonationViaQuickpay,
@@ -21,9 +21,9 @@ import {
   quickpayOneTimeUrl,
   quickpaySubscriptionUrl,
   setDonationQuickpayId,
-  SubmitDataDonation,
-  SubmitDataMembership,
-  FailedRecurringDonation,
+  type SubmitDataDonation,
+  type SubmitDataMembership,
+  type FailedRecurringDonation,
   setDonationCancelledById,
   setDonationEmailed,
   EmailedStatus,
@@ -141,7 +141,7 @@ export async function recreateQuickpayRecurringDonation(
   await setDonationCancelledById(db, info.donation_id);
 
   const donation =
-    info.recipient === DonationRecipient.GivEffektivt
+    info.recipient === DonationRecipient.GivEffektivtsMedlemskab
       ? await insertMembershipViaQuickpay(db, {
           donor_id: info.donor_id,
           method: info.method,
@@ -194,7 +194,7 @@ async function generateRedirectUrl(
   charge: Charge | null,
 ): Promise<string> {
   const successUrl =
-    donation.recipient !== DonationRecipient.GivEffektivt
+    donation.recipient !== DonationRecipient.GivEffektivtsMedlemskab
       ? process.env.SUCCESS_URL
       : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
 

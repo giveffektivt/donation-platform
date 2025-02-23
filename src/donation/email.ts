@@ -11,7 +11,6 @@ import {
   getDonationsToEmail,
   logError,
   setDonationEmailed,
-  tmpMigrate,
 } from "src";
 
 const mailerSend = new MailerSend({
@@ -32,7 +31,7 @@ export async function sendNewEmails() {
     for (const donation of donationsToEmail) {
       try {
         await setDonationEmailed(db, donation, EmailedStatus.Attempted);
-        if (donation.recipient === DonationRecipient.GivEffektivt) {
+        if (donation.recipient === DonationRecipient.GivEffektivtsMedlemskab) {
           await sendMembershipEmail(donation);
         } else {
           await sendPaymentEmail(donation);
@@ -56,7 +55,7 @@ export async function sendMembershipEmail(donation: DonationToEmail) {
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           donation_id: donation.id,
-          recipient: tmpMigrate(donation.recipient),
+          recipient: donation.recipient,
         },
       },
     ]);
@@ -93,7 +92,7 @@ export async function sendPaymentEmail(
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           donation_id: donation.id,
-          recipient: tmpMigrate(donation.recipient),
+          recipient: donation.recipient,
 
           amount: donation.amount.toLocaleString("da-DK"),
           frequency: donation.frequency,
@@ -150,7 +149,7 @@ export async function sendFailedRecurringDonationEmail(
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           amount: info.amount.toLocaleString("da-DK"),
           name: info.donor_name ?? null,
-          recipient: tmpMigrate(info.recipient),
+          recipient: info.recipient,
           payment_link: info.payment_link,
         },
       },

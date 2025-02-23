@@ -42,7 +42,7 @@ test("Insert donation for Giv Effektivt membership using Quickpay", async () => 
     donor_id: donor.id,
     emailed: EmailedStatus.No,
     amount: 50,
-    recipient: DonationRecipient.GivEffektivt,
+    recipient: DonationRecipient.GivEffektivtsMedlemskab,
     frequency: DonationFrequency.Yearly,
     cancelled: false,
     method: PaymentMethod.CreditCard,

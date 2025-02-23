@@ -121,7 +121,7 @@ export async function insertMembershipViaQuickpay(
       [
         donation.donor_id,
         50,
-        DonationRecipient.GivEffektivt,
+        DonationRecipient.GivEffektivtsMedlemskab,
         DonationFrequency.Yearly,
         PaymentGateway.Quickpay,
         donation.method,

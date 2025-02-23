@@ -43,13 +43,15 @@ export async function quickpayCreateSubscription(
   donation: DonationWithGatewayInfoQuickpay,
 ): Promise<string> {
   const description = `Giv Effektivt ${
-    donation.recipient === DonationRecipient.GivEffektivt
+    donation.recipient === DonationRecipient.GivEffektivtsMedlemskab
       ? "medlem"
       : "donation"
   }`;
 
   const text_on_statement = `giveffektivt.dk${
-    donation.recipient === DonationRecipient.GivEffektivt ? " medlem" : ""
+    donation.recipient === DonationRecipient.GivEffektivtsMedlemskab
+      ? " medlem"
+      : ""
   }`;
 
   const response = await request(
@@ -128,7 +130,9 @@ export async function quickpayChargeSubscription(
   }
 
   const text_on_statement = `giveffektivt.dk${
-    charge.recipient === DonationRecipient.GivEffektivt ? " medlem" : ""
+    charge.recipient === DonationRecipient.GivEffektivtsMedlemskab
+      ? " medlem"
+      : ""
   }`;
 
   const isMobilePay = charge.method === PaymentMethod.MobilePay;
@@ -188,10 +192,12 @@ async function request(
 }
 
 function buildAuthorizationHeader(recipient: DonationRecipient) {
-  const apiKey =
-    recipient === DonationRecipient.GivEffektivt
-      ? process.env.QUICKPAY_MEMBERSHIP_API_KEY
-      : process.env.QUICKPAY_DONATION_API_KEY;
+  const apiKey = [
+    DonationRecipient.GivEffektivtsMedlemskab,
+    DonationRecipient.GivEffektivtsArbejdeOgVækst,
+  ].includes(recipient)
+    ? process.env.QUICKPAY_MEMBERSHIP_API_KEY
+    : process.env.QUICKPAY_DONATION_API_KEY;
 
   if (!apiKey) {
     throw new Error(`No Quickpay API key defined for recipient ${recipient}`);
