@@ -11,6 +11,7 @@ import {
   getDonationsToEmail,
   logError,
   setDonationEmailed,
+  tmpMigrate,
 } from "src";
 
 const mailerSend = new MailerSend({
@@ -55,7 +56,7 @@ export async function sendMembershipEmail(donation: DonationToEmail) {
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           donation_id: donation.id,
-          recipient: donation.recipient,
+          recipient: tmpMigrate(donation.recipient),
         },
       },
     ]);
@@ -92,7 +93,7 @@ export async function sendPaymentEmail(
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           donation_id: donation.id,
-          recipient: donation.recipient,
+          recipient: tmpMigrate(donation.recipient),
 
           amount: donation.amount.toLocaleString("da-DK"),
           frequency: donation.frequency,
@@ -149,7 +150,7 @@ export async function sendFailedRecurringDonationEmail(
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           amount: info.amount.toLocaleString("da-DK"),
           name: info.donor_name ?? null,
-          recipient: info.recipient,
+          recipient: tmpMigrate(info.recipient),
           payment_link: info.payment_link,
         },
       },

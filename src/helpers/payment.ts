@@ -42,3 +42,8 @@ export const getBankAccount = (recipient: string) =>
   DonationRecipient.GivEffektivtsArbejdeOgVækst
     ? "5351-0000242653"
     : "5351-0000242661";
+
+export const tmpMigrate = (recipient: string) =>
+  parseDonationRecipient(recipient) === DonationRecipient.GivEffektivt
+    ? DonationRecipient.GivEffektivtsMedlemskab
+    : recipient;
