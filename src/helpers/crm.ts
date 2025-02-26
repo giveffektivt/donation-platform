@@ -9,7 +9,7 @@ export async function ExportToCrm(db: PoolClient) {
     idProperty: "email",
     id: entry.email,
     properties: {
-      firstname: entry.name,
+      ...(entry.name ? { firstname: entry.name } : {}),
       oprettelsesdato: toDate(entry.registered_at),
       email: entry.email,
       sidste_donationsdato: toDate(entry.last_donated_at),
