@@ -22,6 +22,7 @@ donation_with_sensitive_info,
 donor,
 donor_with_contact_info,
 donor_with_sensitive_info,
+donor_impact_report,
 failed_recurring_donations,
 fundraiser,
 fundraiser_activity_checkin,
@@ -2148,5 +2149,45 @@ where
 grant
 select
     on crm_export to reader_contact;
+
+--------------------------------------
+create view donor_impact_report as
+with
+    data as (
+        select
+            p.email,
+            min(t.recipient) as transferred_to,
+            min(t.created_at) as transferred_at,
+            sum(d.amount) as amount,
+            round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
+            round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 2) as lives
+        from
+            donor_with_sensitive_info p
+            join donation d on p.id = d.donor_id
+            join charge c on d.id = c.donation_id
+            left join transfer t on c.transfer_id = t.id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivts medlemskab'
+        group by
+            p.email,
+            t.id
+    )
+select
+    email,
+    coalesce(transferred_to::text, '== Fremtiden ==') as transferred_to,
+    coalesce(to_char(transferred_at, 'YYYY-MM-DD'), '== Fremtiden ==') as transferred_at,
+    amount,
+    units,
+    lives
+from
+    data
+order by
+    email,
+    data.transferred_at;
+
+grant
+select
+    on donor_impact_report to reader_contact;
 
 -- migrate:down
