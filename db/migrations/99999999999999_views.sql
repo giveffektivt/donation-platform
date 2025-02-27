@@ -1218,14 +1218,14 @@ with
             date_trunc('year', now() - interval '9 months') as year_from,
             date_trunc('year', now() + interval '3 months') as year_to
     ),
-    data as (
+    data_per_transfer as (
         select
             p.tin,
             p.email,
             d.tax_deductible,
-            t.recipient,
+            min(t.recipient) as recipient,
             round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as unit,
-            sum(d.amount) as total,
+            sum(d.amount) as amount,
             min(c.created_at) as first_donated
         from
             const
@@ -1241,7 +1241,24 @@ with
             p.tin,
             p.email,
             d.tax_deductible,
-            t.recipient
+            t.id
+    ),
+    data as (
+        select
+            tin,
+            email,
+            tax_deductible,
+            recipient,
+            sum(unit) as unit,
+            sum(amount) as total,
+            min(first_donated) as first_donated
+        from
+            data_per_transfer
+        group by
+            tin,
+            email,
+            tax_deductible,
+            recipient
     ),
     members_confirmed as (
         select distinct

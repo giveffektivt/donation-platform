@@ -811,13 +811,13 @@ CREATE VIEW giveffektivt.annual_email_report AS
  WITH const AS (
          SELECT date_trunc('year'::text, (now() - '9 mons'::interval)) AS year_from,
             date_trunc('year'::text, (now() + '3 mons'::interval)) AS year_to
-        ), data AS (
+        ), data_per_transfer AS (
          SELECT p.tin,
             p.email,
             d_1.tax_deductible,
-            t.recipient,
+            min(t.recipient) AS recipient,
             round(((sum(d_1.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit,
-            sum(d_1.amount) AS total,
+            sum(d_1.amount) AS amount,
             min(c_1.created_at) AS first_donated
            FROM ((((const
              CROSS JOIN giveffektivt.donor_with_sensitive_info p)
@@ -825,7 +825,17 @@ CREATE VIEW giveffektivt.annual_email_report AS
              JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
              LEFT JOIN giveffektivt.transfer t ON ((c_1.transfer_id = t.id)))
           WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
-          GROUP BY p.tin, p.email, d_1.tax_deductible, t.recipient
+          GROUP BY p.tin, p.email, d_1.tax_deductible, t.id
+        ), data AS (
+         SELECT data_per_transfer.tin,
+            data_per_transfer.email,
+            data_per_transfer.tax_deductible,
+            data_per_transfer.recipient,
+            sum(data_per_transfer.unit) AS unit,
+            sum(data_per_transfer.amount) AS total,
+            min(data_per_transfer.first_donated) AS first_donated
+           FROM data_per_transfer
+          GROUP BY data_per_transfer.tin, data_per_transfer.email, data_per_transfer.tax_deductible, data_per_transfer.recipient
         ), members_confirmed AS (
          SELECT DISTINCT ON (p.tin) p.tin,
             p.email
@@ -1470,6 +1480,35 @@ CREATE VIEW giveffektivt.donor AS
     updated_at
    FROM giveffektivt._donor
   WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: donor_impact_report; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donor_impact_report AS
+ WITH data AS (
+         SELECT p.email,
+            min(t.recipient) AS transferred_to,
+            min(t.created_at) AS transferred_at,
+            sum(d.amount) AS amount,
+            round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
+            round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
+           FROM (((giveffektivt.donor_with_sensitive_info p
+             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+             LEFT JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
+          GROUP BY p.email, t.id
+        )
+ SELECT email,
+    COALESCE((transferred_to)::text, '== Fremtiden =='::text) AS transferred_to,
+    COALESCE(to_char(transferred_at, 'YYYY-MM-DD'::text), '== Fremtiden =='::text) AS transferred_at,
+    amount,
+    units,
+    lives
+   FROM data
+  ORDER BY email, data.transferred_at;
 
 
 --
