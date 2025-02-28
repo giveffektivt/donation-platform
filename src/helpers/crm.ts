@@ -16,6 +16,7 @@ export async function ExportToCrm(db: PoolClient) {
       sidste_donationsbelob: entry.last_donated_amount,
       sidste_donationsfrekvens: entry.last_donated_frequency,
       sidste_donationsmetode: entry.last_donated_method,
+      er_sidste_donation_opsagt: entry.last_donation_cancelled,
       school: entry.last_donated_recipient,
       totalt_doneret: entry.total_donated,
       medlem: entry.is_member,

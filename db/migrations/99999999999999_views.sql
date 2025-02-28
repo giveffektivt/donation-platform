@@ -2121,6 +2121,7 @@ with
             d.method as last_donated_method,
             d.frequency as last_donated_frequency,
             d.recipient as last_donated_recipient,
+            d.cancelled as last_donation_cancelled,
             c.created_at as last_donated_at
         from
             donor_with_contact_info p
@@ -2143,6 +2144,7 @@ with
             l.last_donated_method,
             l.last_donated_frequency,
             l.last_donated_recipient,
+            l.last_donation_cancelled,
             l.last_donated_at,
             m.email is not null as is_member
         from

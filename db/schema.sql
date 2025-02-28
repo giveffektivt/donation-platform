@@ -1364,6 +1364,7 @@ CREATE VIEW giveffektivt.crm_export AS
             d.method AS last_donated_method,
             d.frequency AS last_donated_frequency,
             d.recipient AS last_donated_recipient,
+            d.cancelled AS last_donation_cancelled,
             c.created_at AS last_donated_at
            FROM ((giveffektivt.donor_with_contact_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
@@ -1379,6 +1380,7 @@ CREATE VIEW giveffektivt.crm_export AS
             l.last_donated_method,
             l.last_donated_frequency,
             l.last_donated_recipient,
+            l.last_donation_cancelled,
             l.last_donated_at,
             (m.email IS NOT NULL) AS is_member
            FROM ((((emails e
@@ -1395,6 +1397,7 @@ CREATE VIEW giveffektivt.crm_export AS
     last_donated_method,
     last_donated_frequency,
     last_donated_recipient,
+    last_donation_cancelled,
     last_donated_at,
     is_member
    FROM data
