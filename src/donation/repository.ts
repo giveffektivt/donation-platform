@@ -1,16 +1,16 @@
-import { PoolClient } from "pg";
+import type { PoolClient } from "pg";
 import {
-  CrmExport,
-  Donation,
+  type CrmExport,
+  type Donation,
   DonationFrequency,
   DonationRecipient,
-  DonationToEmail,
-  DonationWithGatewayInfoBankTransfer,
-  DonationWithGatewayInfoQuickpay,
-  DonationWithGatewayInfoScanpay,
-  EmailedStatus,
-  FailedRecurringDonation,
-  Fundraiser,
+  type DonationToEmail,
+  type DonationWithGatewayInfoBankTransfer,
+  type DonationWithGatewayInfoQuickpay,
+  type DonationWithGatewayInfoScanpay,
+  type EmailedStatus,
+  type FailedRecurringDonation,
+  type Fundraiser,
   PaymentGateway,
   PaymentMethod,
 } from "src";
@@ -35,7 +35,7 @@ export async function setDonationEmailed(
 
 export async function setDonationCancelledById(client: PoolClient, id: string) {
   return await client.query(
-    `update donation set cancelled = true where id = $1`,
+    "update donation set cancelled = true where id = $1",
     [id],
   );
 }
@@ -191,6 +191,21 @@ export async function getFailedRecurringDonations(
   client: PoolClient,
 ): Promise<FailedRecurringDonation[]> {
   return (await client.query("select * from failed_recurring_donations")).rows;
+}
+
+export async function getFailedRecurringDonationByQuickpayOrder(
+  client: PoolClient,
+  quickpay_order: string,
+): Promise<FailedRecurringDonation> {
+  return (
+    await client.query(
+      `select p.id as donor_id, p.email as donor_email, d.recipient, d.amount, p.name as donor_name, d.gateway_metadata ->> 'quickpay_order' as quickpay_order
+       from donor_with_contact_info p
+       join donation_with_sensitive_info d on p.id = d.donor_id
+       where d.gateway_metadata ->> 'quickpay_order' = $1`,
+      [quickpay_order],
+    )
+  ).rows[0];
 }
 
 export async function getDonationToUpdateQuickpayPaymentInfoById(

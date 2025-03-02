@@ -136,28 +136,33 @@ export async function sendPaymentEmail(
 }
 
 export async function sendFailedRecurringDonationEmail(
-  info: FailedRecurringDonationToEmail,
+  donor_id: string,
+  email: string,
+  recipient: DonationRecipient,
+  amount: number,
+  donor_name?: string,
+  payment_link?: string,
 ) {
   const emailParams = new EmailParams()
-    .setTo([new Recipient(info.donor_email)])
+    .setTo([new Recipient(email)])
     .setTemplateId(process.env.MAILERSEND_TEMPLATE_PAYMENT_EXPIRED)
     .setPersonalization([
       {
-        email: info.donor_email,
+        email,
         data: {
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
-          amount: info.amount.toLocaleString("da-DK"),
-          name: info.donor_name ?? null,
-          recipient: info.recipient,
-          payment_link: info.payment_link,
+          amount: amount.toLocaleString("da-DK"),
+          name: donor_name ?? null,
+          recipient,
+          payment_link: payment_link ?? null,
         },
       },
     ]);
 
   if (
     process.env.BCC_FAILED_RECURRING_DONATION_EMAIL &&
-    process.env.BCC_FAILED_RECURRING_DONATION_EMAIL !== info.donor_email
+    process.env.BCC_FAILED_RECURRING_DONATION_EMAIL !== email
   ) {
     emailParams.setBcc([
       new Recipient(process.env.BCC_FAILED_RECURRING_DONATION_EMAIL),
@@ -171,7 +176,7 @@ export async function sendFailedRecurringDonationEmail(
 
   if (result.body) {
     logError(
-      `Email for failed recurring donation to donor ID ${info.donor_id} was probably sent, but with possible errors or warnings`,
+      `Email for failed recurring donation to donor ID ${donor_id} was probably sent, but with possible errors or warnings`,
       result.body,
     );
   }

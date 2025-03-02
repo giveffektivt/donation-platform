@@ -19,14 +19,14 @@ export async function sendFailedRecurringDonationEmails(
     }
 
     try {
-      await sendFailedRecurringDonationEmail({
-        donor_id: info.donor_id,
-        donor_email: info.donor_email,
-        donor_name: info.donor_name,
-        recipient: info.recipient,
-        amount: info.amount,
-        payment_link: await recreateQuickpayFailedRecurringDonation(db, info),
-      });
+      await sendFailedRecurringDonationEmail(
+        info.donor_id,
+        info.donor_email,
+        info.recipient,
+        info.amount,
+        info.donor_name,
+        await recreateQuickpayFailedRecurringDonation(db, info),
+      );
       console.log(
         `Sent new payment link for a failed recurring donation: ${info.donation_id}`,
       );

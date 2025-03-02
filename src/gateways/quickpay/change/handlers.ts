@@ -1,11 +1,13 @@
 import type { PoolClient } from "pg";
 import {
   ChargeStatus,
-  getDonorIdByChargeShortId,
-  insertInitialChargeQuickpay,
-  logError,
   PaymentMethod,
   type QuickpayChange,
+  getDonorIdByChargeShortId,
+  getFailedRecurringDonationByQuickpayOrder,
+  insertInitialChargeQuickpay,
+  logError,
+  sendFailedRecurringDonationEmail,
   sendFailedRecurringDonationEmails,
   setChargeStatusByShortId,
   setDonationCancelledByQuickpayOrder,
@@ -27,6 +29,17 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
   if (change.state === "cancelled") {
     console.log(`Cancelling Quickpay subscription ${change.order_id}`);
     await setDonationCancelledByQuickpayOrder(db, change.order_id);
+    const info = await getFailedRecurringDonationByQuickpayOrder(
+      db,
+      change.order_id,
+    );
+    await sendFailedRecurringDonationEmail(
+      info.donor_id,
+      info.donor_email,
+      info.recipient,
+      info.amount,
+      info.donor_name,
+    );
     return;
   }
 
