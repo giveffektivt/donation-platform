@@ -187,6 +187,120 @@ $_$;
 
 
 --
+-- Name: general_assembly_invitations(timestamp with time zone); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.general_assembly_invitations(meeting_time timestamp with time zone) RETURNS TABLE(email text, first_names text, can_vote text, voting_codes text)
+    LANGUAGE plpgsql
+    AS $$
+begin return query
+with
+    members_within_last_2_years as (
+        select
+            min(p.email) as email,
+            min(p.name) as name,
+            min(c.created_at) as min_charged_at,
+            max(c.created_at) as max_charged_at
+        from
+            donor_with_sensitive_info p
+            inner join donation d on d.donor_id = p.id
+            inner join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient = 'Giv Effektivts medlemskab'
+            and c.created_at >= '2025-03-25'::timestamp - interval '2 years'
+        group by
+            p.tin
+    ),
+    participants as (
+        select
+            a.email,
+            a.name,
+            a.min_charged_at,
+            a.max_charged_at,
+            case
+                when a.max_charged_at between '2025-03-25'::timestamp - interval '1 year' and '2025-03-25'::timestamp - interval '3 months' then 'Yes'
+                when '2025-03-25'::timestamp - interval '3 months' between a.min_charged_at and a.max_charged_at  then 'Yes'
+                when a.max_charged_at between greatest(now() - interval '1 year', '2025-03-25'::timestamp - interval '1 year 3 months') and '2025-03-25'::timestamp - interval '1 year' then 'Maybe'
+                else 'No'
+            end as can_vote
+        from
+            members_within_last_2_years a
+        where
+            a.max_charged_at >= now() - interval '1 year'
+    ),
+    invitations as (
+        select
+            a.email,
+            string_agg(split_part(a.name, ' ', 1), ', ') as first_names,
+            string_agg(split_part(a.can_vote, ' ', 1), ', ') as can_vote,
+            string_agg(to_char(a.min_charged_at, 'yyyy-mm-dd'), ', ') as min_charged_at,
+            string_agg(to_char(a.max_charged_at, 'yyyy-mm-dd'), ', ') as max_charged_at,
+            count(
+                case
+                    when a.can_vote != 'No' then 1
+                end
+            ) as votes
+        from
+            participants a
+        group by
+            a.email
+    ),
+    invitations_ordered as (
+        select
+            *,
+            coalesce(
+                sum(a.votes) over (
+                    order by
+                        a.votes desc,
+                        a.email rows between unbounded preceding
+                        and 1 preceding
+                ),
+                0
+            ) as start_offset
+        from
+            invitations a
+        order by
+            a.votes desc,
+            a.email
+    ),
+    voting_codes as (
+        select
+            a.code,
+            row_number() over () as rn
+        from
+            general_assembly_voting_code a
+    ),
+    data as (
+        select
+            *,
+            (
+                select
+                    string_agg(
+                        coalesce(c.code, 'missing'),
+                        ', '
+                        order by
+                            gs
+                    )
+                from
+                    generate_series(1, p.votes) as gs
+                    left join voting_codes c on c.rn = p.start_offset + gs
+            ) as voting_codes
+        from
+            invitations_ordered p
+    )
+select
+    a.email,
+    a.first_names,
+    a.can_vote,
+    a.voting_codes
+from
+    data a;
+end
+$$;
+
+
+--
 -- Name: time_distribution(timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -1633,6 +1747,16 @@ CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
 
 
 --
+-- Name: general_assembly_voting_code; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.general_assembly_voting_code (
+    code text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: ignored_renewals; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -2025,6 +2149,14 @@ ALTER TABLE ONLY giveffektivt.gateway_webhook
 
 
 --
+-- Name: general_assembly_voting_code general_assembly_voting_code_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.general_assembly_voting_code
+    ADD CONSTRAINT general_assembly_voting_code_pkey PRIMARY KEY (code);
+
+
+--
 -- Name: max_tax_deduction max_tax_deduction_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -2407,4 +2539,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250122172829'),
     ('20250127221911'),
     ('20250223142559'),
+    ('20250306220252'),
     ('99999999999999');
