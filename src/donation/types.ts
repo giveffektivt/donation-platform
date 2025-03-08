@@ -139,6 +139,7 @@ export type CrmExport = {
   last_donated_frequency: DonationFrequency;
   last_donated_recipient: DonationRecipient;
   last_donation_cancelled: boolean;
+  last_donation_tax_deductible: boolean;
   last_donated_at: Date;
   is_member: boolean;
 };

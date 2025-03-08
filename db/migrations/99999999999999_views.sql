@@ -2135,6 +2135,7 @@ with
             d.method as last_donated_method,
             d.frequency as last_donated_frequency,
             d.recipient as last_donated_recipient,
+            d.tax_deductible as last_donation_tax_deductible,
             d.cancelled as last_donation_cancelled,
             c.created_at as last_donated_at
         from
@@ -2158,6 +2159,7 @@ with
             l.last_donated_method,
             l.last_donated_frequency,
             l.last_donated_recipient,
+            l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
             m.email is not null as is_member
