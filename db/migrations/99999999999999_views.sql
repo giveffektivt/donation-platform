@@ -2042,6 +2042,18 @@ with
             and d.recipient != 'Giv Effektivts medlemskab'
             and not d.cancelled
             and c.created_at >= date_trunc('month', now()) - interval '1 month'
+    ),
+    is_max_tax_deduction_known as (
+        select
+            (
+                max(year) = extract(
+                    year
+                    from
+                        now()
+                )
+            )::int as is_max_tax_deduction_known
+        from
+            max_tax_deduction
     )
 select
     *
@@ -2053,7 +2065,8 @@ from
     dkk_recurring_next_year,
     members_confirmed,
     members_pending_renewal,
-    monthly_donors;
+    monthly_donors,
+    is_max_tax_deduction_known;
 
 grant
 select
