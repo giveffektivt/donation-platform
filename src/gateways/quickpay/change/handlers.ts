@@ -117,6 +117,8 @@ const getChargeStatusFromOperations = (
           return [ChargeStatus.Charged, latest.aq_status_msg];
         case "refund":
           return [ChargeStatus.Refunded, latest.aq_status_msg];
+        case "cancel":
+          return [ChargeStatus.Error, latest.aq_status_msg];
       }
   }
   return [null, ""];
