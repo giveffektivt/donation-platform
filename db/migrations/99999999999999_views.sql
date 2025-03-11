@@ -2054,6 +2054,29 @@ with
             )::int as is_max_tax_deduction_known
         from
             max_tax_deduction
+    ),
+    oldest_stopped_donation_age as (
+        select
+            floor(
+                extract(
+                    epoch
+                    from
+                        (now() - min(max_charged_at))
+                )
+            ) as oldest_stopped_donation_age
+        from
+            (
+                select
+                    max(c.created_at) as max_charged_at
+                from
+                    donor_with_sensitive_info p
+                    inner join donation d on d.donor_id = p.id
+                    inner join charge c on c.donation_id = d.id
+                where
+                    c.status = 'charged'
+                group by
+                    p.email
+            )
     )
 select
     *
@@ -2066,7 +2089,8 @@ from
     members_confirmed,
     members_pending_renewal,
     monthly_donors,
-    is_max_tax_deduction_known;
+    is_max_tax_deduction_known,
+    oldest_stopped_donation_age;
 
 grant
 select

@@ -1872,6 +1872,14 @@ CREATE VIEW giveffektivt.kpi AS
         ), is_max_tax_deduction_known AS (
          SELECT ((max(max_tax_deduction.year) = EXTRACT(year FROM now())))::integer AS is_max_tax_deduction_known
            FROM giveffektivt.max_tax_deduction
+        ), oldest_stopped_donation_age AS (
+         SELECT floor(EXTRACT(epoch FROM (now() - min(unnamed_subquery.max_charged_at)))) AS oldest_stopped_donation_age
+           FROM ( SELECT max(c.created_at) AS max_charged_at
+                   FROM ((giveffektivt.donor_with_sensitive_info p
+                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+                  WHERE (c.status = 'charged'::giveffektivt.charge_status)
+                  GROUP BY p.email) unnamed_subquery
         )
  SELECT dkk_total.dkk_total,
     dkk_total_ops.dkk_total_ops,
@@ -1881,7 +1889,8 @@ CREATE VIEW giveffektivt.kpi AS
     members_confirmed.members_confirmed,
     members_pending_renewal.members_pending_renewal,
     monthly_donors.monthly_donors,
-    is_max_tax_deduction_known.is_max_tax_deduction_known
+    is_max_tax_deduction_known.is_max_tax_deduction_known,
+    oldest_stopped_donation_age.oldest_stopped_donation_age
    FROM dkk_total,
     dkk_total_ops,
     dkk_pending_transfer,
@@ -1890,7 +1899,8 @@ CREATE VIEW giveffektivt.kpi AS
     members_confirmed,
     members_pending_renewal,
     monthly_donors,
-    is_max_tax_deduction_known;
+    is_max_tax_deduction_known,
+    oldest_stopped_donation_age;
 
 
 --
