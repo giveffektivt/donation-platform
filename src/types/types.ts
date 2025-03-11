@@ -11,6 +11,31 @@ export type SubmitDataDonation = {
   message?: string;
 };
 
+export type SubmitDataDonationRegister = {
+  distributionCauseAreas: {
+    id: number;
+    name?: string;
+    standardSplit: boolean;
+    percentageShare: string;
+    organizations: {
+      id: number;
+      name?: string;
+      widgetDisplayName?: string;
+      percentageShare: string;
+    }[];
+  }[];
+  donor: {
+    email: string;
+    name: string;
+    taxDeduction: boolean;
+    newsletter: boolean;
+    ssn?: string;
+  };
+  method: number;
+  recurring: boolean;
+  amount: string | number;
+};
+
 export type SubmitDataMembership = {
   name: string;
   tin: string;
