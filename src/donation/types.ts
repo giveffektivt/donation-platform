@@ -134,6 +134,7 @@ export type CrmExport = {
   registered_at: Date;
   name: string;
   total_donated: number;
+  donations_count: number;
   last_donated_amount: number;
   last_donated_method: string;
   last_donated_frequency: DonationFrequency;

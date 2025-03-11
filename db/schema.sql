@@ -1466,7 +1466,8 @@ CREATE VIEW giveffektivt.crm_export AS
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= (now() - '1 year'::interval)))
         ), donations AS (
          SELECT p.email,
-            sum(d.amount) AS total_donated
+            sum(d.amount) AS total_donated,
+            count(1) AS donations_count
            FROM ((giveffektivt.donor_with_contact_info p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
@@ -1491,6 +1492,7 @@ CREATE VIEW giveffektivt.crm_export AS
             e.registered_at,
             n.name,
             d.total_donated,
+            d.donations_count,
             l.last_donated_amount,
             l.last_donated_method,
             l.last_donated_frequency,
@@ -1509,6 +1511,7 @@ CREATE VIEW giveffektivt.crm_export AS
     registered_at,
     name,
     total_donated,
+    donations_count,
     last_donated_amount,
     last_donated_method,
     last_donated_frequency,

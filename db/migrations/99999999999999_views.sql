@@ -2117,7 +2117,8 @@ with
     donations as (
         select
             p.email,
-            sum(d.amount) as total_donated
+            sum(d.amount) as total_donated,
+            count(1) as donations_count
         from
             donor_with_contact_info p
             join donation d on d.donor_id = p.id
@@ -2155,6 +2156,7 @@ with
             e.registered_at,
             n.name,
             d.total_donated,
+            d.donations_count,
             l.last_donated_amount,
             l.last_donated_method,
             l.last_donated_frequency,

@@ -20,6 +20,7 @@ export async function ExportToCrm(db: PoolClient) {
       er_sidste_donation_fradragsberettiget: entry.last_donation_tax_deductible,
       sidste_donationsoeremaerkning: entry.last_donated_recipient,
       totalt_doneret: entry.total_donated,
+      antal_donationer: entry.donations_count,
       medlem: entry.is_member,
     },
   }));
