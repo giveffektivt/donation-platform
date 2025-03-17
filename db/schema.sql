@@ -1763,6 +1763,28 @@ CREATE TABLE giveffektivt.general_assembly_voting_code (
 
 
 --
+-- Name: gwwc_money_moved; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.gwwc_money_moved AS
+ SELECT to_char(c.created_at, 'YYYY-MM'::text) AS month,
+    (t.recipient ||
+        CASE
+            WHEN (min(t.created_at) < '2024-11-29 00:00:00+00'::timestamp with time zone) THEN ' (via GiveWell)'::text
+            ELSE ''::text
+        END) AS recipient,
+    'GHD'::text AS cause,
+    sum(d.amount) AS amount
+   FROM (((giveffektivt.donor_with_contact_info p
+     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+     JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+     JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
+  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])))
+  GROUP BY (to_char(c.created_at, 'YYYY-MM'::text)), t.recipient
+  ORDER BY (to_char(c.created_at, 'YYYY-MM'::text));
+
+
+--
 -- Name: ignored_renewals; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 

@@ -38,7 +38,8 @@ skat_gaveskema,
 transfer,
 transfer_overview,
 transfer_pending,
-transferred_distribution cascade;
+transferred_distribution,
+gwwc_money_moved cascade;
 
 drop function if exists time_distribution,
 general_assembly_invitations cascade;
@@ -2361,5 +2362,33 @@ $$;
 
 grant
 execute on function general_assembly_invitations (timestamptz) to reader_contact;
+
+--------------------------------------
+create view gwwc_money_moved as
+select
+    to_char(c.created_at, 'YYYY-MM') as month,
+    t.recipient || case
+        when min(t.created_at) < '2024-11-29' then ' (via GiveWell)'
+        else ''
+    end as recipient,
+    'GHD' as cause,
+    sum(d.amount) as amount
+from
+    donor_with_contact_info p
+    join donation d on d.donor_id = p.id
+    join charge_with_gateway_info c on c.donation_id = d.id
+    join transfer t on c.transfer_id = t.id
+where
+    c.status = 'charged'
+    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
+group by
+    to_char(c.created_at, 'YYYY-MM'),
+    t.recipient
+order by
+    month;
+
+grant
+select
+    on gwwc_money_moved to everyone;
 
 -- migrate:down
