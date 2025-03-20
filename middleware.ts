@@ -37,7 +37,3 @@ async function executeCors(request: NextRequest): Promise<Headers> {
     );
   });
 }
-
-export const config = {
-  matcher: "/api/:path*",
-};
