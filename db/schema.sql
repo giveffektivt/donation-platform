@@ -1902,6 +1902,10 @@ CREATE VIEW giveffektivt.kpi AS
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
                   WHERE (c.status = 'charged'::giveffektivt.charge_status)
                   GROUP BY p.email) unnamed_subquery
+        ), missing_gavebrev_income_proof AS (
+         SELECT count(1) AS missing_gavebrev_income_proof
+           FROM giveffektivt.gavebrev_checkin
+          WHERE ((gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (gavebrev_checkin.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)))
         )
  SELECT dkk_total.dkk_total,
     dkk_total_ops.dkk_total_ops,
@@ -1912,7 +1916,8 @@ CREATE VIEW giveffektivt.kpi AS
     members_pending_renewal.members_pending_renewal,
     monthly_donors.monthly_donors,
     is_max_tax_deduction_known.is_max_tax_deduction_known,
-    oldest_stopped_donation_age.oldest_stopped_donation_age
+    oldest_stopped_donation_age.oldest_stopped_donation_age,
+    missing_gavebrev_income_proof.missing_gavebrev_income_proof
    FROM dkk_total,
     dkk_total_ops,
     dkk_pending_transfer,
@@ -1922,7 +1927,8 @@ CREATE VIEW giveffektivt.kpi AS
     members_pending_renewal,
     monthly_donors,
     is_max_tax_deduction_known,
-    oldest_stopped_donation_age;
+    oldest_stopped_donation_age,
+    missing_gavebrev_income_proof;
 
 
 --

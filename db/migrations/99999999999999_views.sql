@@ -2078,6 +2078,28 @@ with
                 group by
                     p.email
             )
+    ),
+    missing_gavebrev_income_proof as (
+        select
+            count(1) as missing_gavebrev_income_proof
+        from
+            gavebrev_checkin
+        where
+            year = extract(
+                year
+                from
+                    current_date
+            )::int - 1
+            and income_verified is null
+            and current_date > make_date(
+                extract(
+                    year
+                    from
+                        current_date
+                )::int,
+                3,
+                15
+            )
     )
 select
     *
@@ -2091,7 +2113,8 @@ from
     members_pending_renewal,
     monthly_donors,
     is_max_tax_deduction_known,
-    oldest_stopped_donation_age;
+    oldest_stopped_donation_age,
+    missing_gavebrev_income_proof;
 
 grant
 select
