@@ -2269,7 +2269,7 @@ with
         where
             c.status = 'charged'
             and d.recipient = 'Giv Effektivts medlemskab'
-            and c.created_at >= '2025-03-25'::timestamp - interval '2 years'
+            and c.created_at >= meeting_time - interval '2 years'
         group by
             p.tin
     ),
@@ -2280,9 +2280,9 @@ with
             a.min_charged_at,
             a.max_charged_at,
             case
-                when a.max_charged_at between '2025-03-25'::timestamp - interval '1 year' and '2025-03-25'::timestamp - interval '3 months' then 'Yes'
-                when '2025-03-25'::timestamp - interval '3 months' between a.min_charged_at and a.max_charged_at  then 'Yes'
-                when a.max_charged_at between greatest(now() - interval '1 year', '2025-03-25'::timestamp - interval '1 year 3 months') and '2025-03-25'::timestamp - interval '1 year' then 'Maybe'
+                when a.max_charged_at between meeting_time - interval '1 year' and meeting_time - interval '3 months' then 'Yes'
+                when meeting_time - interval '3 months' between a.min_charged_at and a.max_charged_at  then 'Yes'
+                when a.max_charged_at between greatest(now() - interval '1 year', meeting_time - interval '1 year 3 months') and meeting_time - interval '1 year' then 'Maybe'
                 else 'No'
             end as can_vote
         from
