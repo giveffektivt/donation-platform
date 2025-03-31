@@ -30,7 +30,7 @@ export type GavebrevCheckin = {
   income_inferred?: number;
   income_preliminary?: number;
   income_verified?: number;
-  maximize_tax_deduction: boolean;
+  limit_normal_donation?: number | null;
   created_at: Date;
   updated_at: Date;
 };

@@ -410,7 +410,7 @@ select
     income_inferred,
     income_preliminary,
     income_verified,
-    maximize_tax_deduction,
+    limit_normal_donation,
     created_at,
     updated_at
 from
@@ -847,7 +847,10 @@ select
     tin,
     y as year,
     coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0) as income,
-    coalesce(c.maximize_tax_deduction, false) as maximize_tax_deduction
+    case
+        when c.year is null then 0
+        else c.limit_normal_donation
+    end as limit_normal_donation
 from
     annual_tax_report_const
     cross join annual_tax_report_gavebrev_since g
@@ -867,7 +870,7 @@ select
     c.tin,
     c.year,
     c.income,
-    c.maximize_tax_deduction,
+    c.limit_normal_donation,
     round(
         sum(
             case
@@ -895,7 +898,7 @@ group by
     c.tin,
     c.year,
     c.income,
-    c.maximize_tax_deduction;
+    c.limit_normal_donation;
 
 create view annual_tax_report_gavebrev_all_payments as
 with
@@ -999,7 +1002,7 @@ with recursive
                     ) b
                     cross join lateral (
                         select
-                            cast(get.maximize_tax_deduction as integer) * least(coalesce(m.value, 0), greatest(0, gap.actual_total - b.uncapped_gavebrev_total)) as non_gavebrev_total
+                            least(coalesce(least(m.value, get.limit_normal_donation), 0), greatest(0, gap.actual_total - b.uncapped_gavebrev_total)) as non_gavebrev_total
                     ) c
                 order by
                     get.tin,
@@ -1033,7 +1036,7 @@ with recursive
             ) b
             cross join lateral (
                 select
-                    cast(get.maximize_tax_deduction as integer) * least(coalesce(m.value, 0), greatest(0, gap.actual_total - b.uncapped_gavebrev_total)) as non_gavebrev_total
+                    least(coalesce(least(m.value, get.limit_normal_donation), 0), greatest(0, gap.actual_total - b.uncapped_gavebrev_total)) as non_gavebrev_total
             ) c
     )
 select

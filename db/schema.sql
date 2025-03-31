@@ -757,7 +757,7 @@ CREATE TABLE giveffektivt._gavebrev_checkin (
     income_inferred numeric,
     income_preliminary numeric,
     income_verified numeric,
-    maximize_tax_deduction boolean DEFAULT false NOT NULL,
+    limit_normal_donation numeric,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone
@@ -1119,7 +1119,7 @@ CREATE VIEW giveffektivt.gavebrev_checkin AS
     income_inferred,
     income_preliminary,
     income_verified,
-    maximize_tax_deduction,
+    limit_normal_donation,
     created_at,
     updated_at
    FROM giveffektivt._gavebrev_checkin
@@ -1134,7 +1134,10 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_checkins AS
  SELECT g.tin,
     y.y AS year,
     COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric) AS income,
-    COALESCE(c.maximize_tax_deduction, false) AS maximize_tax_deduction
+        CASE
+            WHEN (c.year IS NULL) THEN (0)::numeric
+            ELSE c.limit_normal_donation
+        END AS limit_normal_donation
    FROM (((giveffektivt.annual_tax_report_const
      CROSS JOIN giveffektivt.annual_tax_report_gavebrev_since g)
      CROSS JOIN LATERAL generate_series(g.gavebrev_start, (EXTRACT(year FROM annual_tax_report_const.year_to) - (1)::numeric)) y(y))
@@ -1149,7 +1152,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
  SELECT c.tin,
     c.year,
     c.income,
-    c.maximize_tax_deduction,
+    c.limit_normal_donation,
     round(sum(
         CASE
             WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
@@ -1159,7 +1162,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
    FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
      JOIN giveffektivt.donor_with_sensitive_info p ON ((p.tin = c.tin)))
      JOIN giveffektivt.gavebrev g ON (((g.donor_id = p.id) AND (EXTRACT(year FROM g.started_at) <= c.year))))
-  GROUP BY c.tin, c.year, c.income, c.maximize_tax_deduction;
+  GROUP BY c.tin, c.year, c.income, c.limit_normal_donation;
 
 
 --
@@ -1202,7 +1205,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_results AS
                      CROSS JOIN LATERAL ( SELECT get.expected_total AS can_be_reported_this_year) a)
                      CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
                             LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
-                     CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
+                     CROSS JOIN LATERAL ( SELECT LEAST(COALESCE(LEAST(m.value, get.limit_normal_donation), (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total))) AS non_gavebrev_total) c)
                   ORDER BY get.tin, get.year) _a
         UNION ALL
          SELECT get.tin,
@@ -1220,7 +1223,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_results AS
              CROSS JOIN LATERAL ( SELECT GREATEST((0)::numeric, (get.expected_total - data_1.aconto_debt)) AS can_be_reported_this_year) a)
              CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
                     LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
-             CROSS JOIN LATERAL ( SELECT (((get.maximize_tax_deduction)::integer)::numeric * LEAST(COALESCE(m.value, (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total)))) AS non_gavebrev_total) c)
+             CROSS JOIN LATERAL ( SELECT LEAST(COALESCE(LEAST(m.value, get.limit_normal_donation), (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total))) AS non_gavebrev_total) c)
         )
  SELECT tin,
     year,
@@ -2589,4 +2592,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250127221911'),
     ('20250223142559'),
     ('20250306220252'),
+    ('20250330185137'),
     ('99999999999999');

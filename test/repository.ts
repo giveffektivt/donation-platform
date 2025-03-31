@@ -73,7 +73,7 @@ export async function findAnnualTaxReportOfficial(client: PoolClient): Promise<T
 export async function insertGavebrevCheckin(client: PoolClient, gavebrevCheckin: Partial<GavebrevCheckin>): Promise<GavebrevCheckin> {
   return (
     await client.query(
-      `insert into gavebrev_checkin(donor_id, year, income_inferred, income_preliminary, income_verified, maximize_tax_deduction)
+      `insert into gavebrev_checkin(donor_id, year, income_inferred, income_preliminary, income_verified, limit_normal_donation)
        values ($1, $2, $3, $4, $5, $6)
        returning *`,
       [
@@ -82,7 +82,7 @@ export async function insertGavebrevCheckin(client: PoolClient, gavebrevCheckin:
         gavebrevCheckin.income_inferred,
         gavebrevCheckin.income_preliminary,
         gavebrevCheckin.income_verified,
-        gavebrevCheckin.maximize_tax_deduction,
+        gavebrevCheckin.limit_normal_donation,
       ]
     )
   ).rows[0];
