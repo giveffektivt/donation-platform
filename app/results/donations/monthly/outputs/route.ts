@@ -36,7 +36,7 @@ type OrgAggregation = {
 type PeriodAggregation = {
   period: string;
   numberOfOutputs: number;
-  organizations: OrgAggregation;
+  organizations: OrgAggregation[];
 };
 
 type OutputStructure = {
@@ -56,17 +56,21 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
   } = {};
 
   for (const item of data) {
+    // TODO
+    const unit = mapToNorwegianUnit(item.unit);
+    // TODO
     const period =
       item.transferred_at === "Næste overførsel"
         ? item.transferred_at
         : item.transferred_at.slice(0, 7);
-    if (!unitMap[item.unit]) {
-      unitMap[item.unit] = {
+
+    if (!unitMap[unit]) {
+      unitMap[unit] = {
         total: {},
         monthly: Object.assign({}, { numberOfOutputs: {} }),
       };
     }
-    const currentUnit = unitMap[item.unit];
+    const currentUnit = unitMap[unit];
     const cat =
       item.earmark === "Giv Effektivts anbefaling"
         ? "smartDistribution"
@@ -97,7 +101,9 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
       .map((period) => ({
         period,
         numberOfOutputs: unitData.monthly.numberOfOutputs[period],
-        organizations: unitData.monthly[period],
+        organizations: Object.entries(unitData.monthly[period]).map(
+          ([key, value]) => ({ [key]: value }),
+        ),
       }))
       .sort((a, b) => a.period.localeCompare(b.period));
     const totalNumberOfOutputs = Object.values(unitData.total).reduce(
@@ -115,9 +121,30 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
       total: {
         period: "Total",
         numberOfOutputs: totalNumberOfOutputs,
-        organizations: unitData.total,
+        organizations: Object.entries(unitData.total).map(([key, value]) => ({
+          [key]: value,
+        })),
       },
       monthly,
     };
   });
+}
+
+function mapToNorwegianUnit(unit: string) {
+  switch (unit) {
+    case "Antimalaria myggenet udleveret":
+      return "Myggnett";
+    case "Ormekure udleveret":
+      return "Ormekurer";
+    case "Dollars modtaget":
+      return "Dollar mottatt";
+    case "A-vitamintilskud udleveret":
+      return "A-vitamintilskudd";
+    case "Malariamedicin udleveret":
+      return "Malariabehandlinger";
+    case "Vaccinationsprogrammer motiveret":
+      return "Vaksinasjoner";
+    default:
+      return unit;
+  }
 }
