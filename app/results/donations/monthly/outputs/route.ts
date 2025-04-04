@@ -61,7 +61,7 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
     // TODO
     const period =
       item.transferred_at === "Næste overførsel"
-        ? item.transferred_at
+        ? new Date().toISOString().slice(0, 7)
         : item.transferred_at.slice(0, 7);
 
     if (!unitMap[unit]) {
