@@ -1472,6 +1472,7 @@ select
         when t.recipient = 'SCI Foundation' then 'Ormekure udleveret'
     end as unit,
     round(sum(amount))::numeric as total_dkk,
+    round(sum(amount) / max(t.exchange_rate))::numeric as total_usd,
     round(max(t.unit_cost_external), 2) as unit_cost_external,
     round(max(t.unit_cost_conversion), 2) as unit_cost_conversion,
     round(max(t.unit_cost_external) / max(t.unit_cost_conversion) * max(t.exchange_rate), 2) as unit_cost_dkk,

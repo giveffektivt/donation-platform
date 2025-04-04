@@ -2046,6 +2046,7 @@ CREATE VIEW giveffektivt.transfer_overview AS
             ELSE NULL::text
         END AS unit,
     round(sum(d.amount)) AS total_dkk,
+    round((sum(d.amount) / max(t.exchange_rate))) AS total_usd,
     round(max(t.unit_cost_external), 2) AS unit_cost_external,
     round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
     round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
