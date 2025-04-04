@@ -2050,14 +2050,25 @@ with
     ),
     number_of_donors as (
         select
-            count(distinct (p.email, p.tin))::numeric as number_of_donors
+            sum(donors) as number_of_donors
         from
-            donor_with_sensitive_info p
-            inner join donation d on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            (
+                select
+                    email,
+                    case
+                        when count(distinct tin) = 0 then 1
+                        else count(distinct tin)
+                    end as donors
+                from
+                    donor_with_sensitive_info p
+                    join donation d on d.donor_id = p.id
+                    join charge c on c.donation_id = d.id
+                where
+                    c.status = 'charged'
+                    and d.recipient != 'Giv Effektivts medlemskab'
+                group by
+                    email
+            )
     ),
     is_max_tax_deduction_known as (
         select

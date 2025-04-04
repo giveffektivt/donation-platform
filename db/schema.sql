@@ -1895,11 +1895,17 @@ CREATE VIEW giveffektivt.kpi AS
              JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
           WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
         ), number_of_donors AS (
-         SELECT (count(DISTINCT ROW(p.email, p.tin)))::numeric AS number_of_donors
-           FROM ((giveffektivt.donor_with_sensitive_info p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
+         SELECT sum(unnamed_subquery.donors) AS number_of_donors
+           FROM ( SELECT p.email,
+                        CASE
+                            WHEN (count(DISTINCT p.tin) = 0) THEN (1)::bigint
+                            ELSE count(DISTINCT p.tin)
+                        END AS donors
+                   FROM ((giveffektivt.donor_with_sensitive_info p
+                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
+                  GROUP BY p.email) unnamed_subquery
         ), is_max_tax_deduction_known AS (
          SELECT ((max(max_tax_deduction.year) = EXTRACT(year FROM now())))::integer AS is_max_tax_deduction_known
            FROM giveffektivt.max_tax_deduction
