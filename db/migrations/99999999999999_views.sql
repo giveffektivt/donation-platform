@@ -2048,6 +2048,17 @@ with
             and not d.cancelled
             and c.created_at >= date_trunc('month', now()) - interval '1 month'
     ),
+    number_of_donors as (
+        select
+            count(distinct (p.email, p.tin))::numeric as number_of_donors
+        from
+            donor_with_sensitive_info p
+            inner join donation d on d.donor_id = p.id
+            inner join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivts medlemskab'
+    ),
     is_max_tax_deduction_known as (
         select
             (
@@ -2116,6 +2127,7 @@ from
     members_confirmed,
     members_pending_renewal,
     monthly_donors,
+    number_of_donors,
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof;

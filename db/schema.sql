@@ -1894,6 +1894,12 @@ CREATE VIEW giveffektivt.kpi AS
            FROM (giveffektivt.charge c
              JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
           WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
+        ), number_of_donors AS (
+         SELECT (count(DISTINCT ROW(p.email, p.tin)))::numeric AS number_of_donors
+           FROM ((giveffektivt.donor_with_sensitive_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
         ), is_max_tax_deduction_known AS (
          SELECT ((max(max_tax_deduction.year) = EXTRACT(year FROM now())))::integer AS is_max_tax_deduction_known
            FROM giveffektivt.max_tax_deduction
@@ -1918,6 +1924,7 @@ CREATE VIEW giveffektivt.kpi AS
     members_confirmed.members_confirmed,
     members_pending_renewal.members_pending_renewal,
     monthly_donors.monthly_donors,
+    number_of_donors.number_of_donors,
     is_max_tax_deduction_known.is_max_tax_deduction_known,
     oldest_stopped_donation_age.oldest_stopped_donation_age,
     missing_gavebrev_income_proof.missing_gavebrev_income_proof
@@ -1929,6 +1936,7 @@ CREATE VIEW giveffektivt.kpi AS
     members_confirmed,
     members_pending_renewal,
     monthly_donors,
+    number_of_donors,
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof;

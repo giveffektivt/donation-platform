@@ -85,3 +85,27 @@ export async function getFundraiserKpi(
     )
   ).rows;
 }
+
+export async function getDailyDonatedStats(
+  client: PoolClient,
+): Promise<{ date: string; sum: number }[]> {
+  return (
+    await client.query(
+      `
+        select
+            date_trunc('day', c.created_at) as date,
+            sum(amount)
+        from
+            donation d
+            join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivts medlemskab'
+        group by
+            date_trunc('day', c.created_at)
+        order by
+            date
+      `,
+    )
+  ).rows;
+}
