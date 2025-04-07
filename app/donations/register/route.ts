@@ -92,7 +92,7 @@ async function processPayment(
         {
           message: "OK",
           bank: {
-            account: getBankAccount(submitData.recipient),
+            account: getBankAccount(),
             message: bankTransferId,
           },
         },
