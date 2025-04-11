@@ -28,6 +28,8 @@ declare global {
       MAILERSEND_TEMPLATE_DONATION: string;
       MAILERSEND_TEMPLATE_MEMBERSHIP: string;
       MAILERSEND_TEMPLATE_PAYMENT_EXPIRED: string;
+      BREVO_API_URL: string;
+      BREVO_API_KEY: string;
     }
   }
 }
