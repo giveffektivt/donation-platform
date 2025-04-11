@@ -2176,6 +2176,46 @@ with
             p.email,
             p.created_at
     ),
+    ages as (
+        select distinct
+            on (p.email) p.email,
+            case
+                when p.tin ~ '^\d{6}-\d{4}$'
+                and substring(p.tin, 3, 2)::int between 1 and 12
+                and substring(p.tin, 1, 2)::int between 1 and 31  then date_part(
+                    'year',
+                    age (
+                        to_date(
+                            (
+                                case
+                                    when substring(p.tin, 8, 4)::int between 0 and 3999  then case
+                                        when substring(p.tin, 5, 2)::int between 0 and 36  then '20'
+                                        else '19'
+                                    end
+                                    when substring(p.tin, 8, 4)::int between 4000 and 4999  then case
+                                        when substring(p.tin, 5, 2)::int between 0 and 36  then '20'
+                                        else '19'
+                                    end
+                                    when substring(p.tin, 8, 4)::int between 5000 and 9999  then case
+                                        when substring(p.tin, 5, 2)::int between 0 and 57  then '20'
+                                        else '19'
+                                    end
+                                end || substring(p.tin, 5, 2) || '-' || substring(p.tin, 3, 2) || '-' || substring(p.tin, 1, 2)
+                            ),
+                            'yyyy-mm-dd'
+                        )
+                    )
+                )
+            end as age
+        from
+            donor_with_sensitive_info p
+        where
+            p.tin is not null
+            and p.country = 'Denmark'
+        order by
+            p.email,
+            p.created_at
+    ),
     members as (
         select distinct
             on (p.email) p.email,
@@ -2230,6 +2270,7 @@ with
             e.email,
             e.registered_at,
             n.name,
+            a.age,
             d.total_donated,
             d.donations_count,
             l.last_donated_amount,
@@ -2243,6 +2284,7 @@ with
         from
             emails e
             left join names n on n.email = e.email
+            left join ages a on a.email = e.email
             left join donations d on d.email = e.email
             left join members m on m.email = e.email
             left join latest_donations l on l.email = e.email

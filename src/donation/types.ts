@@ -143,4 +143,5 @@ export type CrmExport = {
   last_donation_tax_deductible: boolean;
   last_donated_at: Date;
   is_member: boolean;
+  age: number;
 };

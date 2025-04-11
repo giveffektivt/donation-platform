@@ -1460,6 +1460,33 @@ CREATE VIEW giveffektivt.crm_export AS
            FROM giveffektivt.donor_with_contact_info p
           WHERE (p.name IS NOT NULL)
           ORDER BY p.email, p.created_at
+        ), ages AS (
+         SELECT DISTINCT ON (p.email) p.email,
+                CASE
+                    WHEN ((p.tin ~ '^\d{6}-\d{4}$'::text) AND ((("substring"(p.tin, 3, 2))::integer >= 1) AND (("substring"(p.tin, 3, 2))::integer <= 12)) AND ((("substring"(p.tin, 1, 2))::integer >= 1) AND (("substring"(p.tin, 1, 2))::integer <= 31))) THEN date_part('year'::text, age((to_date((((((
+                    CASE
+                        WHEN ((("substring"(p.tin, 8, 4))::integer >= 0) AND (("substring"(p.tin, 8, 4))::integer <= 3999)) THEN
+                        CASE
+                            WHEN ((("substring"(p.tin, 5, 2))::integer >= 0) AND (("substring"(p.tin, 5, 2))::integer <= 36)) THEN '20'::text
+                            ELSE '19'::text
+                        END
+                        WHEN ((("substring"(p.tin, 8, 4))::integer >= 4000) AND (("substring"(p.tin, 8, 4))::integer <= 4999)) THEN
+                        CASE
+                            WHEN ((("substring"(p.tin, 5, 2))::integer >= 0) AND (("substring"(p.tin, 5, 2))::integer <= 36)) THEN '20'::text
+                            ELSE '19'::text
+                        END
+                        WHEN ((("substring"(p.tin, 8, 4))::integer >= 5000) AND (("substring"(p.tin, 8, 4))::integer <= 9999)) THEN
+                        CASE
+                            WHEN ((("substring"(p.tin, 5, 2))::integer >= 0) AND (("substring"(p.tin, 5, 2))::integer <= 57)) THEN '20'::text
+                            ELSE '19'::text
+                        END
+                        ELSE NULL::text
+                    END || "substring"(p.tin, 5, 2)) || '-'::text) || "substring"(p.tin, 3, 2)) || '-'::text) || "substring"(p.tin, 1, 2)), 'yyyy-mm-dd'::text))::timestamp with time zone))
+                    ELSE NULL::double precision
+                END AS age
+           FROM giveffektivt.donor_with_sensitive_info p
+          WHERE ((p.tin IS NOT NULL) AND (p.country = 'Denmark'::text))
+          ORDER BY p.email, p.created_at
         ), members AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.name
@@ -1494,6 +1521,7 @@ CREATE VIEW giveffektivt.crm_export AS
          SELECT e.email,
             e.registered_at,
             n.name,
+            a.age,
             d.total_donated,
             d.donations_count,
             l.last_donated_amount,
@@ -1504,8 +1532,9 @@ CREATE VIEW giveffektivt.crm_export AS
             l.last_donation_cancelled,
             l.last_donated_at,
             (m.email IS NOT NULL) AS is_member
-           FROM ((((emails e
+           FROM (((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
+             LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
              LEFT JOIN members m ON ((m.email = e.email)))
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
@@ -1513,6 +1542,7 @@ CREATE VIEW giveffektivt.crm_export AS
  SELECT email,
     registered_at,
     name,
+    age,
     total_donated,
     donations_count,
     last_donated_amount,
