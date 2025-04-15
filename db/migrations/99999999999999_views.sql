@@ -10,6 +10,7 @@ annual_tax_report_gavebrev_expected_totals,
 annual_tax_report_gavebrev_results,
 annual_tax_report_gavebrev_since,
 annual_tax_report_gaveskema,
+annual_tax_report_pending_update,
 charge,
 charges_to_charge,
 charge_with_gateway_info,
@@ -1216,6 +1217,39 @@ select
     on annual_tax_report_gaveskema to reader;
 
 --------------------------------------
+create view annual_tax_report_pending_update as
+with
+    last_reported as (
+        select distinct
+            on (donor_cpr, ll8a_or_gavebrev, year) *
+        from
+            skat
+        order by
+            donor_cpr,
+            ll8a_or_gavebrev,
+            year,
+            created_at desc
+    )
+select
+    coalesce(a.year, s.year) as year,
+    coalesce(a.donor_cpr, s.donor_cpr) as donor_cpr,
+    coalesce(a.ll8a_or_gavebrev, s.ll8a_or_gavebrev) as ll8a_or_gavebrev,
+    a.total - s.total as difference
+from
+    annual_tax_report a
+    join last_reported s on s.donor_cpr = a.donor_cpr
+    and s.ll8a_or_gavebrev = a.ll8a_or_gavebrev
+    and s.year = a.year
+where
+    s.total != a.total
+order by
+    donor_cpr;
+
+grant
+select
+    on annual_tax_report_pending_update to reader_sensitive;
+
+--------------------------------------
 create view annual_email_report as
 with
     const as (
@@ -2126,6 +2160,12 @@ with
                 3,
                 15
             )
+    ),
+    pending_skat_update as (
+        select
+            count(1) as pending_skat_update
+        from
+            annual_tax_report_pending_update
     )
 select
     *
@@ -2141,7 +2181,8 @@ from
     number_of_donors,
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
-    missing_gavebrev_income_proof;
+    missing_gavebrev_income_proof,
+    pending_skat_update;
 
 grant
 select

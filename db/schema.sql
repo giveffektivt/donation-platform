@@ -1367,6 +1367,58 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
 
 
 --
+-- Name: skat; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.skat AS
+ SELECT const,
+    ge_cvr,
+    donor_cpr,
+    year,
+    blank,
+    total,
+    ll8a_or_gavebrev,
+    ge_notes,
+    rettekode,
+    id,
+    created_at,
+    updated_at
+   FROM giveffektivt._skat
+  WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: annual_tax_report_pending_update; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.annual_tax_report_pending_update AS
+ WITH last_reported AS (
+         SELECT DISTINCT ON (skat.donor_cpr, skat.ll8a_or_gavebrev, skat.year) skat.const,
+            skat.ge_cvr,
+            skat.donor_cpr,
+            skat.year,
+            skat.blank,
+            skat.total,
+            skat.ll8a_or_gavebrev,
+            skat.ge_notes,
+            skat.rettekode,
+            skat.id,
+            skat.created_at,
+            skat.updated_at
+           FROM giveffektivt.skat
+          ORDER BY skat.donor_cpr, skat.ll8a_or_gavebrev, skat.year, skat.created_at DESC
+        )
+ SELECT COALESCE(a.year, s.year) AS year,
+    COALESCE(a.donor_cpr, s.donor_cpr) AS donor_cpr,
+    COALESCE(a.ll8a_or_gavebrev, s.ll8a_or_gavebrev) AS ll8a_or_gavebrev,
+    (a.total - s.total) AS difference
+   FROM (giveffektivt.annual_tax_report a
+     JOIN last_reported s ON (((s.donor_cpr = a.donor_cpr) AND (s.ll8a_or_gavebrev = a.ll8a_or_gavebrev) AND (s.year = a.year))))
+  WHERE (s.total <> a.total)
+  ORDER BY COALESCE(a.donor_cpr, s.donor_cpr);
+
+
+--
 -- Name: charge_with_gateway_info; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1968,6 +2020,9 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT count(1) AS missing_gavebrev_income_proof
            FROM giveffektivt.gavebrev_checkin
           WHERE ((gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (gavebrev_checkin.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)))
+        ), pending_skat_update AS (
+         SELECT count(1) AS pending_skat_update
+           FROM giveffektivt.annual_tax_report_pending_update
         )
  SELECT dkk_total.dkk_total,
     dkk_total_ops.dkk_total_ops,
@@ -1980,7 +2035,8 @@ CREATE VIEW giveffektivt.kpi AS
     number_of_donors.number_of_donors,
     is_max_tax_deduction_known.is_max_tax_deduction_known,
     oldest_stopped_donation_age.oldest_stopped_donation_age,
-    missing_gavebrev_income_proof.missing_gavebrev_income_proof
+    missing_gavebrev_income_proof.missing_gavebrev_income_proof,
+    pending_skat_update.pending_skat_update
    FROM dkk_total,
     dkk_total_ops,
     dkk_pending_transfer,
@@ -1992,7 +2048,8 @@ CREATE VIEW giveffektivt.kpi AS
     number_of_donors,
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
-    missing_gavebrev_income_proof;
+    missing_gavebrev_income_proof,
+    pending_skat_update;
 
 
 --
@@ -2044,27 +2101,6 @@ CREATE TABLE giveffektivt.scanpay_seq (
 CREATE TABLE giveffektivt.schema_migrations (
     version character varying(128) NOT NULL
 );
-
-
---
--- Name: skat; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.skat AS
- SELECT const,
-    ge_cvr,
-    donor_cpr,
-    year,
-    blank,
-    total,
-    ll8a_or_gavebrev,
-    ge_notes,
-    rettekode,
-    id,
-    created_at,
-    updated_at
-   FROM giveffektivt._skat
-  WHERE (deleted_at IS NULL);
 
 
 --
