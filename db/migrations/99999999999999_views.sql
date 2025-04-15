@@ -2265,6 +2265,30 @@ with
             p.email,
             c.created_at desc
     ),
+    first_donations as (
+        select
+            p.email,
+            min(c.created_at) filter (
+                where
+                    d.recipient = 'Giv Effektivts medlemskab'
+            ) as first_membership_at,
+            min(c.created_at) filter (
+                where
+                    d.recipient != 'Giv Effektivts medlemskab'
+            ) as first_donation_at,
+            min(c.created_at) filter (
+                where
+                    d.frequency = 'monthly'
+            ) as first_monthly_donation_at
+        from
+            donor_with_contact_info p
+            join donation d on d.donor_id = p.id
+            join charge c on c.donation_id = d.id
+        where
+            c.status = 'charged'
+        group by
+            p.email
+    ),
     data as (
         select
             e.email,
@@ -2280,6 +2304,9 @@ with
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
+            f.first_membership_at,
+            f.first_donation_at,
+            f.first_monthly_donation_at,
             m.email is not null as is_member
         from
             emails e
@@ -2288,6 +2315,7 @@ with
             left join donations d on d.email = e.email
             left join members m on m.email = e.email
             left join latest_donations l on l.email = e.email
+            left join first_donations f on f.email = e.email
     )
 select
     *

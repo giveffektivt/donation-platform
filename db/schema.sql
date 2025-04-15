@@ -1517,6 +1517,16 @@ CREATE VIEW giveffektivt.crm_export AS
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
           ORDER BY p.email, c.created_at DESC
+        ), first_donations AS (
+         SELECT p.email,
+            min(c.created_at) FILTER (WHERE (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
+            min(c.created_at) FILTER (WHERE (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
+            min(c.created_at) FILTER (WHERE (d.frequency = 'monthly'::giveffektivt.donation_frequency)) AS first_monthly_donation_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE (c.status = 'charged'::giveffektivt.charge_status)
+          GROUP BY p.email
         ), data AS (
          SELECT e.email,
             e.registered_at,
@@ -1531,13 +1541,17 @@ CREATE VIEW giveffektivt.crm_export AS
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
+            f.first_membership_at,
+            f.first_donation_at,
+            f.first_monthly_donation_at,
             (m.email IS NOT NULL) AS is_member
-           FROM (((((emails e
+           FROM ((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
              LEFT JOIN members m ON ((m.email = e.email)))
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
+             LEFT JOIN first_donations f ON ((f.email = e.email)))
         )
  SELECT email,
     registered_at,
@@ -1552,6 +1566,9 @@ CREATE VIEW giveffektivt.crm_export AS
     last_donation_tax_deductible,
     last_donation_cancelled,
     last_donated_at,
+    first_membership_at,
+    first_donation_at,
+    first_monthly_donation_at,
     is_member
    FROM data
   WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member));
