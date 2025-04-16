@@ -2252,7 +2252,6 @@ with
             donor_with_sensitive_info p
         where
             p.tin is not null
-            and p.country = 'Denmark'
         order by
             p.email,
             p.created_at

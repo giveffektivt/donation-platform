@@ -1537,7 +1537,7 @@ CREATE VIEW giveffektivt.crm_export AS
                     ELSE NULL::double precision
                 END AS age
            FROM giveffektivt.donor_with_sensitive_info p
-          WHERE ((p.tin IS NOT NULL) AND (p.country = 'Denmark'::text))
+          WHERE (p.tin IS NOT NULL)
           ORDER BY p.email, p.created_at
         ), members AS (
          SELECT DISTINCT ON (p.email) p.email,
