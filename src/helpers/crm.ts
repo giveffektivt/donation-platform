@@ -26,6 +26,7 @@ async function exportToBrevo(entries: CrmExport[]) {
       TOTALT_DONERET: entry.total_donated,
       ANTAL_DONATIONER: entry.donations_count,
       MEDLEM: entry.is_member,
+      GAVEBREV: entry.has_gavebrev,
       ALDER: entry.age,
     },
   }));

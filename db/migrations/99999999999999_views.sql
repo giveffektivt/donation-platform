@@ -2330,6 +2330,18 @@ with
         group by
             p.email
     ),
+    has_gavebrev as (
+        select
+            p.email
+        from
+            gavebrev g
+            join donor_with_contact_info p on g.donor_id = p.id
+        where
+            g.started_at <= date_trunc('year', now())
+            and stopped_at > date_trunc('year', now())
+        group by
+            p.email
+    ),
     data as (
         select
             e.email,
@@ -2348,7 +2360,8 @@ with
             f.first_membership_at,
             f.first_donation_at,
             f.first_monthly_donation_at,
-            m.email is not null as is_member
+            m.email is not null as is_member,
+            g.email is not null as has_gavebrev
         from
             emails e
             left join names n on n.email = e.email
@@ -2357,6 +2370,7 @@ with
             left join members m on m.email = e.email
             left join latest_donations l on l.email = e.email
             left join first_donations f on f.email = e.email
+            left join has_gavebrev g on g.email = e.email
     )
 select
     *
@@ -2367,6 +2381,7 @@ where
     and (
         total_donated > 0
         or is_member
+        or has_gavebrev
     );
 
 grant

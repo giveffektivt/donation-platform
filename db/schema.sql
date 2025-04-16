@@ -1579,6 +1579,12 @@ CREATE VIEW giveffektivt.crm_export AS
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE (c.status = 'charged'::giveffektivt.charge_status)
           GROUP BY p.email
+        ), has_gavebrev AS (
+         SELECT p.email
+           FROM (giveffektivt.gavebrev g
+             JOIN giveffektivt.donor_with_contact_info p ON ((g.donor_id = p.id)))
+          WHERE ((g.started_at <= date_trunc('year'::text, now())) AND (g.stopped_at > date_trunc('year'::text, now())))
+          GROUP BY p.email
         ), data AS (
          SELECT e.email,
             e.registered_at,
@@ -1596,14 +1602,16 @@ CREATE VIEW giveffektivt.crm_export AS
             f.first_membership_at,
             f.first_donation_at,
             f.first_monthly_donation_at,
-            (m.email IS NOT NULL) AS is_member
-           FROM ((((((emails e
+            (m.email IS NOT NULL) AS is_member,
+            (g.email IS NOT NULL) AS has_gavebrev
+           FROM (((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
              LEFT JOIN members m ON ((m.email = e.email)))
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
              LEFT JOIN first_donations f ON ((f.email = e.email)))
+             LEFT JOIN has_gavebrev g ON ((g.email = e.email)))
         )
  SELECT email,
     registered_at,
@@ -1621,9 +1629,10 @@ CREATE VIEW giveffektivt.crm_export AS
     first_membership_at,
     first_donation_at,
     first_monthly_donation_at,
-    is_member
+    is_member,
+    has_gavebrev
    FROM data
-  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member));
+  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR has_gavebrev));
 
 
 --

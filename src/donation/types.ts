@@ -146,5 +146,6 @@ export type CrmExport = {
   first_donation_at: Date;
   first_monthly_donation_at: Date;
   is_member: boolean;
+  has_gavebrev: boolean;
   age: number;
 };
