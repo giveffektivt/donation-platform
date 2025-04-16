@@ -1494,6 +1494,35 @@ CREATE VIEW giveffektivt.charges_to_charge AS
 
 
 --
+-- Name: donor_impact_report; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donor_impact_report AS
+ WITH data AS (
+         SELECT p.email,
+            min(t.recipient) AS transferred_to,
+            min(t.created_at) AS transferred_at,
+            sum(d.amount) AS amount,
+            round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
+            round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
+           FROM (((giveffektivt.donor_with_sensitive_info p
+             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+             LEFT JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
+          GROUP BY p.email, t.id
+        )
+ SELECT email,
+    COALESCE((transferred_to)::text, '== Fremtiden =='::text) AS transferred_to,
+    COALESCE(to_char(transferred_at, 'YYYY-MM-DD'::text), '== Fremtiden =='::text) AS transferred_at,
+    amount,
+    units,
+    lives
+   FROM data
+  ORDER BY email, data.transferred_at;
+
+
+--
 -- Name: crm_export; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1585,6 +1614,71 @@ CREATE VIEW giveffektivt.crm_export AS
              JOIN giveffektivt.donor_with_contact_info p ON ((g.donor_id = p.id)))
           WHERE ((g.started_at <= date_trunc('year'::text, now())) AND (g.stopped_at > date_trunc('year'::text, now())))
           GROUP BY p.email
+        ), impact AS (
+         SELECT donor_impact_report.email,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Helen Keller International'::text) THEN donor_impact_report.amount
+                    ELSE (0)::numeric
+                END) AS vitamin_a_amount,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Helen Keller International'::text) THEN donor_impact_report.units
+                    ELSE (0)::numeric
+                END) AS vitamin_a_units,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'New Incentives'::text) THEN donor_impact_report.amount
+                    ELSE (0)::numeric
+                END) AS vaccinations_amount,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'New Incentives'::text) THEN donor_impact_report.units
+                    ELSE (0)::numeric
+                END) AS vaccinations_units,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Against Malaria Foundation'::text) THEN donor_impact_report.amount
+                    ELSE (0)::numeric
+                END) AS bednets_amount,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Against Malaria Foundation'::text) THEN donor_impact_report.units
+                    ELSE (0)::numeric
+                END) AS bednets_units,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Malaria Consortium'::text) THEN donor_impact_report.amount
+                    ELSE (0)::numeric
+                END) AS malaria_medicine_amount,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Malaria Consortium'::text) THEN donor_impact_report.units
+                    ELSE (0)::numeric
+                END) AS malaria_medicine_units,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Give Directly'::text) THEN donor_impact_report.amount
+                    ELSE (0)::numeric
+                END) AS direct_transfer_amount,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'Give Directly'::text) THEN donor_impact_report.units
+                    ELSE (0)::numeric
+                END) AS direct_transfer_units,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'SCI Foundation'::text) THEN donor_impact_report.amount
+                    ELSE (0)::numeric
+                END) AS deworming_amount,
+            sum(
+                CASE
+                    WHEN (donor_impact_report.transferred_to = 'SCI Foundation'::text) THEN donor_impact_report.units
+                    ELSE (0)::numeric
+                END) AS deworming_units,
+            sum(donor_impact_report.lives) AS lives
+           FROM giveffektivt.donor_impact_report
+          GROUP BY donor_impact_report.email
         ), data AS (
          SELECT e.email,
             e.registered_at,
@@ -1603,8 +1697,21 @@ CREATE VIEW giveffektivt.crm_export AS
             f.first_donation_at,
             f.first_monthly_donation_at,
             (m.email IS NOT NULL) AS is_member,
-            (g.email IS NOT NULL) AS has_gavebrev
-           FROM (((((((emails e
+            (g.email IS NOT NULL) AS has_gavebrev,
+            i.vitamin_a_amount,
+            i.vitamin_a_units,
+            i.vaccinations_amount,
+            i.vaccinations_units,
+            i.bednets_amount,
+            i.bednets_units,
+            i.malaria_medicine_amount,
+            i.malaria_medicine_units,
+            i.direct_transfer_amount,
+            i.direct_transfer_units,
+            i.deworming_amount,
+            i.deworming_units,
+            i.lives
+           FROM ((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
@@ -1612,6 +1719,7 @@ CREATE VIEW giveffektivt.crm_export AS
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
              LEFT JOIN first_donations f ON ((f.email = e.email)))
              LEFT JOIN has_gavebrev g ON ((g.email = e.email)))
+             LEFT JOIN impact i ON ((i.email = e.email)))
         )
  SELECT email,
     registered_at,
@@ -1630,7 +1738,20 @@ CREATE VIEW giveffektivt.crm_export AS
     first_donation_at,
     first_monthly_donation_at,
     is_member,
-    has_gavebrev
+    has_gavebrev,
+    vitamin_a_amount,
+    vitamin_a_units,
+    vaccinations_amount,
+    vaccinations_units,
+    bednets_amount,
+    bednets_units,
+    malaria_medicine_amount,
+    malaria_medicine_units,
+    direct_transfer_amount,
+    direct_transfer_units,
+    deworming_amount,
+    deworming_units,
+    lives
    FROM data
   WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR has_gavebrev));
 
@@ -1714,35 +1835,6 @@ CREATE VIEW giveffektivt.donor AS
     updated_at
    FROM giveffektivt._donor
   WHERE (deleted_at IS NULL);
-
-
---
--- Name: donor_impact_report; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donor_impact_report AS
- WITH data AS (
-         SELECT p.email,
-            min(t.recipient) AS transferred_to,
-            min(t.created_at) AS transferred_at,
-            sum(d.amount) AS amount,
-            round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
-            round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
-           FROM (((giveffektivt.donor_with_sensitive_info p
-             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-             LEFT JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
-          GROUP BY p.email, t.id
-        )
- SELECT email,
-    COALESCE((transferred_to)::text, '== Fremtiden =='::text) AS transferred_to,
-    COALESCE(to_char(transferred_at, 'YYYY-MM-DD'::text), '== Fremtiden =='::text) AS transferred_at,
-    amount,
-    units,
-    lives
-   FROM data
-  ORDER BY email, data.transferred_at;
 
 
 --

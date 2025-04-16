@@ -2189,6 +2189,46 @@ select
     on kpi to everyone;
 
 --------------------------------------
+create view donor_impact_report as
+with
+    data as (
+        select
+            p.email,
+            min(t.recipient) as transferred_to,
+            min(t.created_at) as transferred_at,
+            sum(d.amount) as amount,
+            round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
+            round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 2) as lives
+        from
+            donor_with_sensitive_info p
+            join donation d on p.id = d.donor_id
+            join charge c on d.id = c.donation_id
+            left join transfer t on c.transfer_id = t.id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivts medlemskab'
+        group by
+            p.email,
+            t.id
+    )
+select
+    email,
+    coalesce(transferred_to::text, '== Fremtiden ==') as transferred_to,
+    coalesce(to_char(transferred_at, 'YYYY-MM-DD'), '== Fremtiden ==') as transferred_at,
+    amount,
+    units,
+    lives
+from
+    data
+order by
+    email,
+    data.transferred_at;
+
+grant
+select
+    on donor_impact_report to reader_contact;
+
+--------------------------------------
 create view crm_export as
 with
     emails as (
@@ -2341,6 +2381,29 @@ with
         group by
             p.email
     ),
+    impact as (
+        select
+            email,
+            /* sql-formatter-disable */
+            sum(case when transferred_to = 'Helen Keller International' then amount else 0 end) as vitamin_a_amount,
+            sum(case when transferred_to = 'Helen Keller International' then units else 0 end) as vitamin_a_units,
+            sum(case when transferred_to = 'New Incentives' then amount else 0 end) as vaccinations_amount,
+            sum(case when transferred_to = 'New Incentives' then units else 0 end) as vaccinations_units,
+            sum(case when transferred_to = 'Against Malaria Foundation' then amount else 0 end) as bednets_amount,
+            sum(case when transferred_to = 'Against Malaria Foundation' then units else 0 end) as bednets_units,
+            sum(case when transferred_to = 'Malaria Consortium' then amount else 0 end) as malaria_medicine_amount,
+            sum(case when transferred_to = 'Malaria Consortium' then units else 0 end) as malaria_medicine_units,
+            sum(case when transferred_to = 'Give Directly' then amount else 0 end) as direct_transfer_amount,
+            sum(case when transferred_to = 'Give Directly' then units else 0 end) as direct_transfer_units,
+            sum(case when transferred_to = 'SCI Foundation' then amount else 0 end) as deworming_amount,
+            sum(case when transferred_to = 'SCI Foundation' then units else 0 end) as deworming_units,
+            sum(lives) as lives
+            /* sql-formatter-enable */
+        from
+            donor_impact_report
+        group by
+            email
+    ),
     data as (
         select
             e.email,
@@ -2360,7 +2423,20 @@ with
             f.first_donation_at,
             f.first_monthly_donation_at,
             m.email is not null as is_member,
-            g.email is not null as has_gavebrev
+            g.email is not null as has_gavebrev,
+            i.vitamin_a_amount,
+            i.vitamin_a_units,
+            i.vaccinations_amount,
+            i.vaccinations_units,
+            i.bednets_amount,
+            i.bednets_units,
+            i.malaria_medicine_amount,
+            i.malaria_medicine_units,
+            i.direct_transfer_amount,
+            i.direct_transfer_units,
+            i.deworming_amount,
+            i.deworming_units,
+            i.lives
         from
             emails e
             left join names n on n.email = e.email
@@ -2370,6 +2446,7 @@ with
             left join latest_donations l on l.email = e.email
             left join first_donations f on f.email = e.email
             left join has_gavebrev g on g.email = e.email
+            left join impact i on i.email = e.email
     )
 select
     *
@@ -2386,46 +2463,6 @@ where
 grant
 select
     on crm_export to reader_contact;
-
---------------------------------------
-create view donor_impact_report as
-with
-    data as (
-        select
-            p.email,
-            min(t.recipient) as transferred_to,
-            min(t.created_at) as transferred_at,
-            sum(d.amount) as amount,
-            round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
-            round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 2) as lives
-        from
-            donor_with_sensitive_info p
-            join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-            left join transfer t on c.transfer_id = t.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
-        group by
-            p.email,
-            t.id
-    )
-select
-    email,
-    coalesce(transferred_to::text, '== Fremtiden ==') as transferred_to,
-    coalesce(to_char(transferred_at, 'YYYY-MM-DD'), '== Fremtiden ==') as transferred_at,
-    amount,
-    units,
-    lives
-from
-    data
-order by
-    email,
-    data.transferred_at;
-
-grant
-select
-    on donor_impact_report to reader_contact;
 
 --
 create function general_assembly_invitations (in meeting_time timestamptz) returns table (email text, first_names text, can_vote text, voting_codes text) language plpgsql as $$

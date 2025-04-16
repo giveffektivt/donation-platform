@@ -148,4 +148,17 @@ export type CrmExport = {
   is_member: boolean;
   has_gavebrev: boolean;
   age: number;
+  vitamin_a_amount: number;
+  vitamin_a_units: number;
+  vaccinations_amount: number;
+  vaccinations_units: number;
+  bednets_amount: number;
+  bednets_units: number;
+  malaria_medicine_amount: number;
+  malaria_medicine_units: number;
+  direct_transfer_amount: number;
+  direct_transfer_units: number;
+  deworming_amount: number;
+  deworming_units: number;
+  lives: number;
 };
