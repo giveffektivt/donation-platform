@@ -329,6 +329,16 @@ export const withRecipientKontantoverførslerTilVerdensFattigste = (
   );
 };
 
+export const withRecipientGivEffektivtsArbejdeOgVækst = (
+  Component: any,
+): ComponentType => {
+  return withRecipient(Component, (setStore) =>
+    setStore({
+      recipient: "Giv Effektivts arbejde og vækst",
+    }),
+  );
+};
+
 // Show summary + bank
 
 export const showAmount = (Component: any): ComponentType => {
