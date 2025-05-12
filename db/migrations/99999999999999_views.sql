@@ -40,7 +40,8 @@ transfer,
 transfer_overview,
 transfer_pending,
 transferred_distribution,
-gwwc_money_moved cascade;
+gwwc_money_moved,
+value_lost_analysis cascade;
 
 drop function if exists time_distribution,
 general_assembly_invitations cascade;
@@ -2602,5 +2603,208 @@ order by
 grant
 select
     on gwwc_money_moved to everyone;
+
+create view value_lost_analysis as
+with
+    buckets as (
+        select
+            *
+        from
+            (
+                values
+                    ('once'::donation_frequency, 0, 1000, 'small'),
+                    ('once'::donation_frequency, 1000, 6000, 'medium'),
+                    ('once'::donation_frequency, 6000, 24000, 'large'),
+                    ('once'::donation_frequency, 24000, 999999999999, 'major'),
+                    ('monthly'::donation_frequency, 0, 200, 'small'),
+                    ('monthly'::donation_frequency, 200, 500, 'medium'),
+                    ('monthly'::donation_frequency, 500, 2000, 'large'),
+                    ('monthly'::donation_frequency, 2000, 999999999999, 'major')
+            ) as bucket_table (frequency, start, stop, bucket)
+    ),
+    monthly_donations_charged_exactly_once as (
+        select
+            id
+        from
+            (
+                select
+                    d.id,
+                    bool_or(d.cancelled) as cancelled,
+                    count(c.id) as number_of_donations,
+                    max(c.created_at) as last_donated_at
+                from
+                    donation d
+                    join charge c on d.id = c.donation_id
+                where
+                    c.status = 'charged'
+                    and recipient != 'Giv Effektivts medlemskab'
+                    and frequency = 'monthly'
+                group by
+                    d.id
+            )
+        where
+            number_of_donations = 1
+            and (
+                cancelled
+                or last_donated_at < now() - interval '40 days'
+            )
+    ),
+    successful_charges as (
+        select
+            a.*,
+            bucket
+        from
+            (
+                select
+                    date_trunc('month', c.created_at) as period,
+                    date_trunc('month', c.created_at) as month,
+                    c.created_at,
+                    p.email,
+                    d.id as donation_id,
+                    d.cancelled,
+                    amount,
+                    case
+                        when exists (
+                            select
+                                1
+                            from
+                                monthly_donations_charged_exactly_once m
+                            where
+                                d.id = m.id
+                        ) then 'once'
+                        else frequency
+                    end as frequency
+                from
+                    donor_with_contact_info p
+                    join donation d on p.id = d.donor_id
+                    join charge c on c.donation_id = d.id
+                where
+                    c.status = 'charged'
+                    and d.recipient != 'Giv Effektivts medlemskab'
+            ) a
+            join buckets b on a.frequency = b.frequency
+            and a.amount > b.start
+            and a.amount <= b.stop
+    ),
+    first_time_donations as (
+        select
+            period,
+            sum(amount) as amount,
+            count(1) as payments
+        from
+            (
+                select distinct
+                    on (email) email,
+                    amount,
+                    date_trunc('month', c.created_at) as period,
+                    c.created_at
+                from
+                    donor_with_contact_info p
+                    join donation d on p.id = d.donor_id
+                    join charge c on d.id = c.donation_id
+                where
+                    c.status = 'charged'
+                    and d.recipient != 'Giv Effektivts medlemskab'
+                order by
+                    email,
+                    c.created_at
+            )
+        group by
+            period
+    ),
+    stopped_monthly_donations as (
+        select
+            email,
+            date_trunc('month', last_donated_at + interval '1 month') as stop_period,
+            - sum(amount) as amount,
+            frequency
+        from
+            (
+                select distinct
+                    on (donation_id) email,
+                    created_at as last_donated_at,
+                    amount,
+                    frequency,
+                    cancelled
+                from
+                    successful_charges s
+                where
+                    frequency = 'monthly'
+                order by
+                    donation_id,
+                    created_at desc
+            ) a
+        where
+            last_donated_at + interval '40 days' < now()
+            or cancelled
+        group by
+            email,
+            date_trunc('month', last_donated_at + interval '1 month'),
+            frequency
+    ),
+    started_donations as (
+        select
+            email,
+            period as start_period,
+            sum(amount) as amount,
+            frequency
+        from
+            (
+                select distinct
+                    on (donation_id) email,
+                    period,
+                    amount,
+                    frequency
+                from
+                    successful_charges
+                order by
+                    donation_id,
+                    created_at
+            )
+        group by
+            email,
+            period,
+            frequency
+    ),
+    changed_donations as (
+        select
+            a.*,
+            bucket
+        from
+            (
+                select
+                    coalesce(start_period, stop_period) as period,
+                    coalesce(a.frequency, b.frequency) as frequency,
+                    sum(coalesce(a.amount, 0)) + sum(coalesce(b.amount, 0)) as amount,
+                    coalesce(a.email, b.email) as email,
+                    min(a.frequency) is not null as has_active_donation
+                from
+                    started_donations a
+                    full outer join stopped_monthly_donations b on a.email = b.email
+                    and a.frequency = b.frequency
+                    and date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
+                group by
+                    coalesce(a.email, b.email),
+                    coalesce(a.frequency, b.frequency),
+                    coalesce(start_period, stop_period)
+            ) a
+            join buckets b on a.frequency = b.frequency
+            and abs(a.amount) > b.start
+            and abs(a.amount) <= b.stop
+    )
+select
+    *
+from
+    changed_donations
+where
+    amount < 0
+    and period <= now()
+order by
+    period desc,
+    amount;
+
+grant
+select
+    on value_lost_analysis to reader_contact;
 
 -- migrate:down

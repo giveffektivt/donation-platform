@@ -43,6 +43,10 @@ export async function getIgnoredRenewals(client: PoolClient) {
   return (await client.query("select * from ignored_renewals")).rows;
 }
 
+export async function getValueLostAnalysis(client: PoolClient) {
+  return (await client.query("select * from value_lost_analysis")).rows;
+}
+
 export async function getFundraiserKpi(
   client: PoolClient,
   id: string,

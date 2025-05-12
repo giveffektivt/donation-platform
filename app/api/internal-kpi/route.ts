@@ -1,4 +1,10 @@
-import { dbClient, dbRelease, getIgnoredRenewals, logError } from "src";
+import {
+  dbClient,
+  dbRelease,
+  getIgnoredRenewals,
+  getValueLostAnalysis,
+  logError,
+} from "src";
 
 export async function GET(req: Request) {
   let db = null;
@@ -19,6 +25,7 @@ export async function GET(req: Request) {
         ...r,
         renewal_link: `${process.env.RENEW_PAYMENT_INFO_URL}?id=${r.donation_id}`,
       })),
+      value_lost_analysis: await getValueLostAnalysis(db),
     };
 
     return Response.json(result);
