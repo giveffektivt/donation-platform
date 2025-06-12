@@ -26,12 +26,10 @@ async function executeCors(request: NextRequest): Promise<Headers> {
     };
 
     Cors({
-      origin: [
-        "https://giveffektivt.dk",
-        ...(process.env.DEV_WEBSITE_DOMAINS
-          ? process.env.DEV_WEBSITE_DOMAINS.split(",")
-          : []),
-      ],
+      origin:
+        process.env.VERCEL_ENV === "production"
+          ? ["https://giveffektivt.dk"]
+          : "*",
     })(mockRequest, mockResponse, (error) =>
       error ? reject(error) : resolve(headers),
     );
