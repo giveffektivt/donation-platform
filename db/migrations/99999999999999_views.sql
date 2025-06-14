@@ -2072,7 +2072,7 @@ with
     ),
     monthly_donors as (
         select
-            count(distinct c.donation_id) as monthly_donors
+            count(distinct c.donation_id)::numeric as monthly_donors
         from
             charge c
             join donation d on c.donation_id = d.id
@@ -2104,6 +2104,15 @@ with
                 group by
                     email
             )
+    ),
+    number_of_gavebrev as (
+        select
+            count(1)::numeric as number_of_gavebrev
+        from
+            gavebrev
+        where
+            status = 'signed'
+            and stopped_at >= now()
     ),
     is_max_tax_deduction_known as (
         select
@@ -2142,7 +2151,7 @@ with
     ),
     missing_gavebrev_income_proof as (
         select
-            count(1) as missing_gavebrev_income_proof
+            count(1)::numeric as missing_gavebrev_income_proof
         from
             gavebrev_checkin
         where
@@ -2164,7 +2173,7 @@ with
     ),
     pending_skat_update as (
         select
-            count(1) as pending_skat_update
+            count(1)::numeric as pending_skat_update
         from
             annual_tax_report_pending_update
     )
@@ -2180,6 +2189,7 @@ from
     members_pending_renewal,
     monthly_donors,
     number_of_donors,
+    number_of_gavebrev,
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof,

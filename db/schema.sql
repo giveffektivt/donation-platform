@@ -2090,7 +2090,7 @@ CREATE VIEW giveffektivt.kpi AS
                   ORDER BY p.tin, c.created_at DESC) a
           WHERE (a.created_at < date_trunc('year'::text, now()))
         ), monthly_donors AS (
-         SELECT count(DISTINCT c.donation_id) AS monthly_donors
+         SELECT (count(DISTINCT c.donation_id))::numeric AS monthly_donors
            FROM (giveffektivt.charge c
              JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
           WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
@@ -2106,6 +2106,10 @@ CREATE VIEW giveffektivt.kpi AS
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
                   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
                   GROUP BY p.email) unnamed_subquery
+        ), number_of_gavebrev AS (
+         SELECT (count(1))::numeric AS number_of_gavebrev
+           FROM giveffektivt.gavebrev
+          WHERE ((gavebrev.status = 'signed'::giveffektivt.gavebrev_status) AND (gavebrev.stopped_at >= now()))
         ), is_max_tax_deduction_known AS (
          SELECT ((max(max_tax_deduction.year) = EXTRACT(year FROM now())))::integer AS is_max_tax_deduction_known
            FROM giveffektivt.max_tax_deduction
@@ -2118,11 +2122,11 @@ CREATE VIEW giveffektivt.kpi AS
                   WHERE (c.status = 'charged'::giveffektivt.charge_status)
                   GROUP BY p.email) unnamed_subquery
         ), missing_gavebrev_income_proof AS (
-         SELECT count(1) AS missing_gavebrev_income_proof
+         SELECT (count(1))::numeric AS missing_gavebrev_income_proof
            FROM giveffektivt.gavebrev_checkin
           WHERE ((gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (gavebrev_checkin.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)))
         ), pending_skat_update AS (
-         SELECT count(1) AS pending_skat_update
+         SELECT (count(1))::numeric AS pending_skat_update
            FROM giveffektivt.annual_tax_report_pending_update
         )
  SELECT dkk_total.dkk_total,
@@ -2134,6 +2138,7 @@ CREATE VIEW giveffektivt.kpi AS
     members_pending_renewal.members_pending_renewal,
     monthly_donors.monthly_donors,
     number_of_donors.number_of_donors,
+    number_of_gavebrev.number_of_gavebrev,
     is_max_tax_deduction_known.is_max_tax_deduction_known,
     oldest_stopped_donation_age.oldest_stopped_donation_age,
     missing_gavebrev_income_proof.missing_gavebrev_income_proof,
@@ -2147,6 +2152,7 @@ CREATE VIEW giveffektivt.kpi AS
     members_pending_renewal,
     monthly_donors,
     number_of_donors,
+    number_of_gavebrev,
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof,
