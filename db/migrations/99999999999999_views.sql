@@ -1609,6 +1609,14 @@ create function time_distribution (in time_from timestamptz, in time_to timestam
     payments_monthly_medium numeric,
     payments_monthly_large numeric,
     payments_monthly_major numeric,
+    payments_new_once_small numeric,
+    payments_new_once_medium numeric,
+    payments_new_once_large numeric,
+    payments_new_once_major numeric,
+    payments_new_monthly_small numeric,
+    payments_new_monthly_medium numeric,
+    payments_new_monthly_large numeric,
+    payments_new_monthly_major numeric,
     value_added_once_small numeric,
     value_added_once_medium numeric,
     value_added_once_large numeric,
@@ -1722,29 +1730,30 @@ with
             and a.amount > b.start
             and a.amount <= b.stop
     ),
+    first_time_by_email as (
+        select distinct
+            on (email) email,
+            amount,
+            date_trunc(interval_type, c.created_at) as period,
+            c.created_at
+        from
+            donor_with_contact_info p
+            join donation d on p.id = d.donor_id
+            join charge c on d.id = c.donation_id
+        where
+            c.status = 'charged'
+            and d.recipient != 'Giv Effektivts medlemskab'
+        order by
+            email,
+            c.created_at
+    ),
     first_time_donations as (
         select
             period,
             sum(amount) as amount,
             count(1) as payments
         from
-            (
-                select distinct
-                    on (email) email,
-                    amount,
-                    date_trunc(interval_type, c.created_at) as period,
-                    c.created_at
-                from
-                    donor_with_contact_info p
-                    join donation d on p.id = d.donor_id
-                    join charge c on d.id = c.donation_id
-                where
-                    c.status = 'charged'
-                    and d.recipient != 'Giv Effektivts medlemskab'
-                order by
-                    email,
-                    c.created_at
-            )
+            first_time_by_email
         where
             (
                 time_from is null
@@ -1882,6 +1891,30 @@ with
             period,
             frequency,
             bucket
+    ),
+    payments_new_donors as (
+        select
+            s.period,
+            sum(s.amount) as amount,
+            count(distinct donation_id) as payments,
+            frequency,
+            bucket
+        from
+            successful_charges s
+            join first_time_by_email f on s.email = f.email and s.period = f.period and s.amount = f.amount
+        where
+            (
+                time_from is null
+                or s.created_at >= time_from
+            )
+            and (
+                time_to is null
+                or s.created_at <= time_to
+            )
+        group by
+            s.period,
+            frequency,
+            bucket
     )
 select
     to_char(coalesce(a.period, b.period), 'yyyy') || '-' || to_char(coalesce(a.period, b.period), 'MM') || '-' || to_char(coalesce(a.period, b.period), 'dd') as date,
@@ -1902,6 +1935,14 @@ select
     coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_monthly_medium,
     coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_monthly_large,
     coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_monthly_major,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'small'  then d.payments else 0 end), 0) as payments_new_once_small,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'medium' then d.payments else 0 end), 0) as payments_new_once_medium,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'large'  then d.payments else 0 end), 0) as payments_new_once_large,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'major'  then d.payments else 0 end), 0) as payments_new_once_major,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'small'  then d.payments else 0 end), 0) as payments_new_monthly_small,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'medium' then d.payments else 0 end), 0) as payments_new_monthly_medium,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'large'  then d.payments else 0 end), 0) as payments_new_monthly_large,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'major'  then d.payments else 0 end), 0) as payments_new_monthly_major,
     coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_once_small,
     coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_once_medium,
     coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_once_large,
@@ -1931,6 +1972,9 @@ from
     and a.frequency = b.frequency
     and a.bucket = b.bucket
     full outer join first_time_donations c on a.period = c.period
+    full outer join payments_new_donors d on a.period = d.period
+    and a.frequency = d.frequency
+    and a.bucket = d.bucket
 group by
     coalesce(a.period, b.period)
 order by
