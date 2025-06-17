@@ -7,7 +7,8 @@ export async function ExportToCrm(db: PoolClient) {
 }
 
 async function exportToBrevo(entries: CrmExport[]) {
-  const toDate = (date: Date | null) => date?.toISOString()?.split("T")[0];
+  const toDate = (date: Date | null) =>
+    date?.toISOString()?.split("T")[0] ?? null;
   const toLink = (id: string | null) =>
     id ? `${process.env.RENEW_PAYMENT_INFO_URL}?id=${id}` : null;
   const payloads = entries.map((entry) => ({
