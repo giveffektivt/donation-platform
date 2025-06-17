@@ -1440,19 +1440,24 @@ with
     ),
     last_payment_by_email as (
         select distinct
-            on (p.email, d.recipient) p.email,
-            d.recipient,
-            c.created_at
+            on (email, is_membership) *
         from
-            donor_with_contact_info p
-            join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-        where
-            c.status = 'charged'
+            (
+                select
+                    p.email,
+                    d.recipient = 'Giv Effektivts medlemskab' as is_membership,
+                    c.created_at
+                from
+                    donor_with_contact_info p
+                    join donation d on p.id = d.donor_id
+                    join charge c on d.id = c.donation_id
+                where
+                    c.status = 'charged'
+            )
         order by
-            p.email,
-            d.recipient,
-            c.created_at desc
+            email,
+            is_membership,
+            created_at desc
     ),
     email_to_name as (
         select distinct
@@ -1469,12 +1474,13 @@ select
     lc.amount,
     lc.recipient,
     na.donation_id,
+    na.created_at as expired_at,
     now()::date - na.created_at::date as days_ago
 from
     last_charge lc
     join never_activated na on lc.id = na.id
     left join last_payment_by_email lp on lc.email = lp.email
-    and lc.recipient = lp.recipient
+    and (lc.recipient = 'Giv Effektivts medlemskab') = lp.is_membership
     left join email_to_name en on lc.email = en.email
 where
     lc.status = 'error'
@@ -2459,6 +2465,43 @@ with
         group by
             email
     ),
+    expired_memberships as (
+        select distinct
+            on (email) email,
+            donation_id as expired_membership_id,
+            expired_at as expired_membership_at
+        from
+            ignored_renewals
+        where
+            recipient = 'Giv Effektivts medlemskab'
+        order by
+            email,
+            donation_id
+    ),
+    expired_donations as (
+        select distinct
+            on (email) email,
+            donation_id as expired_donation_id,
+            expired_at as expired_donation_at
+        from
+            ignored_renewals
+        where
+            recipient != 'Giv Effektivts medlemskab'
+        order by
+            email,
+            donation_id
+    ),
+    renewals as (
+        select
+            coalesce(m.email, d.email) as email,
+            m.expired_membership_id,
+            m.expired_membership_at,
+            d.expired_donation_id,
+            d.expired_donation_at
+        from
+            expired_memberships m
+            full outer join expired_donations d using (email)
+    ),
     data as (
         select
             e.email,
@@ -2491,7 +2534,11 @@ with
             i.direct_transfer_units,
             i.deworming_amount,
             i.deworming_units,
-            i.lives
+            i.lives,
+            r.expired_donation_id,
+            r.expired_donation_at,
+            r.expired_membership_id,
+            r.expired_membership_at
         from
             emails e
             left join names n on n.email = e.email
@@ -2502,6 +2549,7 @@ with
             left join first_donations f on f.email = e.email
             left join has_gavebrev g on g.email = e.email
             left join impact i on i.email = e.email
+            left join renewals r on r.email = e.email
     )
 select
     *

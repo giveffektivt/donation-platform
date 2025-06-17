@@ -161,4 +161,8 @@ export type CrmExport = {
   deworming_amount: number;
   deworming_units: number;
   lives: number;
+  expired_donation_id: string;
+  expired_donation_at: Date;
+  expired_membership_id: string;
+  expired_membership_at: Date;
 };

@@ -1559,6 +1559,65 @@ CREATE VIEW giveffektivt.donor_impact_report AS
 
 
 --
+-- Name: ignored_renewals; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.ignored_renewals AS
+ WITH last_charge AS (
+         SELECT DISTINCT ON (p.id) p.id,
+            p.name,
+            p.email,
+            d.amount,
+            d.recipient,
+            c.status,
+            c.created_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+          WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
+          ORDER BY p.id, c.created_at DESC
+        ), never_activated AS (
+         SELECT DISTINCT ON (p.id) p.id,
+            d.id AS donation_id,
+            d.created_at
+           FROM ((giveffektivt.donor_with_contact_info p
+             LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+             LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+          WHERE ((c.id IS NULL) AND (d.frequency <> 'once'::giveffektivt.donation_frequency))
+        ), last_payment_by_email AS (
+         SELECT DISTINCT ON (unnamed_subquery.email, unnamed_subquery.is_membership) unnamed_subquery.email,
+            unnamed_subquery.is_membership,
+            unnamed_subquery.created_at
+           FROM ( SELECT p.email,
+                    (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AS is_membership,
+                    c.created_at
+                   FROM ((giveffektivt.donor_with_contact_info p
+                     JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+                     JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+                  WHERE (c.status = 'charged'::giveffektivt.charge_status)) unnamed_subquery
+          ORDER BY unnamed_subquery.email, unnamed_subquery.is_membership, unnamed_subquery.created_at DESC
+        ), email_to_name AS (
+         SELECT DISTINCT ON (p.email) p.name,
+            p.email
+           FROM giveffektivt.donor_with_contact_info p
+          WHERE (p.name IS NOT NULL)
+        )
+ SELECT COALESCE(lc.name, en.name) AS name,
+    lc.email,
+    lc.amount,
+    lc.recipient,
+    na.donation_id,
+    na.created_at AS expired_at,
+    ((now())::date - (na.created_at)::date) AS days_ago
+   FROM (((last_charge lc
+     JOIN never_activated na ON ((lc.id = na.id)))
+     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND ((lc.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) = lp.is_membership))))
+     LEFT JOIN email_to_name en ON ((lc.email = en.email)))
+  WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
+  ORDER BY na.created_at;
+
+
+--
 -- Name: crm_export; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1715,6 +1774,28 @@ CREATE VIEW giveffektivt.crm_export AS
             sum(donor_impact_report.lives) AS lives
            FROM giveffektivt.donor_impact_report
           GROUP BY donor_impact_report.email
+        ), expired_memberships AS (
+         SELECT DISTINCT ON (ignored_renewals.email) ignored_renewals.email,
+            ignored_renewals.donation_id AS expired_membership_id,
+            ignored_renewals.expired_at AS expired_membership_at
+           FROM giveffektivt.ignored_renewals
+          WHERE (ignored_renewals.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
+          ORDER BY ignored_renewals.email, ignored_renewals.donation_id
+        ), expired_donations AS (
+         SELECT DISTINCT ON (ignored_renewals.email) ignored_renewals.email,
+            ignored_renewals.donation_id AS expired_donation_id,
+            ignored_renewals.expired_at AS expired_donation_at
+           FROM giveffektivt.ignored_renewals
+          WHERE (ignored_renewals.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
+          ORDER BY ignored_renewals.email, ignored_renewals.donation_id
+        ), renewals AS (
+         SELECT COALESCE(m.email, d.email) AS email,
+            m.expired_membership_id,
+            m.expired_membership_at,
+            d.expired_donation_id,
+            d.expired_donation_at
+           FROM (expired_memberships m
+             FULL JOIN expired_donations d USING (email))
         ), data AS (
          SELECT e.email,
             e.registered_at,
@@ -1746,8 +1827,12 @@ CREATE VIEW giveffektivt.crm_export AS
             i.direct_transfer_units,
             i.deworming_amount,
             i.deworming_units,
-            i.lives
-           FROM ((((((((emails e
+            i.lives,
+            r.expired_donation_id,
+            r.expired_donation_at,
+            r.expired_membership_id,
+            r.expired_membership_at
+           FROM (((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
@@ -1756,6 +1841,7 @@ CREATE VIEW giveffektivt.crm_export AS
              LEFT JOIN first_donations f ON ((f.email = e.email)))
              LEFT JOIN has_gavebrev g ON ((g.email = e.email)))
              LEFT JOIN impact i ON ((i.email = e.email)))
+             LEFT JOIN renewals r ON ((r.email = e.email)))
         )
  SELECT email,
     registered_at,
@@ -1787,7 +1873,11 @@ CREATE VIEW giveffektivt.crm_export AS
     direct_transfer_units,
     deworming_amount,
     deworming_units,
-    lives
+    lives,
+    expired_donation_id,
+    expired_donation_at,
+    expired_membership_id,
+    expired_membership_at
    FROM data
   WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR has_gavebrev));
 
@@ -2021,61 +2111,6 @@ CREATE VIEW giveffektivt.gwwc_money_moved AS
   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])))
   GROUP BY (to_char(c.created_at, 'YYYY-MM'::text)), t.recipient
   ORDER BY (to_char(c.created_at, 'YYYY-MM'::text));
-
-
---
--- Name: ignored_renewals; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.ignored_renewals AS
- WITH last_charge AS (
-         SELECT DISTINCT ON (p.id) p.id,
-            p.name,
-            p.email,
-            d.amount,
-            d.recipient,
-            c.status,
-            c.created_at
-           FROM ((giveffektivt.donor_with_contact_info p
-             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-          WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
-          ORDER BY p.id, c.created_at DESC
-        ), never_activated AS (
-         SELECT DISTINCT ON (p.id) p.id,
-            d.id AS donation_id,
-            d.created_at
-           FROM ((giveffektivt.donor_with_contact_info p
-             LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-          WHERE ((c.id IS NULL) AND (d.frequency <> 'once'::giveffektivt.donation_frequency))
-        ), last_payment_by_email AS (
-         SELECT DISTINCT ON (p.email, d.recipient) p.email,
-            d.recipient,
-            c.created_at
-           FROM ((giveffektivt.donor_with_contact_info p
-             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-          WHERE (c.status = 'charged'::giveffektivt.charge_status)
-          ORDER BY p.email, d.recipient, c.created_at DESC
-        ), email_to_name AS (
-         SELECT DISTINCT ON (p.email) p.name,
-            p.email
-           FROM giveffektivt.donor_with_contact_info p
-          WHERE (p.name IS NOT NULL)
-        )
- SELECT COALESCE(lc.name, en.name) AS name,
-    lc.email,
-    lc.amount,
-    lc.recipient,
-    na.donation_id,
-    ((now())::date - (na.created_at)::date) AS days_ago
-   FROM (((last_charge lc
-     JOIN never_activated na ON ((lc.id = na.id)))
-     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND (lc.recipient = lp.recipient))))
-     LEFT JOIN email_to_name en ON ((lc.email = en.email)))
-  WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
-  ORDER BY na.created_at;
 
 
 --

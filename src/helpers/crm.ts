@@ -8,6 +8,8 @@ export async function ExportToCrm(db: PoolClient) {
 
 async function exportToBrevo(entries: CrmExport[]) {
   const toDate = (date: Date | null) => date?.toISOString()?.split("T")[0];
+  const toLink = (id: string | null) =>
+    id ? `${process.env.RENEW_PAYMENT_INFO_URL}?id=${id}` : null;
   const payloads = entries.map((entry) => ({
     email: entry.email,
     attributes: {
@@ -41,6 +43,10 @@ async function exportToBrevo(entries: CrmExport[]) {
       DONERET_ORMEKURE: entry.deworming_amount,
       IMPACT_ORMEKURE: entry.deworming_units,
       LIVES_SAVED: entry.lives,
+      UDLOEBET_DONATIONSLINK: toLink(entry.expired_donation_id),
+      DONATIONENS_UDLOEBSDATO: toDate(entry.expired_donation_at),
+      UDLOEBET_MEDLEMSKABSLINK: toLink(entry.expired_membership_id),
+      MEDLEMSKABETS_UDLOEBSDATO: toDate(entry.expired_membership_at),
     },
   }));
 
