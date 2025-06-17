@@ -63,7 +63,7 @@ async function uploadBatchToBrevo(batch: object[]) {
     body: JSON.stringify({
       disableNotification: true,
       updateExistingContacts: true,
-      emptyContactsAttributes: false,
+      emptyContactsAttributes: true,
       jsonBody: batch,
       listIds: (process.env.BREVO_LIST_IDS ?? "")
         .split(",")
