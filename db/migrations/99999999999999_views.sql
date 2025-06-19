@@ -2476,7 +2476,7 @@ with
             recipient = 'Giv Effektivts medlemskab'
         order by
             email,
-            donation_id
+            expired_at desc
     ),
     expired_donations as (
         select distinct
@@ -2489,7 +2489,7 @@ with
             recipient != 'Giv Effektivts medlemskab'
         order by
             email,
-            donation_id
+            expired_at desc
     ),
     renewals as (
         select

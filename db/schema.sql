@@ -1780,14 +1780,14 @@ CREATE VIEW giveffektivt.crm_export AS
             ignored_renewals.expired_at AS expired_membership_at
            FROM giveffektivt.ignored_renewals
           WHERE (ignored_renewals.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
-          ORDER BY ignored_renewals.email, ignored_renewals.donation_id
+          ORDER BY ignored_renewals.email, ignored_renewals.expired_at DESC
         ), expired_donations AS (
          SELECT DISTINCT ON (ignored_renewals.email) ignored_renewals.email,
             ignored_renewals.donation_id AS expired_donation_id,
             ignored_renewals.expired_at AS expired_donation_at
            FROM giveffektivt.ignored_renewals
           WHERE (ignored_renewals.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
-          ORDER BY ignored_renewals.email, ignored_renewals.donation_id
+          ORDER BY ignored_renewals.email, ignored_renewals.expired_at DESC
         ), renewals AS (
          SELECT COALESCE(m.email, d.email) AS email,
             m.expired_membership_id,
