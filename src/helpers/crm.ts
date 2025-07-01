@@ -31,6 +31,7 @@ async function exportToBrevo(entries: CrmExport[]) {
       MEDLEM: entry.is_member,
       GAVEBREV: entry.has_gavebrev,
       ALDER: entry.age,
+      CVR: entry.cvr,
       DONERET_AVITAMIN: entry.vitamin_a_amount,
       IMPACT_AVITAMIN: entry.vitamin_a_units,
       DONERET_INCENTIVES: entry.vaccinations_amount,

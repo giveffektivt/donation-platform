@@ -1636,6 +1636,12 @@ CREATE VIEW giveffektivt.crm_export AS
            FROM giveffektivt.donor_with_contact_info p
           WHERE (p.name IS NOT NULL)
           ORDER BY p.email, p.created_at
+        ), cvrs AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            p.tin AS cvr
+           FROM giveffektivt.donor_with_sensitive_info p
+          WHERE ((p.tin ~ '^\d{8}$'::text) AND ((p.country IS NULL) OR (p.country = 'Denmark'::text)))
+          ORDER BY p.email, p.created_at
         ), ages AS (
          SELECT DISTINCT ON (p.email) p.email,
                 CASE
@@ -1800,6 +1806,7 @@ CREATE VIEW giveffektivt.crm_export AS
          SELECT e.email,
             e.registered_at,
             n.name,
+            c.cvr,
             a.age,
             d.total_donated,
             d.donations_count,
@@ -1832,7 +1839,7 @@ CREATE VIEW giveffektivt.crm_export AS
             r.expired_donation_at,
             r.expired_membership_id,
             r.expired_membership_at
-           FROM (((((((((emails e
+           FROM ((((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
@@ -1842,10 +1849,12 @@ CREATE VIEW giveffektivt.crm_export AS
              LEFT JOIN has_gavebrev g ON ((g.email = e.email)))
              LEFT JOIN impact i ON ((i.email = e.email)))
              LEFT JOIN renewals r ON ((r.email = e.email)))
+             LEFT JOIN cvrs c ON ((c.email = e.email)))
         )
  SELECT email,
     registered_at,
     name,
+    cvr,
     age,
     total_donated,
     donations_count,

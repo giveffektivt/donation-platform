@@ -148,6 +148,7 @@ export type CrmExport = {
   is_member: boolean;
   has_gavebrev: boolean;
   age: number;
+  cvr: string;
   vitamin_a_amount: number;
   vitamin_a_units: number;
   vaccinations_amount: number;

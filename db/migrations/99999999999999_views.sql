@@ -2318,6 +2318,22 @@ with
             p.email,
             p.created_at
     ),
+    cvrs as (
+        select distinct
+            on (p.email) p.email,
+            p.tin as cvr
+        from
+            donor_with_sensitive_info p
+        where
+            p.tin ~ '^\d{8}$'
+            and (
+                p.country is null
+                or p.country = 'Denmark'
+            )
+        order by
+            p.email,
+            p.created_at
+    ),
     ages as (
         select distinct
             on (p.email) p.email,
@@ -2507,6 +2523,7 @@ with
             e.email,
             e.registered_at,
             n.name,
+            c.cvr,
             a.age,
             d.total_donated,
             d.donations_count,
@@ -2550,6 +2567,7 @@ with
             left join has_gavebrev g on g.email = e.email
             left join impact i on i.email = e.email
             left join renewals r on r.email = e.email
+            left join cvrs c on c.email = e.email
     )
 select
     *
