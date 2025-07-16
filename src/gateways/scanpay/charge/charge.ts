@@ -66,6 +66,7 @@ export async function scanpayChargeSubscription(
     await client.subscriber.charge(scanpayId, data, options);
   } catch (err: any) {
     if (
+      err?.message?.includes("clearhaus rule violation") ||
       err?.message?.includes("card expired") ||
       err?.message?.includes("card restricted") ||
       err?.message?.includes("card lost or stolen")
