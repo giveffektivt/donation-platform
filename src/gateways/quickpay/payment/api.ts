@@ -148,9 +148,6 @@ export async function quickpayChargeSubscription(
         amount: charge.amount * 100,
         order_id: charge.short_id,
         auto_capture: true,
-        auto_capture_at: isMobilePay
-          ? addDays(new Date(), 3) // must be at least 2 days in the future for MobilePay Subscriptions
-          : undefined,
         text_on_statement,
         description: `Giv Effektivt ${charge.short_id}`,
       },
