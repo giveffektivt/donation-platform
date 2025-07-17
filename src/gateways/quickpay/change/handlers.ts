@@ -43,7 +43,7 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
     return;
   }
 
-  if (change.acquirer === "mobilepaysubscriptions") {
+  if (change.acquirer === "vmpepayment") {
     // User has an option to change payment type to MobilePay on Quickpay's side.
     // Ensure this is reflected in DB, as it is important for charging recurring MobilePay subscriptions.
     await setDonationMethodByQuickpayOrder(
