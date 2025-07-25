@@ -1530,6 +1530,18 @@ CREATE VIEW giveffektivt.charges_to_charge AS
 
 
 --
+-- Name: clearhaus_settlement; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.clearhaus_settlement (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    merchant_id numeric NOT NULL,
+    amount numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: donor_impact_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -2597,6 +2609,14 @@ ALTER TABLE ONLY giveffektivt._transfer
 
 
 --
+-- Name: clearhaus_settlement clearhaus_settlement_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.clearhaus_settlement
+    ADD CONSTRAINT clearhaus_settlement_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: gateway_webhook gateway_webhook_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -2997,4 +3017,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250223142559'),
     ('20250306220252'),
     ('20250330185137'),
+    ('20250725112716'),
     ('99999999999999');

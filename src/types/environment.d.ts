@@ -29,6 +29,7 @@ declare global {
       MAILERSEND_TEMPLATE_PAYMENT_EXPIRED: string;
       BREVO_API_URL: string;
       BREVO_API_KEY: string;
+      CLEARHAUS_MERCHANT_ID: string;
     }
   }
 }
