@@ -53,7 +53,7 @@ export async function getClearhausUpcomingSettlement(
 ): Promise<number> {
   return (
     await client.query(
-      "select amount from clearhaus_settlement where merchant_id = $1 order by created_at limit 1",
+      "select amount from clearhaus_settlement where merchant_id = $1 order by created_at desc limit 1",
       [merchant_id],
     )
   ).rows[0]?.amount;
