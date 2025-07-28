@@ -47,6 +47,18 @@ export async function getValueLostAnalysis(client: PoolClient) {
   return (await client.query("select * from value_lost_analysis")).rows;
 }
 
+export async function getClearhausUpcomingSettlement(
+  client: PoolClient,
+  merchant_id: string,
+): Promise<number> {
+  return (
+    await client.query(
+      "select amount from clearhaus_settlement where merchant_id = $1 order by created_at desc limit 1",
+      [merchant_id],
+    )
+  ).rows[0]?.amount;
+}
+
 export async function getFundraiserKpi(
   client: PoolClient,
   id: string,

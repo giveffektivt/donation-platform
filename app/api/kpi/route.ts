@@ -8,6 +8,7 @@ import {
   getTimeDistribution,
   logError,
   getTransferOverview,
+  getClearhausUpcomingSettlement,
 } from "src";
 
 export async function GET(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
       transferred: await getTransferredDistribution(db),
       transfer_overview: await getTransferOverview(db),
       collected: await getTimeDistribution(db, from, to),
+      clearhaus: await getClearhausUpcomingSettlement(db, process.env.CLEARHAUS_MERCHANT_ID)
     };
 
     return Response.json(result, {
