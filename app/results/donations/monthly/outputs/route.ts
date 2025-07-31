@@ -57,20 +57,18 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
 
   for (const item of data) {
     // TODO
-    const unit = mapToNorwegianUnit(item.unit);
-    // TODO
     const period =
       item.transferred_at === "Næste overførsel"
         ? new Date().toISOString().slice(0, 7)
         : item.transferred_at.slice(0, 7);
 
-    if (!unitMap[unit]) {
-      unitMap[unit] = {
+    if (!unitMap[item.unit]) {
+      unitMap[item.unit] = {
         total: {},
         monthly: Object.assign({}, { numberOfOutputs: {} }),
       };
     }
-    const currentUnit = unitMap[unit];
+    const currentUnit = unitMap[item.unit];
     const cat =
       item.earmark === "Giv Effektivts anbefaling"
         ? "smartDistribution"
@@ -128,23 +126,4 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
       monthly,
     };
   });
-}
-
-function mapToNorwegianUnit(unit: string) {
-  switch (unit) {
-    case "Antimalaria myggenet udleveret":
-      return "Myggnett";
-    case "Ormekure udleveret":
-      return "Ormekurer";
-    case "Dollars modtaget":
-      return "Dollar mottatt";
-    case "A-vitamintilskud udleveret":
-      return "A-vitamintilskudd";
-    case "Malariamedicin udleveret":
-      return "Malariabehandlinger";
-    case "Vaccinationsprogrammer motiveret":
-      return "Vaksinasjoner";
-    default:
-      return unit;
-  }
 }
