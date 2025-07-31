@@ -2,9 +2,9 @@ import {
   DonationFrequency,
   getBankAccount,
   logError,
-  parsePaymentMethod,
   PaymentGateway,
   PaymentMethod,
+  parsePaymentMethod,
   processBankTransferDonation,
   processQuickpayDonation,
   type SubmitDataDonation,
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       taxDeductible: submitData.donor.taxDeduction ?? false,
       tin: submitData.donor.ssn,
       email: submitData.donor.email,
-      method: "Bank transfer",
+      method: mapToNorwegianPaymentMethods(submitData.method),
       subscribeToNewsletter: submitData.donor.newsletter,
     };
 
@@ -119,5 +119,18 @@ async function processPayment(
             `donation/register: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${submitData.method}'`,
           );
       }
+  }
+}
+
+function mapToNorwegianPaymentMethods(method: number): PaymentMethod {
+  switch (method) {
+    case 99:
+      return PaymentMethod.CreditCard;
+    case 98:
+      return PaymentMethod.MobilePay;
+    case 2:
+      return PaymentMethod.BankTransfer;
+    default:
+      throw new Error(`donation/register: Unknown payment method ${method}`);
   }
 }
