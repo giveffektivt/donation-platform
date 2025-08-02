@@ -1534,7 +1534,6 @@ CREATE VIEW giveffektivt.charges_to_charge AS
 --
 
 CREATE TABLE giveffektivt.clearhaus_settlement (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
     merchant_id numeric NOT NULL,
     amount numeric NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
@@ -2613,7 +2612,7 @@ ALTER TABLE ONLY giveffektivt._transfer
 --
 
 ALTER TABLE ONLY giveffektivt.clearhaus_settlement
-    ADD CONSTRAINT clearhaus_settlement_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT clearhaus_settlement_pkey PRIMARY KEY (merchant_id, created_at);
 
 
 --
@@ -2654,6 +2653,13 @@ ALTER TABLE ONLY giveffektivt.scanpay_seq
 
 ALTER TABLE ONLY giveffektivt.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: idx_clearhaus_settlement_merchant_latest_amount; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX idx_clearhaus_settlement_merchant_latest_amount ON giveffektivt.clearhaus_settlement USING btree (merchant_id, created_at DESC) INCLUDE (amount);
 
 
 --
@@ -3018,4 +3024,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250306220252'),
     ('20250330185137'),
     ('20250725112716'),
+    ('20250802174406'),
     ('99999999999999');
