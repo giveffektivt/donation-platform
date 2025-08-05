@@ -70,9 +70,7 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
     }
     const currentUnit = unitMap[item.unit];
     const cat =
-      item.earmark === "Giv Effektivts anbefaling"
-        ? "smartDistribution"
-        : "direct";
+      item.earmark === "Smart fordeling" ? "smartDistribution" : "direct";
     function addValue(orgAgg: OrgAggregation) {
       if (!orgAgg[item.recipient]) {
         orgAgg[item.recipient] = {

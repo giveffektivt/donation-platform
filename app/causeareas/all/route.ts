@@ -15,7 +15,7 @@ export async function GET() {
         standardPercentageShare: 100,
         organizations: buildOrganizations([
           {
-            name: "Giv Effektivts anbefaling",
+            name: "Smart fordeling",
             description:
               "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt.",
             infoUrl: "https://giveffektivt.dk/anbefalinger",
