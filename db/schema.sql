@@ -849,11 +849,11 @@ CREATE TABLE giveffektivt._transfer (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     deleted_at timestamp with time zone,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    unit_cost_conversion numeric,
     unit_cost_external numeric,
     life_cost_external numeric,
-    exchange_rate numeric,
-    earmark giveffektivt.donation_recipient NOT NULL,
-    unit_cost_conversion numeric
+    exchange_rate numeric
 );
 
 
@@ -2332,12 +2332,12 @@ CREATE VIEW giveffektivt.transfer_overview AS
             ELSE ''::text
         END || t.recipient) AS recipient,
         CASE
-            WHEN (t.recipient = 'Against Malaria Foundation'::giveffektivt.transfer_recipient) THEN 'Antimalaria myggenet udleveret'::text
-            WHEN (t.recipient = 'Malaria Consortium'::giveffektivt.transfer_recipient) THEN 'Malariamedicin udleveret'::text
-            WHEN (t.recipient = 'Helen Keller International'::giveffektivt.transfer_recipient) THEN 'A-vitamintilskud udleveret'::text
-            WHEN (t.recipient = 'New Incentives'::giveffektivt.transfer_recipient) THEN 'Vaccinationsprogrammer motiveret'::text
-            WHEN (t.recipient = 'Give Directly'::giveffektivt.transfer_recipient) THEN 'Dollars modtaget'::text
-            WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure udleveret'::text
+            WHEN (t.recipient = 'Against Malaria Foundation'::giveffektivt.transfer_recipient) THEN 'Antimalaria myggenet'::text
+            WHEN (t.recipient = 'Malaria Consortium'::giveffektivt.transfer_recipient) THEN 'Malariabehandlinger'::text
+            WHEN (t.recipient = 'Helen Keller International'::giveffektivt.transfer_recipient) THEN 'A-vitamintilskud'::text
+            WHEN (t.recipient = 'New Incentives'::giveffektivt.transfer_recipient) THEN 'Vaccinationsprogrammer'::text
+            WHEN (t.recipient = 'Give Directly'::giveffektivt.transfer_recipient) THEN 'Dollars'::text
+            WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure'::text
             ELSE NULL::text
         END AS unit,
     round(sum(d.amount)) AS total_dkk,

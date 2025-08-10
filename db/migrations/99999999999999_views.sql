@@ -1505,12 +1505,12 @@ select
         else ''
     end || t.recipient as recipient,
     case
-        when t.recipient = 'Against Malaria Foundation' then 'Antimalaria myggenet udleveret'
-        when t.recipient = 'Malaria Consortium' then 'Malariamedicin udleveret'
-        when t.recipient = 'Helen Keller International' then 'A-vitamintilskud udleveret'
-        when t.recipient = 'New Incentives' then 'Vaccinationsprogrammer motiveret'
-        when t.recipient = 'Give Directly' then 'Dollars modtaget'
-        when t.recipient = 'SCI Foundation' then 'Ormekure udleveret'
+        when t.recipient = 'Against Malaria Foundation' then 'Antimalaria myggenet'
+        when t.recipient = 'Malaria Consortium' then 'Malariabehandlinger'
+        when t.recipient = 'Helen Keller International' then 'A-vitamintilskud'
+        when t.recipient = 'New Incentives' then 'Vaccinationsprogrammer'
+        when t.recipient = 'Give Directly' then 'Dollars'
+        when t.recipient = 'SCI Foundation' then 'Ormekure'
     end as unit,
     round(sum(amount))::numeric as total_dkk,
     round(sum(amount) / max(t.exchange_rate))::numeric as total_usd,
