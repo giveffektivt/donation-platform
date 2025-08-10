@@ -47,7 +47,7 @@ export async function scanpayChargeSubscription(
     orderid: charge.short_id,
     items: [
       {
-        name: `Donation to ${charge.recipient}`,
+        name: "Donation to Giv Effektivt",
         quantity: 1,
         price: `${charge.amount} DKK`,
       },

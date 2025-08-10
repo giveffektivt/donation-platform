@@ -1,20 +1,19 @@
 import {
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   EmailedStatus,
-  insertMembershipViaQuickpay,
-  insertDonationViaBankTransfer,
-  insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertFundraiser,
   PaymentGateway,
   PaymentMethod,
-  insertFundraiser,
-  insertDonationViaQuickpay,
+  registerDonationViaBankTransfer,
+  registerDonationViaQuickpay,
+  registerMembershipViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
+import { findAllDonations, findAllEarmarks } from "./repository";
 
 const client = dbClient();
 
@@ -29,89 +28,133 @@ afterEach(async () => {
 test("Insert donation for Giv Effektivt membership using Quickpay", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerMembershipViaQuickpay(db, {
     email: "hello@example.com",
+    tin: "111111-1111",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
   });
 
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  expect(donation).toMatchObject({
-    donor_id: donor.id,
+  const expected = {
+    id: donation.id,
     emailed: EmailedStatus.No,
     amount: 50,
-    recipient: DonationRecipient.GivEffektivtsMedlemskab,
     frequency: DonationFrequency.Yearly,
     cancelled: false,
     method: PaymentMethod.CreditCard,
     tax_deductible: false,
     gateway: PaymentGateway.Quickpay,
     fundraiser_id: null,
-  });
+  };
+  expect(donation).toMatchObject(expected);
+  expect(await findAllDonations(db)).toMatchObject([expected]);
+
+  expect(await findAllEarmarks(db)).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.GivEffektivtsMedlemskab,
+      percentage: 100,
+    },
+  ]);
 });
 
-test("Insert donation using Scanpay", async () => {
+test("Insert donation using Quickpay", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaScanpay(db, {
-    donor_id: donor.id,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
+    tin: "111111-1111",
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
-  expect(donation).toMatchObject({
-    donor_id: donor.id,
+  const expected = {
+    id: donation.id,
     emailed: EmailedStatus.No,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     cancelled: false,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
-    gateway: PaymentGateway.Scanpay,
+    gateway: PaymentGateway.Quickpay,
     fundraiser_id: null,
-  });
+  };
+  expect(donation).toMatchObject(expected);
+  expect(await findAllDonations(db)).toMatchObject([expected]);
+
+  const earmarks = await findAllEarmarks(db);
+  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
+
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 95,
+    },
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.MedicinModMalaria,
+      percentage: 5,
+    },
+  ]);
 });
 
 test("Insert donation using bank transfer", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerDonationViaBankTransfer(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaBankTransfer(db, {
-    donor_id: donor.id,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     tax_deductible: true,
+    tin: "111111-1111",
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
-  expect(donation).toMatchObject({
-    donor_id: donor.id,
+  const expected = {
+    id: donation.id,
     emailed: EmailedStatus.No,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     cancelled: false,
     method: PaymentMethod.BankTransfer,
     tax_deductible: true,
     gateway: PaymentGateway.BankTransfer,
     fundraiser_id: null,
-  });
+  };
+  expect(donation).toMatchObject(expected);
+  expect(await findAllDonations(db)).toMatchObject([expected]);
+
+  const earmarks = await findAllEarmarks(db);
+  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
+
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 95,
+    },
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.MedicinModMalaria,
+      percentage: 5,
+    },
+  ]);
 });
 
-test("Insert donation with fundraiser using Quickpay", async () => {
+test("Insert donation with fundraiser and message using Quickpay", async () => {
   const db = await client;
 
   const fundraiser = await insertFundraiser(db, {
@@ -120,35 +163,53 @@ test("Insert donation with fundraiser using Quickpay", async () => {
     has_match: false,
   });
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaQuickpay(db, {
-    donor_id: donor.id,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
-    tax_deductible: true,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
     fundraiser_id: fundraiser.id,
+    message: "Happy Birthday!",
   });
 
-  expect(donation).toMatchObject({
-    donor_id: donor.id,
+  const expected = {
+    id: donation.id,
     emailed: EmailedStatus.No,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     cancelled: false,
     method: PaymentMethod.MobilePay,
-    tax_deductible: true,
+    tax_deductible: false,
     gateway: PaymentGateway.Quickpay,
     fundraiser_id: fundraiser.id,
-  });
+    message: "Happy Birthday!",
+  };
+  expect(donation).toMatchObject(expected);
+  expect(await findAllDonations(db)).toMatchObject([expected]);
+
+  const earmarks = await findAllEarmarks(db);
+  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
+
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 95,
+    },
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.MedicinModMalaria,
+      percentage: 5,
+    },
+  ]);
 });
 
-test("Insert donation with fundraiser using bank transfer", async () => {
+test("Insert donation with fundraiser and message using bank transfer", async () => {
   const db = await client;
 
   const fundraiser = await insertFundraiser(db, {
@@ -157,60 +218,47 @@ test("Insert donation with fundraiser using bank transfer", async () => {
     has_match: false,
   });
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerDonationViaBankTransfer(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaBankTransfer(db, {
-    donor_id: donor.id,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
-    tax_deductible: true,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
     fundraiser_id: fundraiser.id,
+    message: "Happy Birthday!",
   });
 
-  expect(donation).toMatchObject({
-    donor_id: donor.id,
+  const expected = {
+    id: donation.id,
     emailed: EmailedStatus.No,
     amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Monthly,
     cancelled: false,
     method: PaymentMethod.BankTransfer,
-    tax_deductible: true,
+    tax_deductible: false,
     gateway: PaymentGateway.BankTransfer,
     fundraiser_id: fundraiser.id,
-  });
-});
+    message: "Happy Birthday!",
+  };
+  expect(donation).toMatchObject(expected);
+  expect(await findAllDonations(db)).toMatchObject([expected]);
 
-test("Insert donation with a custom message", async () => {
-  const db = await client;
+  const earmarks = await findAllEarmarks(db);
+  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
-    email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaQuickpay(db, {
-    donor_id: donor.id,
-    amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
-    frequency: DonationFrequency.Monthly,
-    method: PaymentMethod.MobilePay,
-    tax_deductible: true,
-    message: "hello world",
-  });
-
-  expect(donation).toMatchObject({
-    donor_id: donor.id,
-    emailed: EmailedStatus.No,
-    amount: 123,
-    recipient: DonationRecipient.MyggenetModMalaria,
-    frequency: DonationFrequency.Monthly,
-    cancelled: false,
-    method: PaymentMethod.MobilePay,
-    tax_deductible: true,
-    gateway: PaymentGateway.Quickpay,
-    message: "hello world",
-  });
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 95,
+    },
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.MedicinModMalaria,
+      percentage: 5,
+    },
+  ]);
 });

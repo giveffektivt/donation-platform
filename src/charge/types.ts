@@ -1,7 +1,6 @@
-import {
+import type {
   DonationGatewayMetadataQuickpay,
   DonationGatewayMetadataScanpay,
-  DonationRecipient,
   PaymentGateway,
   PaymentMethod,
 } from "src";
@@ -34,7 +33,6 @@ export type ChargeToCharge = {
   email: string;
   gateway: PaymentGateway;
   method: PaymentMethod;
-  recipient: DonationRecipient;
 };
 
 export type ChargeToChargeScanpay = ChargeToCharge & {

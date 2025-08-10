@@ -1,27 +1,27 @@
-import { setDate, subMonths, subYears } from "date-fns";
-import { utc } from "./helpers";
+import { setDate, subYears } from "date-fns";
 import {
   ChargeStatus,
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   EmailedStatus,
-  insertDonorWithSensitiveInfo,
-  insertMembershipViaQuickpay,
   insertQuickpayDataDonation,
   insertQuickpayDataMembership,
   PaymentGateway,
   PaymentMethod,
   recreateQuickpayRecurringDonation,
+  registerDonationViaQuickpay,
   setDonationQuickpayId,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
+import { utc } from "./helpers";
 import {
   findAllCharges,
   findAllDonations,
   findAllDonors,
+  findAllEarmarks,
   insertChargeWithCreatedAt,
 } from "./repository";
 
@@ -38,10 +38,10 @@ afterEach(async () => {
 test("One-time donation using Quickpay", async () => {
   const db = await client;
 
-  await insertQuickpayDataDonation(db, {
-    amount: 10,
+  const [donation, charge] = await insertQuickpayDataDonation(db, {
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
+    amount: 10,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
     tin: undefined,
@@ -59,6 +59,7 @@ test("One-time donation using Quickpay", async () => {
   const donations = await findAllDonations(db);
   expect(donations).toMatchObject([
     {
+      id: donation.id,
       amount: 10,
       cancelled: false,
       donor_id: donors[0].id,
@@ -66,14 +67,24 @@ test("One-time donation using Quickpay", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.Quickpay,
       method: PaymentMethod.MobilePay,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
+    },
+  ]);
+
+  const earmarks = await findAllEarmarks(db);
+  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      percentage: 100,
     },
   ]);
 
   const charges = await findAllCharges(db);
   expect(charges).toMatchObject([
     {
+      id: charge?.id,
       donation_id: donations[0].id,
       status: ChargeStatus.Waiting,
     },
@@ -83,7 +94,7 @@ test("One-time donation using Quickpay", async () => {
 test("Monthly donation using Quickpay", async () => {
   const db = await client;
 
-  await insertQuickpayDataDonation(db, {
+  const [donation] = await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -105,6 +116,7 @@ test("Monthly donation using Quickpay", async () => {
   const donations = await findAllDonations(db);
   expect(donations).toMatchObject([
     {
+      id: donation.id,
       amount: 10,
       cancelled: false,
       donor_id: donors[0].id,
@@ -112,8 +124,16 @@ test("Monthly donation using Quickpay", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.Quickpay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
+    },
+  ]);
+
+  const earmarks = await findAllEarmarks(db);
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      percentage: 100,
     },
   ]);
 
@@ -124,7 +144,7 @@ test("Monthly donation using Quickpay", async () => {
 test("Membership using Quickpay", async () => {
   const db = await client;
 
-  await insertQuickpayDataMembership(db, {
+  const [donation] = await insertQuickpayDataMembership(db, {
     email: "hello@example.com",
     tin: "111111-1111",
     name: "John Smith",
@@ -150,6 +170,7 @@ test("Membership using Quickpay", async () => {
   const donations = await findAllDonations(db);
   expect(donations).toMatchObject([
     {
+      id: donation.id,
       amount: 50,
       cancelled: false,
       donor_id: donors[0].id,
@@ -157,8 +178,16 @@ test("Membership using Quickpay", async () => {
       frequency: DonationFrequency.Yearly,
       gateway: PaymentGateway.Quickpay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.GivEffektivtsMedlemskab,
       tax_deductible: false,
+    },
+  ]);
+
+  const earmarks = await findAllEarmarks(db);
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsMedlemskab,
+      percentage: 100,
     },
   ]);
 
@@ -204,12 +233,20 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.Quickpay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: true,
       gateway_metadata: {
         quickpay_id: quickpayId,
         quickpay_order: quickpayOrder,
       },
+    },
+  ]);
+
+  const earmarks = await findAllEarmarks(db);
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      percentage: 100,
     },
   ]);
 
@@ -222,15 +259,17 @@ test("Recreate failed recurring donation", async () => {
 
   const now = setDate(new Date(), 1);
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  // Donation that was successful first time, but failed on a second charge
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-    name: "John Smith",
-  });
-
-  // Membership that was successful first time, but failed on a second charge
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 300,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
+    ],
   });
 
   const successfulCharge = await insertChargeWithCreatedAt(db, {
@@ -245,21 +284,14 @@ test("Recreate failed recurring donation", async () => {
     status: ChargeStatus.Error,
   });
 
-  const recreated = await recreateQuickpayRecurringDonation(db, {
-    donor_id: donor.id,
-    donor_name: donor.name,
-    donor_email: donor.email,
-    donation_id: donation.id,
-    amount: donation.amount,
-    recipient: donation.recipient,
-    frequency: donation.frequency,
-    tax_deductible: donation.tax_deductible,
-    method: donation.method,
-    failed_at: failedCharge.created_at,
-  });
+  const recreated = await recreateQuickpayRecurringDonation(db, donation.id);
 
   const donors = await findAllDonors(db);
-  expect(donors).toEqual([donor]);
+  expect(donors).toMatchObject([
+    {
+      email: "hello@example.com",
+    },
+  ]);
 
   const donations = await findAllDonations(db);
   const expectedDonations = [
@@ -268,7 +300,6 @@ test("Recreate failed recurring donation", async () => {
       donor_id: donation.donor_id,
       emailed: donation.emailed,
       amount: donation.amount,
-      recipient: donation.recipient,
       frequency: donation.frequency,
       cancelled: true,
       gateway: donation.gateway,
@@ -282,7 +313,6 @@ test("Recreate failed recurring donation", async () => {
       donor_id: donation.donor_id,
       emailed: EmailedStatus.Yes,
       amount: donation.amount,
-      recipient: donation.recipient,
       frequency: donation.frequency,
       cancelled: false,
       gateway: donation.gateway,
@@ -301,6 +331,34 @@ test("Recreate failed recurring donation", async () => {
   );
 
   expect(donations).toMatchObject(expectedDonations);
+
+  const earmarks = await findAllEarmarks(db);
+
+  donations.sort((a, b) => a.id.localeCompare(b.id));
+  earmarks.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
+
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 80,
+    },
+    {
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.VaccinerTilSpædbørn,
+      percentage: 20,
+    },
+    {
+      donation_id: donations[1].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 80,
+    },
+    {
+      donation_id: donations[1].id,
+      recipient: DonationRecipient.VaccinerTilSpædbørn,
+      percentage: 20,
+    },
+  ]);
 
   const charges = await findAllCharges(db);
   const expectedCharges = [

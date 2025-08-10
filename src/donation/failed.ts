@@ -25,7 +25,7 @@ export async function sendFailedRecurringDonationEmails(
         info.recipient,
         info.amount,
         info.donor_name,
-        await recreateQuickpayFailedRecurringDonation(db, info),
+        await recreateQuickpayFailedRecurringDonation(db, info.donation_id),
       );
       console.log(
         `Sent new payment link for a failed recurring donation: ${info.donation_id}`,

@@ -40,7 +40,6 @@ export type Donation = {
   donor_id: string;
   emailed: EmailedStatus;
   amount: number;
-  recipient: DonationRecipient;
   frequency: DonationFrequency;
   cancelled: boolean;
   gateway: PaymentGateway;
@@ -67,6 +66,7 @@ export type DonationWithGatewayInfoBankTransfer = Donation & {
 export type DonationGatewayMetadataQuickpay = {
   quickpay_id: string;
   quickpay_order: string;
+  quickpay_legacy?: boolean;
 };
 
 export type DonationGatewayMetadataScanpay = {
@@ -88,11 +88,8 @@ export type DonationToEmail = {
 
 export type FailedRecurringDonation = {
   failed_at: Date;
-  charge_id: string;
-  short_id: string;
   amount: number;
   method: PaymentMethod;
-  gateway: PaymentGateway;
   donor_id: string;
   donor_name: string;
   donor_email: string;
@@ -100,8 +97,8 @@ export type FailedRecurringDonation = {
   recipient: DonationRecipient;
   frequency: DonationFrequency;
   tax_deductible: boolean;
-  fundraiser_id: string;
-  message: string;
+  fundraiser_id?: string;
+  message?: string;
 };
 
 export type FailedRecurringDonationToEmail = {

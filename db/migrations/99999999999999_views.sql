@@ -11,562 +11,193 @@ annual_tax_report_gavebrev_results,
 annual_tax_report_gavebrev_since,
 annual_tax_report_gaveskema,
 annual_tax_report_pending_update,
-charge,
+charged_donations,
+charged_donations_by_transfer,
+charged_memberships,
+charged_or_created_donations,
 charges_to_charge,
-charge_with_gateway_info,
 crm_export,
-donation,
+donations_overview,
 donations_to_create_charges,
 donations_to_email,
-donation_with_contact_info,
-donation_with_sensitive_info,
-donor,
-donor_with_contact_info,
-donor_with_sensitive_info,
 donor_impact_report,
 failed_recurring_donations,
-fundraiser,
-fundraiser_activity_checkin,
-gavebrev,
-gavebrev_checkin,
 gavebrev_checkins_to_create,
+gwwc_money_moved,
 ignored_renewals,
 kpi,
-old_ids_map,
 pending_distribution,
-skat,
-skat_gaveskema,
-transfer,
+time_distribution_daily,
+time_distribution_monthly,
 transfer_overview,
 transfer_pending,
 transferred_distribution,
-gwwc_money_moved,
 value_lost_analysis cascade;
 
-drop function if exists time_distribution,
+drop function if exists register_donor,
+register_donation,
+register_gavebrev,
+recreate_failed_recurring_donation,
 general_assembly_invitations cascade;
 
--- =========== table views ===========
---
 --------------------------------------
-create view donor as
-select
-    id,
-    created_at,
-    updated_at
-from
-    _donor
-where
-    deleted_at is null;
-
-create rule donor_soft_delete as on delete to donor do instead
-update _donor
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on donor to reader;
-
-grant insert,
-update,
-delete on donor to writer;
-
---------------------------------------
-create view donor_with_contact_info as
-select
-    id,
-    name,
-    email,
-    created_at,
-    updated_at
-from
-    _donor
-where
-    deleted_at is null;
-
-create rule donor_with_contact_info_soft_delete as on delete to donor_with_contact_info do instead
-update _donor
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on donor_with_contact_info to reader_contact;
-
-grant insert,
-update,
-delete on donor_with_contact_info to writer;
-
---------------------------------------
-create view donor_with_sensitive_info as
-select
-    id,
-    name,
-    email,
-    address,
-    postcode,
-    city,
-    country,
-    tin,
-    birthday,
-    created_at,
-    updated_at
-from
-    _donor
-where
-    deleted_at is null;
-
-create rule donor_with_sensitive_info_soft_delete as on delete to donor_with_sensitive_info do instead
-update _donor
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on donor_with_sensitive_info to reader_sensitive;
-
-grant insert,
-update,
-delete on donor_with_sensitive_info to writer;
-
---------------------------------------
-create view donation as
-select
-    id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    created_at,
-    updated_at,
-    fundraiser_id
-from
-    _donation
-where
-    deleted_at is null;
-
-create rule donation_soft_delete as on delete to donation do instead
-update _donation
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on donation to reader;
-
-grant insert,
-update,
-delete on donation to writer;
-
---------------------------------------
-create view donation_with_contact_info as
-select
-    id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    fundraiser_id,
-    message,
-    created_at,
-    updated_at
-from
-    _donation
-where
-    deleted_at is null;
-
-create rule donation_with_contact_info_soft_delete as on delete to donation_with_contact_info do instead
-update _donation
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on donation_with_contact_info to reader_contact;
-
-grant insert,
-update,
-delete on donation_with_contact_info to writer;
-
---------------------------------------
-create view donation_with_sensitive_info as
-select
-    id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    fundraiser_id,
-    message,
-    gateway_metadata,
-    created_at,
-    updated_at
-from
-    _donation
-where
-    deleted_at is null;
-
-create rule donation_with_sensitive_info_soft_delete as on delete to donation_with_sensitive_info do instead
-update _donation
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on donation_with_sensitive_info to reader_sensitive;
-
-grant insert,
-update,
-delete on donation_with_sensitive_info to writer;
-
---------------------------------------
-create view charge as
-select
-    id,
-    donation_id,
-    short_id,
-    status,
-    created_at,
-    updated_at,
-    transfer_id
-from
-    _charge
-where
-    deleted_at is null;
-
-create rule charge_soft_delete as on delete to charge do instead
-update _charge
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on charge to reader;
-
-grant insert,
-update,
-delete on charge to writer;
-
---------------------------------------
-create view charge_with_gateway_info as
-select
-    id,
-    donation_id,
-    short_id,
-    status,
-    gateway_metadata,
-    created_at,
-    updated_at,
-    transfer_id
-from
-    _charge
-where
-    deleted_at is null;
-
-create rule charge_with_gateway_info_soft_delete as on delete to charge_with_gateway_info do instead
-update _charge
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on charge_with_gateway_info to reader_sensitive;
-
-grant insert,
-update,
-delete on charge_with_gateway_info to writer;
-
---------------------------------------
-create view fundraiser as
-select
-    id,
-    email,
-    title,
-    has_match,
-    match_currency,
-    key,
-    created_at,
-    updated_at
-from
-    _fundraiser
-where
-    deleted_at is null;
-
-create rule fundraiser_soft_delete as on delete to fundraiser do instead
-update _fundraiser
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on fundraiser to reader;
-
-grant insert,
-update,
-delete on fundraiser to writer;
-
---------------------------------------
-create view fundraiser_activity_checkin as
-select
-    id,
-    fundraiser_id,
-    amount,
-    created_at,
-    updated_at
-from
-    _fundraiser_activity_checkin
-where
-    deleted_at is null;
-
-grant
-select
-    on fundraiser_activity_checkin to reader;
-
-grant insert,
-update,
-delete on fundraiser_activity_checkin to writer;
-
---------------------------------------
-create view gavebrev as
-select
-    id,
-    donor_id,
-    status,
-    type,
-    amount,
-    minimal_income,
-    started_at,
-    stopped_at,
-    created_at,
-    updated_at
-from
-    _gavebrev
-where
-    deleted_at is null;
-
-create rule gavebrev_soft_delete as on delete to gavebrev do instead
-update _gavebrev
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on gavebrev to reader_sensitive;
-
-grant insert,
-update,
-delete on gavebrev to writer;
-
---------------------------------------
-create view gavebrev_checkin as
-select
-    id,
-    donor_id,
-    year,
-    income_inferred,
-    income_preliminary,
-    income_verified,
-    limit_normal_donation,
-    created_at,
-    updated_at
-from
-    _gavebrev_checkin
-where
-    deleted_at is null;
-
-create rule gavebrev_checkin_soft_delete as on delete to gavebrev_checkin do instead
-update _gavebrev_checkin
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on gavebrev_checkin to reader_sensitive;
-
-grant insert,
-update,
-delete on gavebrev_checkin to writer;
-
---------------------------------------
-create view skat as
-select
-    const,
-    ge_cvr,
-    donor_cpr,
-    year,
-    blank,
-    total,
-    ll8a_or_gavebrev,
-    ge_notes,
-    rettekode,
-    id,
-    created_at,
-    updated_at
-from
-    _skat
-where
-    deleted_at is null;
-
-create rule skat_soft_delete as on delete to skat do instead
-update _skat
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on skat to reader_sensitive;
-
-grant insert,
-update,
-delete on skat to writer;
-
---------------------------------------
-create view skat_gaveskema as
-select
-    year,
-    count_donors_donated_min_200_kr,
-    count_members,
-    amount_donated_A,
-    amount_donated_L,
-    amount_donated_total,
-    id,
-    created_at,
-    updated_at
-from
-    _skat_gaveskema
-where
-    deleted_at is null;
-
-create rule skat_gaveskema_soft_delete as on delete to skat_gaveskema do instead
-update _skat_gaveskema
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on skat_gaveskema to reader_sensitive;
-
-grant insert,
-update,
-delete on skat_gaveskema to writer;
-
---------------------------------------
-create view transfer as
-select
-    id,
-    earmark,
-    recipient,
-    unit_cost_external,
-    unit_cost_conversion,
-    life_cost_external,
-    exchange_rate,
-    created_at,
-    updated_at
-from
-    _transfer
-where
-    deleted_at is null
-order by
-    created_at;
-
-create rule transfer_soft_delete as on delete to transfer do instead
-update _transfer
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on transfer to everyone;
-
-grant insert,
-update,
-delete on transfer to writer;
-
--- =========== helper views ===========
---
-create view old_ids_map as
+create view donations_overview as
 select
     p.id as donor_id,
-    p._old_id as old_donor_id,
+    case
+        when pg_has_role(current_user, 'reader_contact', 'member') then p.name
+        else '***'
+    end as name,
+    case
+        when pg_has_role(current_user, 'reader_contact', 'member') then p.email
+        else '***'
+    end as email,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then p.tin
+        else '***'
+    end as tin,
     d.id as donation_id,
-    d._old_id as old_donation_id,
+    d.frequency,
+    d.amount,
+    coalesce(
+        (
+            select
+                string_agg(
+                    e.recipient || '=' || e.percentage || '%',
+                    ', '
+                    order by
+                        e.percentage desc
+                )
+            from
+                earmark e
+            where
+                e.donation_id = d.id
+        ),
+        ''
+    ) as earmarks,
+    d.cancelled,
+    d.method,
+    d.gateway,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then d.gateway_metadata
+        else null
+    end as donation_gateway_metadata,
+    d.tax_deductible,
     c.id as charge_id,
-    c._old_id as old_charge_id
+    c.short_id as charge_short_id,
+    c.status,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then c.gateway_metadata
+        else null
+    end as charge_gateway_metadata,
+    c.created_at as charged_at,
+    d.created_at as donation_created_at
 from
-    _donor p
-    left join _donation d on p.id = d.donor_id
-    left join _charge c on d.id = c.donation_id
+    donor p
+    join donation d on d.donor_id = p.id
+    left join charge c on c.donation_id = d.id
+order by
+    c.created_at desc nulls last;
+
+grant
+select
+    on donations_overview to reader;
+
+--------------------------------------
+create view charged_donations as
+select
+    *
+from
+    donations_overview d
 where
-    p.deleted_at is null
-    and d.deleted_at is null
-    and c.deleted_at is null
-    and (
-        p._old_id is not null
-        or d._old_id is not null
-        or c._old_id is not null
+    d.status = 'charged'
+    and not exists (
+        select
+            1
+        from
+            earmark e
+        where
+            e.donation_id = d.donation_id
+            and e.recipient = 'Giv Effektivts medlemskab'
     );
 
 grant
 select
-    on old_ids_map to reader;
+    on charged_donations to reader;
+
+--------------------------------------
+create view charged_or_created_donations as
+select
+    *
+from
+    donations_overview d
+where
+    d.status in ('charged', 'created')
+    and not exists (
+        select
+            1
+        from
+            earmark e
+        where
+            e.donation_id = d.donation_id
+            and e.recipient = 'Giv Effektivts medlemskab'
+    );
+
+grant
+select
+    on charged_or_created_donations to reader;
+
+--------------------------------------
+create view charged_memberships as
+select
+    *
+from
+    donations_overview d
+where
+    d.status = 'charged'
+    and exists (
+        select
+            1
+        from
+            earmark e
+        where
+            e.donation_id = d.donation_id
+            and e.recipient = 'Giv Effektivts medlemskab'
+    );
+
+grant
+select
+    on charged_memberships to reader;
+
+--------------------------------------
+create view charged_donations_by_transfer as
+select
+    cd.donor_id,
+    cd.name,
+    cd.email,
+    cd.tin,
+    cd.donation_id,
+    round(cd.amount * e.percentage / 100, 1) as amount,
+    cd.frequency,
+    cd.cancelled,
+    cd.method,
+    cd.gateway,
+    cd.tax_deductible,
+    cd.charge_id,
+    cd.charged_at,
+    e.recipient as earmark,
+    t.id as transfer_id
+from
+    charged_donations cd
+    join earmark e on cd.donation_id = e.donation_id
+    left join charge_transfer ct on ct.charge_id = cd.charge_id
+    left join transfer t on ct.transfer_id = t.id
+order by
+    cd.charged_at desc;
+
+grant
+select
+    on charged_donations_by_transfer to reader;
 
 --------------------------------------
 create view donations_to_create_charges as
@@ -645,37 +276,50 @@ select
 
 --------------------------------------
 create view donations_to_email as
-select
-    d.id,
-    email,
-    amount,
-    recipient,
-    frequency,
-    tax_deductible
-from
-    donor_with_sensitive_info p
-    inner join donation d on d.donor_id = p.id
-    inner join lateral (
-        select
+with
+    latest_charge as (
+        select distinct
+            on (donation_id) donation_id,
             id,
             status
         from
             charge
-        where
-            donation_id = d.id
         order by
+            donation_id,
             created_at desc
-        limit
-            1
-    ) c on 1 = 1
+    ),
+    single_recipient as (
+        select
+            donation_id,
+            case
+                when count(*) = 1 then max(recipient)
+                else null
+            end as recipient
+        from
+            earmark
+        group by
+            donation_id
+    )
+select
+    d.id,
+    p.email,
+    d.amount,
+    sr.recipient,
+    d.frequency,
+    d.tax_deductible
+from
+    donor p
+    join donation d on d.donor_id = p.id
+    join latest_charge c on c.donation_id = d.id
+    left join single_recipient sr on sr.donation_id = d.id
 where
-    emailed = 'no'
+    d.emailed = 'no'
     and (
         c.status = 'charged'
         or (
-            method = 'MobilePay'
-            and frequency != 'once'
-            and c.status != 'error'
+            d.method = 'MobilePay'
+            and d.frequency <> 'once'
+            and c.status <> 'error'
         )
     );
 
@@ -693,15 +337,14 @@ select
     c.short_id,
     email,
     amount,
-    recipient,
     gateway,
     method,
     c.gateway_metadata,
     d.gateway_metadata as donation_gateway_metadata
 from
-    donor_with_contact_info dc
-    inner join donation_with_sensitive_info d on d.donor_id = dc.id
-    inner join charge_with_gateway_info c on c.donation_id = d.id
+    donor dc
+    inner join donation d on d.donor_id = dc.id
+    inner join charge c on c.donation_id = d.id
 where
     gateway in ('Quickpay', 'Scanpay')
     and not cancelled
@@ -722,9 +365,9 @@ with
         select distinct
             on (d.id) d.id
         from
-            donation_with_sensitive_info d
-            inner join donor_with_contact_info p on d.donor_id = p.id
-            inner join charge_with_gateway_info c on c.donation_id = d.id
+            donation d
+            inner join donor p on d.donor_id = p.id
+            inner join charge c on c.donation_id = d.id
         where
             gateway in ('Quickpay', 'Scanpay')
             and not cancelled
@@ -732,6 +375,18 @@ with
             and status = 'charged'
         order by
             d.id
+    ),
+    single_recipient as (
+        select
+            donation_id,
+            case
+                when count(*) = 1 then max(recipient)
+                else null
+            end as recipient
+        from
+            earmark
+        group by
+            donation_id
     )
 select
     *
@@ -749,16 +404,17 @@ from
             p.email as donor_email,
             d.id as donation_id,
             d.gateway_metadata,
-            d.recipient,
+            sr.recipient,
             d.frequency,
             d.tax_deductible,
             d.fundraiser_id,
             d.message,
             c.status
         from
-            donation_with_sensitive_info d
-            inner join donor_with_contact_info p on d.donor_id = p.id
-            inner join charge_with_gateway_info c on c.donation_id = d.id
+            donation d
+            inner join donor p on d.donor_id = p.id
+            inner join charge c on c.donation_id = d.id
+            left join single_recipient sr on sr.donation_id = d.id
         where
             d.id in (
                 select
@@ -787,62 +443,42 @@ select
 
 create view annual_tax_report_current_payments as
 select
-    p.tin,
-    round(sum(d.amount)) as total,
+    tin,
+    round(sum(amount)) as total,
     min(
         extract(
             year
             from
-                c.created_at
+                charged_at
         )
     ) as year
 from
     annual_tax_report_const
-    cross join donor_with_sensitive_info p
-    inner join donation d on d.donor_id = p.id
-    inner join charge c on c.donation_id = d.id
+    cross join charged_donations
 where
-    c.status = 'charged'
-    and d.recipient != 'Giv Effektivts medlemskab'
-    and c.created_at <@ tstzrange (year_from, year_to, '[)')
-    and d.tax_deductible
+    charged_at <@ tstzrange (year_from, year_to, '[)')
+    and tax_deductible
 group by
-    p.tin;
+    tin;
 
 create view annual_tax_report_gavebrev_since as
 select
     donor_id,
     tin,
-    gavebrev_start
+    min(
+        extract(
+            year
+            from
+                started_at
+        )
+    ) as gavebrev_start
 from
-    lateral (
-        select
-            donor_id,
-            min(
-                extract(
-                    year
-                    from
-                        started_at
-                )
-            ) as gavebrev_start
-        from
-            annual_tax_report_const,
-            gavebrev
-        where
-            coalesce(stopped_at, now()) > year_from
-        group by
-            donor_id
-    ) a
-    cross join lateral (
-        select
-            tin
-        from
-            donor_with_sensitive_info p
-        where
-            id = donor_id
-        limit
-            1
-    ) b;
+    annual_tax_report_const
+    join gavebrev g on coalesce(stopped_at, now()) > year_from
+    join donor p on p.id = donor_id
+group by
+    donor_id,
+    tin;
 
 create view annual_tax_report_gavebrev_checkins as
 select
@@ -889,7 +525,7 @@ select
     ) as expected_total
 from
     annual_tax_report_gavebrev_checkins c
-    inner join donor_with_sensitive_info p on p.tin = c.tin
+    inner join donor p on p.tin = c.tin
     inner join gavebrev g on g.donor_id = p.id
     and extract(
         year
@@ -911,7 +547,7 @@ with
             max(stopped_at) as stopped_at
         from
             gavebrev g
-            inner join donor_with_sensitive_info p on g.donor_id = p.id
+            inner join donor p on g.donor_id = p.id
         group by
             tin
     ),
@@ -941,21 +577,17 @@ with
         select
             i.tin,
             i.year,
-            d.amount
+            amount
         from
             gavebrev_tin_years_until_now i
-            inner join donor_with_sensitive_info p on i.tin = p.tin
-            inner join donation d on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
+            inner join charged_donations c on i.tin = c.tin
             and i.year = extract(
                 year
                 from
-                    c.created_at
+                    charged_at
             )
         where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
-            and d.tax_deductible
+            tax_deductible
     )
 select
     i.tin,
@@ -1156,14 +788,10 @@ with
         select
             count(distinct tin) as count_members
         from
-            const,
-            donor_with_sensitive_info ds
-            inner join donation d on d.donor_id = ds.id
-            inner join charge c on c.donation_id = d.id
+            const
+            cross join charged_memberships c
         where
-            d.recipient = 'Giv Effektivts medlemskab'
-            and c.status = 'charged'
-            and c.created_at <@ tstzrange (year_from, year_to, '[)')
+            charged_at <@ tstzrange (year_from, year_to, '[)')
     ),
     donated_A as (
         select
@@ -1185,14 +813,10 @@ with
         select
             coalesce(sum(amount), 0) as amount_donated_total
         from
-            const,
-            donor_with_sensitive_info ds
-            inner join donation d on d.donor_id = ds.id
-            inner join charge c on c.donation_id = d.id
+            const
+            cross join charged_donations c
         where
-            d.recipient != 'Giv Effektivts medlemskab'
-            and c.status = 'charged'
-            and c.created_at <@ tstzrange (year_from, year_to, '[)')
+            charged_at <@ tstzrange (year_from, year_to, '[)')
     )
 select
     extract(
@@ -1260,27 +884,23 @@ with
     ),
     data_per_transfer as (
         select
-            p.tin,
-            p.email,
-            d.tax_deductible,
+            cdt.tin,
+            cdt.email,
+            cdt.tax_deductible,
             min(t.recipient) as recipient,
-            round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as unit,
-            sum(d.amount) as amount,
-            min(c.created_at) as first_donated
+            round(sum(cdt.amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as unit,
+            sum(cdt.amount) as amount,
+            min(cdt.charged_at) as first_donated
         from
             const
-            cross join donor_with_sensitive_info p
-            join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-            left join transfer t on c.transfer_id = t.id
+            cross join charged_donations_by_transfer cdt
+            left join transfer t on cdt.transfer_id = t.id
         where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
-            and c.created_at <@ tstzrange (year_from, year_to, '[)')
+            cdt.charged_at <@ tstzrange (year_from, year_to, '[)')
         group by
-            p.tin,
-            p.email,
-            d.tax_deductible,
+            cdt.tin,
+            cdt.email,
+            cdt.tax_deductible,
             t.id
     ),
     data as (
@@ -1302,17 +922,13 @@ with
     ),
     members_confirmed as (
         select distinct
-            on (p.tin) p.tin,
-            p.email
+            on (tin) tin,
+            email
         from
             const
-            cross join donor_with_sensitive_info p
-            inner join donation d on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
+            cross join charged_memberships
         where
-            c.status = 'charged'
-            and d.recipient = 'Giv Effektivts medlemskab'
-            and c.created_at <@ tstzrange (year_from, year_to, '[)')
+            charged_at <@ tstzrange (year_from, year_to, '[)')
     ),
     active_gavebrev as (
         select
@@ -1320,7 +936,7 @@ with
         from
             const
             cross join gavebrev g
-            inner join donor_with_sensitive_info p on g.donor_id = p.id
+            inner join donor p on g.donor_id = p.id
         where
             started_at <= year_from
             and stopped_at > year_from
@@ -1333,7 +949,7 @@ with
             p.tin
         from
             const
-            cross join donor_with_sensitive_info p
+            cross join donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
         where
@@ -1406,19 +1022,28 @@ select
 --------------------------------------
 create view ignored_renewals as
 with
+    membership_ids as (
+        select distinct
+            donation_id as id
+        from
+            earmark
+        where
+            recipient = 'Giv Effektivts medlemskab'
+    ),
     last_charge as (
         select distinct
             on (p.id) p.id,
             p.name,
             p.email,
             d.amount,
-            d.recipient,
+            m.id is not null as is_membership,
             c.status,
             c.created_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
+            left join membership_ids m on m.id = d.id
         where
             d.frequency != 'once'
         order by
@@ -1431,7 +1056,7 @@ with
             d.id as donation_id,
             d.created_at
         from
-            donor_with_contact_info p
+            donor p
             left join donation d on p.id = d.donor_id
             left join charge c on d.id = c.donation_id
         where
@@ -1445,12 +1070,13 @@ with
             (
                 select
                     p.email,
-                    d.recipient = 'Giv Effektivts medlemskab' as is_membership,
+                    m.id is not null as is_membership,
                     c.created_at
                 from
-                    donor_with_contact_info p
+                    donor p
                     join donation d on p.id = d.donor_id
                     join charge c on d.id = c.donation_id
+                    left join membership_ids m on m.id = d.id
                 where
                     c.status = 'charged'
             )
@@ -1464,7 +1090,7 @@ with
             on (email) name,
             email
         from
-            donor_with_contact_info p
+            donor p
         where
             name is not null
     )
@@ -1472,7 +1098,7 @@ select
     coalesce(lc.name, en.name) as name,
     lc.email,
     lc.amount,
-    lc.recipient,
+    lc.is_membership,
     na.donation_id,
     na.created_at as expired_at,
     now()::date - na.created_at::date as days_ago
@@ -1480,7 +1106,7 @@ from
     last_charge lc
     join never_activated na on lc.id = na.id
     left join last_payment_by_email lp on lc.email = lp.email
-    and (lc.recipient = 'Giv Effektivts medlemskab') = lp.is_membership
+    and lp.is_membership = lp.is_membership
     left join email_to_name en on lc.email = en.email
 where
     lc.status = 'error'
@@ -1521,23 +1147,19 @@ select
     round(max(t.life_cost_external), 2) as life_cost_external,
     round(max(t.life_cost_external) * max(t.exchange_rate), 2) as life_cost_dkk,
     round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 1) as life_impact,
-    max(c.created_at) as computed_at,
+    max(charged_at) as computed_at,
     case
         when t.created_at > now() then 'Næste overførsel'
         else to_char(t.created_at, 'yyyy-mm-dd')
     end as transferred_at
 from
-    donation d
-    join charge c on c.donation_id = d.id
-    join transfer t on c.transfer_id = t.id
+    charged_donations_by_transfer cdt
+    join transfer t on cdt.transfer_id = t.id
     or (
-        c.transfer_id is null
-        and d.recipient = t.earmark
+        cdt.transfer_id is null
+        and cdt.earmark = t.earmark
         and t.created_at > now()
     )
-where
-    c.status = 'charged'
-    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
 group by
     t.id,
     t.earmark,
@@ -1558,13 +1180,8 @@ select
     round(sum(amount))::numeric as dkk_total,
     count(*)::numeric as payments_total
 from
-    donation d
-    inner join charge c on c.donation_id = d.id
-    inner join transfer t on c.transfer_id = t.id
-where
-    c.status = 'charged'
-    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
-    and transfer_id is not null
+    charged_donations_by_transfer cdt
+    join transfer t on cdt.transfer_id = t.id
 group by
     t.recipient
 order by
@@ -1577,18 +1194,16 @@ select
 --------------------------------------
 create view pending_distribution as
 select
-    d.recipient,
+    earmark,
     round(sum(amount))::numeric as dkk_total,
     count(*)::numeric as payments_total
 from
-    donation d
-    inner join charge c on c.donation_id = d.id
+    charged_donations_by_transfer cdt
 where
-    c.status = 'charged'
-    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
+    earmark not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
     and transfer_id is null
 group by
-    d.recipient
+    earmark
 order by
     dkk_total desc;
 
@@ -1597,64 +1212,7 @@ select
     on pending_distribution to everyone;
 
 --------------------------------------
-create function time_distribution (in time_from timestamptz, in time_to timestamptz) returns table (
-    date text,
-    amount_once_small numeric,
-    amount_once_medium numeric,
-    amount_once_large numeric,
-    amount_once_major numeric,
-    amount_monthly_small numeric,
-    amount_monthly_medium numeric,
-    amount_monthly_large numeric,
-    amount_monthly_major numeric,
-    payments_once_small numeric,
-    payments_once_medium numeric,
-    payments_once_large numeric,
-    payments_once_major numeric,
-    payments_monthly_small numeric,
-    payments_monthly_medium numeric,
-    payments_monthly_large numeric,
-    payments_monthly_major numeric,
-    payments_new_once_small numeric,
-    payments_new_once_medium numeric,
-    payments_new_once_large numeric,
-    payments_new_once_major numeric,
-    payments_new_monthly_small numeric,
-    payments_new_monthly_medium numeric,
-    payments_new_monthly_large numeric,
-    payments_new_monthly_major numeric,
-    value_added_once_small numeric,
-    value_added_once_medium numeric,
-    value_added_once_large numeric,
-    value_added_once_major numeric,
-    value_added_monthly_small numeric,
-    value_added_monthly_medium numeric,
-    value_added_monthly_large numeric,
-    value_added_monthly_major numeric,
-    value_lost_small numeric,
-    value_lost_medium numeric,
-    value_lost_large numeric,
-    value_lost_major numeric,
-    value_total numeric,
-    monthly_donors numeric,
-    payments_total numeric,
-    dkk_total numeric,
-    value_added numeric,
-    value_added_once numeric,
-    value_added_monthly numeric,
-    value_lost numeric,
-    amount_new numeric,
-    payments_new numeric
-) language plpgsql as $$
-declare
-  interval_type text;
-begin
-if time_to - time_from <= interval '3 month' then
-    interval_type := 'day';
-else
-    interval_type := 'month';
-end if;
-return query
+create view time_distribution_monthly as
 with
     buckets as (
         select
@@ -1674,23 +1232,20 @@ with
     ),
     monthly_donations_charged_exactly_once as (
         select
-            id
+            donation_id
         from
             (
                 select
-                    d.id,
-                    bool_or(d.cancelled) as cancelled,
-                    count(c.id) as number_of_donations,
-                    max(c.created_at) as last_donated_at
+                    donation_id,
+                    bool_or(cancelled) as cancelled,
+                    count(charge_id) as number_of_donations,
+                    max(charged_at) as last_donated_at
                 from
-                    donation d
-                    join charge c on d.id = c.donation_id
+                    charged_donations
                 where
-                    c.status = 'charged'
-                    and recipient != 'Giv Effektivts medlemskab'
-                    and frequency = 'monthly'
+                    frequency = 'monthly'
                 group by
-                    d.id
+                    donation_id
             )
         where
             number_of_donations = 1
@@ -1706,12 +1261,12 @@ with
         from
             (
                 select
-                    date_trunc(interval_type, c.created_at) as period,
-                    date_trunc('month', c.created_at) as month,
-                    c.created_at,
-                    p.email,
-                    d.id as donation_id,
-                    d.cancelled,
+                    date_trunc('month', charged_at) as period,
+                    date_trunc('month', charged_at) as month,
+                    charged_at,
+                    email,
+                    donation_id,
+                    cancelled,
                     amount,
                     case
                         when exists (
@@ -1720,17 +1275,12 @@ with
                             from
                                 monthly_donations_charged_exactly_once m
                             where
-                                d.id = m.id
+                                cd.donation_id = m.donation_id
                         ) then 'once'
                         else frequency
                     end as frequency
                 from
-                    donor_with_contact_info p
-                    join donation d on p.id = d.donor_id
-                    join charge c on c.donation_id = d.id
-                where
-                    c.status = 'charged'
-                    and d.recipient != 'Giv Effektivts medlemskab'
+                    charged_donations cd
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -1740,18 +1290,13 @@ with
         select distinct
             on (email) email,
             amount,
-            date_trunc(interval_type, c.created_at) as period,
-            c.created_at
+            date_trunc('month', charged_at) as period,
+            charged_at
         from
-            donor_with_contact_info p
-            join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            charged_donations
         order by
             email,
-            c.created_at
+            charged_at
     ),
     first_time_donations as (
         select
@@ -1760,29 +1305,20 @@ with
             count(1) as payments
         from
             first_time_by_email
-        where
-            (
-                time_from is null
-                or created_at >= time_from
-            )
-            and (
-                time_to is null
-                or created_at <= time_to
-            )
         group by
             period
     ),
     stopped_monthly_donations as (
         select
             email,
-            date_trunc(interval_type, last_donated_at + interval '1 month') as stop_period,
+            date_trunc('month', last_donated_at + interval '1 month') as stop_period,
             - sum(amount) as amount,
             frequency
         from
             (
                 select distinct
                     on (donation_id) email,
-                    created_at as last_donated_at,
+                    charged_at as last_donated_at,
                     amount,
                     frequency,
                     cancelled
@@ -1792,14 +1328,14 @@ with
                     frequency = 'monthly'
                 order by
                     donation_id,
-                    created_at desc
+                    charged_at desc
             ) a
         where
             last_donated_at + interval '40 days' < now()
             or cancelled
         group by
             email,
-            date_trunc(interval_type, last_donated_at + interval '1 month'),
+            date_trunc('month', last_donated_at + interval '1 month'),
             frequency
     ),
     started_donations as (
@@ -1819,7 +1355,7 @@ with
                     successful_charges
                 order by
                     donation_id,
-                    created_at
+                    charged_at
             )
         group by
             email,
@@ -1849,15 +1385,6 @@ with
             join buckets b on a.frequency = b.frequency
             and abs(a.amount) > b.start
             and abs(a.amount) <= b.stop
-        where
-            (
-                time_from is null
-                or period >= time_from
-            )
-            and (
-                time_to is null
-                or period <= time_to
-            )
     ),
     value_added_lost as (
         select
@@ -1884,15 +1411,6 @@ with
             bucket
         from
             successful_charges
-        where
-            (
-                time_from is null
-                or created_at >= time_from
-            )
-            and (
-                time_to is null
-                or created_at <= time_to
-            )
         group by
             period,
             frequency,
@@ -1907,16 +1425,9 @@ with
             bucket
         from
             successful_charges s
-            join first_time_by_email f on s.email = f.email and s.period = f.period and s.amount = f.amount
-        where
-            (
-                time_from is null
-                or s.created_at >= time_from
-            )
-            and (
-                time_to is null
-                or s.created_at <= time_to
-            )
+            join first_time_by_email f on s.email = f.email
+            and s.period = f.period
+            and s.amount = f.amount
         group by
             s.period,
             frequency,
@@ -1985,38 +1496,314 @@ group by
     coalesce(a.period, b.period)
 order by
     coalesce(a.period, b.period) desc;
-end
-$$;
 
 grant
-execute on function time_distribution (timestamptz, timestamptz) to everyone;
+select
+    on time_distribution_monthly to everyone;
+
+--------------------------------------
+create view time_distribution_daily as
+with
+    buckets as (
+        select
+            *
+        from
+            (
+                values
+                    ('once'::donation_frequency, 0, 1000, 'small'),
+                    ('once'::donation_frequency, 1000, 6000, 'medium'),
+                    ('once'::donation_frequency, 6000, 24000, 'large'),
+                    ('once'::donation_frequency, 24000, 999999999999, 'major'),
+                    ('monthly'::donation_frequency, 0, 200, 'small'),
+                    ('monthly'::donation_frequency, 200, 500, 'medium'),
+                    ('monthly'::donation_frequency, 500, 2000, 'large'),
+                    ('monthly'::donation_frequency, 2000, 999999999999, 'major')
+            ) as bucket_table (frequency, start, stop, bucket)
+    ),
+    monthly_donations_charged_exactly_once as (
+        select
+            donation_id
+        from
+            (
+                select
+                    donation_id,
+                    bool_or(cancelled) as cancelled,
+                    count(charge_id) as number_of_donations,
+                    max(charged_at) as last_donated_at
+                from
+                    charged_donations
+                where
+                    frequency = 'monthly'
+                group by
+                    donation_id
+            )
+        where
+            number_of_donations = 1
+            and (
+                cancelled
+                or last_donated_at < now() - interval '40 days'
+            )
+    ),
+    successful_charges as (
+        select
+            a.*,
+            bucket
+        from
+            (
+                select
+                    date_trunc('day', charged_at) as period,
+                    date_trunc('day', charged_at) as month,
+                    charged_at,
+                    email,
+                    donation_id,
+                    cancelled,
+                    amount,
+                    case
+                        when exists (
+                            select
+                                1
+                            from
+                                monthly_donations_charged_exactly_once m
+                            where
+                                cd.donation_id = m.donation_id
+                        ) then 'once'
+                        else frequency
+                    end as frequency
+                from
+                    charged_donations cd
+            ) a
+            join buckets b on a.frequency = b.frequency
+            and a.amount > b.start
+            and a.amount <= b.stop
+    ),
+    first_time_by_email as (
+        select distinct
+            on (email) email,
+            amount,
+            date_trunc('day', charged_at) as period,
+            charged_at
+        from
+            charged_donations
+        order by
+            email,
+            charged_at
+    ),
+    first_time_donations as (
+        select
+            period,
+            sum(amount) as amount,
+            count(1) as payments
+        from
+            first_time_by_email
+        group by
+            period
+    ),
+    stopped_monthly_donations as (
+        select
+            email,
+            date_trunc('day', last_donated_at + interval '1 month') as stop_period,
+            - sum(amount) as amount,
+            frequency
+        from
+            (
+                select distinct
+                    on (donation_id) email,
+                    charged_at as last_donated_at,
+                    amount,
+                    frequency,
+                    cancelled
+                from
+                    successful_charges s
+                where
+                    frequency = 'monthly'
+                order by
+                    donation_id,
+                    charged_at desc
+            ) a
+        where
+            last_donated_at + interval '40 days' < now()
+            or cancelled
+        group by
+            email,
+            date_trunc('day', last_donated_at + interval '1 month'),
+            frequency
+    ),
+    started_donations as (
+        select
+            email,
+            period as start_period,
+            sum(amount) as amount,
+            frequency
+        from
+            (
+                select distinct
+                    on (donation_id) email,
+                    period,
+                    amount,
+                    frequency
+                from
+                    successful_charges
+                order by
+                    donation_id,
+                    charged_at
+            )
+        group by
+            email,
+            period,
+            frequency
+    ),
+    changed_donations as (
+        select
+            a.*,
+            bucket
+        from
+            (
+                select
+                    coalesce(start_period, stop_period) as period,
+                    coalesce(a.frequency, b.frequency) as frequency,
+                    sum(coalesce(a.amount, 0)) + sum(coalesce(b.amount, 0)) as amount
+                from
+                    started_donations a
+                    full outer join stopped_monthly_donations b on a.email = b.email
+                    and a.frequency = b.frequency
+                    and date_trunc('day', a.start_period) = date_trunc('day', b.stop_period)
+                group by
+                    coalesce(a.email, b.email),
+                    coalesce(a.frequency, b.frequency),
+                    coalesce(start_period, stop_period)
+            ) a
+            join buckets b on a.frequency = b.frequency
+            and abs(a.amount) > b.start
+            and abs(a.amount) <= b.stop
+    ),
+    value_added_lost as (
+        select
+            period,
+            frequency,
+            bucket,
+            /* sql-formatter-disable */
+            sum(amount * (case when amount > 0 then 1 else 0 end) * (case when frequency = 'monthly' then 18 else 1 end)) as value_added,
+            sum(amount * (case when amount < 0 then 1 else 0 end) * 18) as value_lost
+            /* sql-formatter-enable */
+        from
+            changed_donations
+        group by
+            period,
+            frequency,
+            bucket
+    ),
+    payments as (
+        select
+            period,
+            sum(amount) as amount,
+            count(distinct donation_id) as payments,
+            frequency,
+            bucket
+        from
+            successful_charges
+        group by
+            period,
+            frequency,
+            bucket
+    ),
+    payments_new_donors as (
+        select
+            s.period,
+            sum(s.amount) as amount,
+            count(distinct donation_id) as payments,
+            frequency,
+            bucket
+        from
+            successful_charges s
+            join first_time_by_email f on s.email = f.email
+            and s.period = f.period
+            and s.amount = f.amount
+        group by
+            s.period,
+            frequency,
+            bucket
+    )
+select
+    to_char(coalesce(a.period, b.period), 'yyyy') || '-' || to_char(coalesce(a.period, b.period), 'MM') || '-' || to_char(coalesce(a.period, b.period), 'dd') as date,
+    /* sql-formatter-disable */
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_once_small,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_once_medium,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'large'  then a.amount else 0 end), 0) as amount_once_large,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'major'  then a.amount else 0 end), 0) as amount_once_major,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_monthly_small,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_monthly_medium,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.amount else 0 end), 0) as amount_monthly_large,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.amount else 0 end), 0) as amount_monthly_major,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.payments else 0 end), 0) as payments_once_small,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_once_medium,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_once_large,
+    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_once_major,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'small'  then a.payments else 0 end), 0) as payments_monthly_small,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_monthly_medium,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_monthly_large,
+    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_monthly_major,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'small'  then d.payments else 0 end), 0) as payments_new_once_small,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'medium' then d.payments else 0 end), 0) as payments_new_once_medium,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'large'  then d.payments else 0 end), 0) as payments_new_once_large,
+    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'major'  then d.payments else 0 end), 0) as payments_new_once_major,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'small'  then d.payments else 0 end), 0) as payments_new_monthly_small,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'medium' then d.payments else 0 end), 0) as payments_new_monthly_medium,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'large'  then d.payments else 0 end), 0) as payments_new_monthly_large,
+    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'major'  then d.payments else 0 end), 0) as payments_new_monthly_major,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_once_small,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_once_medium,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_once_large,
+    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'major'  then b.value_added else 0 end), 0) as value_added_once_major,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_monthly_small,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_monthly_medium,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_monthly_large,
+    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'major'  then b.value_added else 0 end), 0) as value_added_monthly_major,
+    coalesce(sum(case when b.bucket = 'small'  then b.value_lost else 0 end), 0) as value_lost_small,
+    coalesce(sum(case when b.bucket = 'medium' then b.value_lost else 0 end), 0) as value_lost_medium,
+    coalesce(sum(case when b.bucket = 'large'  then b.value_lost else 0 end), 0) as value_lost_large,
+    coalesce(sum(case when b.bucket = 'major'  then b.value_lost else 0 end), 0) as value_lost_major,
+    coalesce(sum(b.value_added), 0) + coalesce(sum(b.value_lost), 0) as value_total,
+    coalesce(sum(case when a.frequency = 'monthly' then a.payments else 0 end), 0) as monthly_donors,
+    coalesce(sum(a.payments), 0) as payments_total,
+    coalesce(sum(a.amount), 0) as dkk_total,
+    coalesce(sum(b.value_added), 0) as value_added,
+    coalesce(sum(case when b.frequency = 'once' then b.value_added else 0 end), 0) as value_added_once,
+    coalesce(sum(case when b.frequency = 'monthly' then b.value_added else 0 end), 0) as value_added_monthly,
+    coalesce(sum(b.value_lost), 0) as value_lost,
+    coalesce(max(c.amount), 0)::numeric as amount_new,
+    coalesce(max(c.payments), 0)::numeric as payments_new
+    /* sql-formatter-enable */
+from
+    payments a
+    full outer join value_added_lost b on a.period = b.period
+    and a.frequency = b.frequency
+    and a.bucket = b.bucket
+    full outer join first_time_donations c on a.period = c.period
+    full outer join payments_new_donors d on a.period = d.period
+    and a.frequency = d.frequency
+    and a.bucket = d.bucket
+group by
+    coalesce(a.period, b.period)
+order by
+    coalesce(a.period, b.period) desc;
+
+grant
+select
+    on time_distribution_daily to everyone;
 
 --------------------------------------
 create view transfer_pending as
-with
-    data as (
-        select
-            c.created_at as donated_at,
-            d.amount,
-            d.recipient,
-            sum(d.amount) over (
-                order by
-                    c.created_at
-            ) as potential_cutoff
-        from
-            donation d
-            join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
-            and c.transfer_id is null
-    )
 select
-    *
+    charged_at,
+    amount,
+    earmark
 from
-    data
+    charged_donations_by_transfer cdt
+where
+    earmark not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
+    and transfer_id is null
 order by
-    donated_at;
+    charged_at;
 
 grant
 select
@@ -2027,45 +1814,32 @@ create view kpi as
 with
     dkk_total as (
         select
-            round(sum(d.amount))::numeric as dkk_total
+            round(sum(amount))::numeric as dkk_total
         from
-            donation d
-            inner join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            charged_donations
     ),
     dkk_total_ops as (
         select
-            round(sum(d.amount))::numeric as dkk_total_ops
+            round(sum(amount))::numeric as dkk_total_ops
         from
-            donation d
-            inner join charge c on c.donation_id = d.id
+            charged_donations cd
+            join earmark e on e.donation_id = cd.donation_id
         where
-            c.status = 'charged'
-            and d.recipient = 'Giv Effektivts arbejde og vækst'
+            e.recipient = 'Giv Effektivts arbejde og vækst'
     ),
     dkk_pending_transfer as (
         select
-            coalesce(round(sum(d.amount))::numeric, 0) as dkk_pending_transfer
+            coalesce(round(sum(amount))::numeric, 0) as dkk_pending_transfer
         from
-            donation d
-            inner join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
-            and transfer_id is null
+            transfer_pending
     ),
     dkk_last_30_days as (
         select
-            round(sum(d.amount))::numeric as dkk_last_30_days
+            round(sum(amount))::numeric as dkk_last_30_days
         from
-            donation d
-            inner join charge c on c.donation_id = d.id
+            charged_donations
         where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
-            and c.created_at >= date_trunc('day', now()) - interval '30 days'
+            charged_at >= date_trunc('day', now()) - interval '30 days'
     ),
     dkk_recurring_next_year as (
         select
@@ -2073,29 +1847,22 @@ with
         from
             (
                 select distinct
-                    on (d.id) amount
+                    on (donation_id) amount
                 from
-                    charge c
-                    join donation d on c.donation_id = d.id
+                    charged_or_created_donations
                 where
-                    c.status in ('charged', 'created')
-                    and d.frequency = 'monthly'
-                    and d.recipient != 'Giv Effektivts medlemskab'
-                    and not d.cancelled
-                    and c.created_at >= date_trunc('month', now()) - interval '1 month'
+                    frequency = 'monthly'
+                    and not cancelled
+                    and charged_at >= date_trunc('month', now()) - interval '1 month'
             ) c1
     ),
     members_confirmed as (
         select
-            count(distinct p.tin)::numeric as members_confirmed
+            count(distinct tin)::numeric as members_confirmed
         from
-            donor_with_sensitive_info p
-            inner join donation d on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
+            charged_memberships
         where
-            c.status = 'charged'
-            and d.recipient = 'Giv Effektivts medlemskab'
-            and c.created_at >= date_trunc('year', now())
+            charged_at >= date_trunc('year', now())
     ),
     members_pending_renewal as (
         select
@@ -2103,35 +1870,28 @@ with
         from
             (
                 select distinct
-                    on (p.tin) p.tin,
-                    c.created_at
+                    on (tin) tin,
+                    charged_at
                 from
-                    donor_with_sensitive_info p
-                    inner join donation d on d.donor_id = p.id
-                    inner join charge c on c.donation_id = d.id
+                    charged_memberships
                 where
-                    c.status = 'charged'
-                    and d.recipient = 'Giv Effektivts medlemskab'
-                    and not d.cancelled
+                    not cancelled
                 order by
-                    p.tin,
-                    c.created_at desc
+                    tin,
+                    charged_at desc
             ) a
         where
-            created_at < date_trunc('year', now())
+            charged_at < date_trunc('year', now())
     ),
     monthly_donors as (
         select
-            count(distinct c.donation_id)::numeric as monthly_donors
+            count(distinct donation_id)::numeric as monthly_donors
         from
-            charge c
-            join donation d on c.donation_id = d.id
+            charged_or_created_donations
         where
-            c.status in ('charged', 'created')
-            and d.frequency = 'monthly'
-            and d.recipient != 'Giv Effektivts medlemskab'
-            and not d.cancelled
-            and c.created_at >= date_trunc('month', now()) - interval '1 month'
+            frequency = 'monthly'
+            and not cancelled
+            and charged_at >= date_trunc('month', now()) - interval '1 month'
     ),
     number_of_donors as (
         select
@@ -2145,12 +1905,7 @@ with
                         else count(distinct tin)
                     end as donors
                 from
-                    donor_with_sensitive_info p
-                    join donation d on d.donor_id = p.id
-                    join charge c on c.donation_id = d.id
-                where
-                    c.status = 'charged'
-                    and d.recipient != 'Giv Effektivts medlemskab'
+                    charged_donations
                 group by
                     email
             )
@@ -2188,15 +1943,13 @@ with
         from
             (
                 select
-                    max(c.created_at) as max_charged_at
+                    max(charged_at) as max_charged_at
                 from
-                    donor_with_sensitive_info p
-                    inner join donation d on d.donor_id = p.id
-                    inner join charge c on c.donation_id = d.id
+                    donations_overview
                 where
-                    c.status = 'charged'
+                    status = 'charged'
                 group by
-                    p.email
+                    email
             )
     ),
     missing_gavebrev_income_proof as (
@@ -2254,22 +2007,17 @@ create view donor_impact_report as
 with
     data as (
         select
-            p.email,
+            email,
             min(t.recipient) as transferred_to,
             min(t.created_at) as transferred_at,
-            sum(d.amount) as amount,
+            sum(amount) as amount,
             round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
             round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 2) as lives
         from
-            donor_with_sensitive_info p
-            join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-            left join transfer t on c.transfer_id = t.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            charged_donations_by_transfer cdt
+            left join transfer t on cdt.transfer_id = t.id
         group by
-            p.email,
+            email,
             t.id
     )
 select
@@ -2297,7 +2045,7 @@ with
             on (p.email) p.email,
             p.created_at as registered_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on d.donor_id = p.id
             join charge c on c.donation_id = d.id
         where
@@ -2311,7 +2059,7 @@ with
             on (p.email) p.email,
             p.name
         from
-            donor_with_contact_info p
+            donor p
         where
             p.name is not null
         order by
@@ -2323,7 +2071,7 @@ with
             on (p.email) p.email,
             p.tin as cvr
         from
-            donor_with_sensitive_info p
+            donor p
         where
             p.tin ~ '^\d{8}$'
             and (
@@ -2366,7 +2114,7 @@ with
                 )
             end as age
         from
-            donor_with_sensitive_info p
+            donor p
         where
             p.tin is not null
         order by
@@ -2375,83 +2123,67 @@ with
     ),
     members as (
         select distinct
-            on (p.email) p.email,
-            p.name
+            on (email) email,
+            name
         from
-            donor_with_sensitive_info p
-            join donation d on d.donor_id = p.id
-            join charge c on c.donation_id = d.id
+            charged_memberships
         where
-            c.status = 'charged'
-            and d.recipient = 'Giv Effektivts medlemskab'
-            and c.created_at >= now() - interval '1 year'
+            charged_at >= now() - interval '1 year'
     ),
     donations as (
         select
-            p.email,
-            sum(d.amount) as total_donated,
+            email,
+            sum(amount) as total_donated,
             count(1) as donations_count
         from
-            donor_with_contact_info p
-            join donation d on d.donor_id = p.id
-            join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            charged_donations
         group by
-            p.email
+            email
     ),
     latest_donations as (
         select distinct
-            on (p.email) p.email,
-            d.amount as last_donated_amount,
-            d.method as last_donated_method,
-            d.frequency as last_donated_frequency,
-            d.recipient as last_donated_recipient,
-            d.tax_deductible as last_donation_tax_deductible,
-            d.cancelled as last_donation_cancelled,
-            c.created_at as last_donated_at
+            on (email) email,
+            amount as last_donated_amount,
+            method as last_donated_method,
+            frequency as last_donated_frequency,
+            tax_deductible as last_donation_tax_deductible,
+            cancelled as last_donation_cancelled,
+            charged_at as last_donated_at
         from
-            donor_with_contact_info p
-            join donation d on d.donor_id = p.id
-            join charge c on c.donation_id = d.id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            charged_donations
         order by
-            p.email,
-            c.created_at desc
+            email,
+            charged_at desc
     ),
     first_donations as (
         select
-            p.email,
-            min(c.created_at) filter (
+            email,
+            min(charged_at) filter (
                 where
-                    d.recipient = 'Giv Effektivts medlemskab'
+                    e.recipient = 'Giv Effektivts medlemskab'
             ) as first_membership_at,
-            min(c.created_at) filter (
+            min(charged_at) filter (
                 where
-                    d.recipient != 'Giv Effektivts medlemskab'
+                    e.recipient != 'Giv Effektivts medlemskab'
             ) as first_donation_at,
-            min(c.created_at) filter (
+            min(charged_at) filter (
                 where
-                    d.frequency = 'monthly'
+                    frequency = 'monthly'
             ) as first_monthly_donation_at
         from
-            donor_with_contact_info p
-            join donation d on d.donor_id = p.id
-            join charge c on c.donation_id = d.id
+            donations_overview d
+            join earmark e on d.donation_id = e.donation_id
         where
-            c.status = 'charged'
+            status = 'charged'
         group by
-            p.email
+            email
     ),
     has_gavebrev as (
         select
             p.email
         from
             gavebrev g
-            join donor_with_contact_info p on g.donor_id = p.id
+            join donor p on g.donor_id = p.id
         where
             g.started_at <= date_trunc('year', now())
             and stopped_at > date_trunc('year', now())
@@ -2489,7 +2221,7 @@ with
         from
             ignored_renewals
         where
-            recipient = 'Giv Effektivts medlemskab'
+            is_membership
         order by
             email,
             expired_at desc
@@ -2502,7 +2234,7 @@ with
         from
             ignored_renewals
         where
-            recipient != 'Giv Effektivts medlemskab'
+            not is_membership
         order by
             email,
             expired_at desc
@@ -2530,7 +2262,6 @@ with
             l.last_donated_amount,
             l.last_donated_method,
             l.last_donated_frequency,
-            l.last_donated_recipient,
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
@@ -2585,7 +2316,7 @@ grant
 select
     on crm_export to reader_contact;
 
---
+--------------------------------------
 create function general_assembly_invitations (in meeting_time timestamptz) returns table (email text, first_names text, can_vote text, voting_codes text) language plpgsql as $$
 begin return query
 with
@@ -2596,7 +2327,7 @@ with
             min(c.created_at) as min_charged_at,
             max(c.created_at) as max_charged_at
         from
-            donor_with_sensitive_info p
+            donor p
             inner join donation d on d.donor_id = p.id
             inner join charge c on c.donation_id = d.id
         where
@@ -2699,23 +2430,18 @@ execute on function general_assembly_invitations (timestamptz) to reader_contact
 --------------------------------------
 create view gwwc_money_moved as
 select
-    to_char(c.created_at, 'YYYY-MM') as month,
+    to_char(charged_at, 'YYYY-MM') as month,
     t.recipient || case
         when min(t.created_at) < '2024-11-29' then ' (via GiveWell)'
         else ''
     end as recipient,
     'GHD' as cause,
-    sum(d.amount) as amount
+    sum(amount) as amount
 from
-    donor_with_contact_info p
-    join donation d on d.donor_id = p.id
-    join charge_with_gateway_info c on c.donation_id = d.id
-    join transfer t on c.transfer_id = t.id
-where
-    c.status = 'charged'
-    and d.recipient not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
+    charged_donations_by_transfer cdt
+    left join transfer t on cdt.transfer_id = t.id
 group by
-    to_char(c.created_at, 'YYYY-MM'),
+    to_char(charged_at, 'YYYY-MM'),
     t.recipient
 order by
     month;
@@ -2744,23 +2470,20 @@ with
     ),
     monthly_donations_charged_exactly_once as (
         select
-            id
+            donation_id
         from
             (
                 select
-                    d.id,
-                    bool_or(d.cancelled) as cancelled,
-                    count(c.id) as number_of_donations,
-                    max(c.created_at) as last_donated_at
+                    donation_id,
+                    bool_or(cancelled) as cancelled,
+                    count(charge_id) as number_of_donations,
+                    max(charged_at) as last_donated_at
                 from
-                    donation d
-                    join charge c on d.id = c.donation_id
+                    charged_donations
                 where
-                    c.status = 'charged'
-                    and recipient != 'Giv Effektivts medlemskab'
-                    and frequency = 'monthly'
+                    frequency = 'monthly'
                 group by
-                    d.id
+                    donation_id
             )
         where
             number_of_donations = 1
@@ -2776,12 +2499,12 @@ with
         from
             (
                 select
-                    date_trunc('month', c.created_at) as period,
-                    date_trunc('month', c.created_at) as month,
-                    c.created_at,
-                    p.email,
-                    d.id as donation_id,
-                    d.cancelled,
+                    date_trunc('month', charged_at) as period,
+                    date_trunc('month', charged_at) as month,
+                    charged_at,
+                    email,
+                    donation_id,
+                    cancelled,
                     amount,
                     case
                         when exists (
@@ -2790,17 +2513,12 @@ with
                             from
                                 monthly_donations_charged_exactly_once m
                             where
-                                d.id = m.id
+                                cd.donation_id = m.donation_id
                         ) then 'once'
                         else frequency
                     end as frequency
                 from
-                    donor_with_contact_info p
-                    join donation d on p.id = d.donor_id
-                    join charge c on c.donation_id = d.id
-                where
-                    c.status = 'charged'
-                    and d.recipient != 'Giv Effektivts medlemskab'
+                    charged_donations cd
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -2816,18 +2534,13 @@ with
                 select distinct
                     on (email) email,
                     amount,
-                    date_trunc('month', c.created_at) as period,
-                    c.created_at
+                    date_trunc('month', charged_at) as period,
+                    charged_at
                 from
-                    donor_with_contact_info p
-                    join donation d on p.id = d.donor_id
-                    join charge c on d.id = c.donation_id
-                where
-                    c.status = 'charged'
-                    and d.recipient != 'Giv Effektivts medlemskab'
+                    charged_donations
                 order by
                     email,
-                    c.created_at
+                    charged_at
             )
         group by
             period
@@ -2842,7 +2555,7 @@ with
             (
                 select distinct
                     on (donation_id) email,
-                    created_at as last_donated_at,
+                    charged_at as last_donated_at,
                     amount,
                     frequency,
                     cancelled
@@ -2852,7 +2565,7 @@ with
                     frequency = 'monthly'
                 order by
                     donation_id,
-                    created_at desc
+                    charged_at desc
             ) a
         where
             last_donated_at + interval '40 days' < now()
@@ -2879,7 +2592,7 @@ with
                     successful_charges
                 order by
                     donation_id,
-                    created_at
+                    charged_at
             )
         group by
             email,
@@ -2926,5 +2639,225 @@ order by
 grant
 select
     on value_lost_analysis to reader_contact;
+
+--------------------------------------
+create function register_donation (
+    p_amount numeric,
+    p_frequency donation_frequency,
+    p_gateway payment_gateway,
+    p_method payment_method,
+    p_tax_deductible boolean,
+    p_fundraiser_id uuid,
+    p_message text,
+    p_earmarks jsonb,
+    p_email text,
+    p_tin text default null,
+    p_name text default null,
+    p_address text default null,
+    p_postcode text default null,
+    p_city text default null,
+    p_country text default null,
+    p_birthday date default null
+) returns donation language plpgsql as $$
+declare
+    v_donor donor%rowtype;
+    v_donation donation%rowtype;
+    v_total numeric;
+    v_dup text;
+    v_has_nonpos boolean;
+    v_membership_present boolean;
+    v_gateway_metadata jsonb;
+begin
+    if p_tax_deductible and p_tin is null then
+        raise exception 'tax-deductible donation requires tin';
+    end if;
+
+    if jsonb_typeof(p_earmarks) <> 'array' or jsonb_array_length(p_earmarks) = 0 then
+        raise exception 'earmarks must be a non-empty JSON array of {recipient, percentage}';
+    end if;
+
+    select exists(
+        select 1 from jsonb_array_elements(p_earmarks) e
+        where e->>'recipient' = 'Giv Effektivts medlemskab'
+    ) into v_membership_present;
+
+    if jsonb_array_length(p_earmarks) > 1 and v_membership_present then
+        raise exception 'including membership with another earmark is not supported yet';
+    end if;
+
+    select coalesce(sum((e->>'percentage')::numeric),0) into v_total
+    from jsonb_array_elements(p_earmarks) e;
+
+    if round(v_total, 6) <> 100 then
+        raise exception 'sum of earmark percentages must be 100, got %', v_total;
+    end if;
+
+    select exists(
+        select 1
+        from jsonb_array_elements(p_earmarks) e
+        where (e->>'percentage')::numeric <= 0
+    ) into v_has_nonpos;
+
+    if v_has_nonpos then
+        raise exception 'all earmark percentages must be > 0';
+    end if;
+
+    select r into v_dup
+    from (
+        select (e->>'recipient') as r, count(*) as c
+        from jsonb_array_elements(p_earmarks) e
+        group by 1
+        having count(*) > 1
+    ) d
+    limit 1;
+
+    if v_dup is not null then
+        raise exception 'duplicate earmark %', v_dup;
+    end if;
+
+    if p_gateway = 'Quickpay' then
+        v_gateway_metadata := format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb;
+    elsif p_gateway = 'Bank transfer' then
+        v_gateway_metadata := format('{"bank_msg": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb;
+    else
+        raise exception 'unsupported gateway: %', p_gateway;
+    end if;
+
+    insert into donor(email, tin, name, address, postcode, city, country, birthday)
+    values (p_email, p_tin, p_name, p_address, p_postcode, p_city, p_country, p_birthday)
+    on conflict (email, coalesce(tin,'')) do update
+    set
+        name     = coalesce(excluded.name, donor.name),
+        address  = coalesce(excluded.address, donor.address),
+        postcode = coalesce(excluded.postcode, donor.postcode),
+        city     = coalesce(excluded.city, donor.city),
+        country  = coalesce(excluded.country, donor.country),
+        birthday = coalesce(excluded.birthday, donor.birthday)
+    returning * into v_donor;
+
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+    values (
+        v_donor.id,
+        p_amount,
+        p_frequency,
+        p_gateway,
+        p_method,
+        p_tax_deductible,
+        p_fundraiser_id,
+        p_message,
+        v_gateway_metadata
+    )
+    returning * into v_donation;
+
+    insert into earmark (donation_id, recipient, percentage)
+    select v_donation.id, (e->>'recipient')::donation_recipient, (e->>'percentage')::numeric
+    from jsonb_array_elements(p_earmarks) e;
+
+    return v_donation;
+end
+$$;
+
+grant
+execute on function register_donation (
+    numeric,
+    donation_frequency,
+    payment_gateway,
+    payment_method,
+    boolean,
+    uuid,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    text,
+    text,
+    text,
+    date
+) to writer;
+
+--------------------------------------
+create function recreate_failed_recurring_donation (p_donation_id uuid) returns donation language plpgsql as $$
+declare
+    v_donor donor%rowtype;
+    v_old_earmarks jsonb;
+    v_old_donation donation%rowtype;
+    v_new_donation donation%rowtype;
+begin
+    update donation set cancelled = true where id = p_donation_id;
+
+    select * from donation where id = p_donation_id into v_old_donation;
+
+    if v_old_donation.id is null then
+        raise exception 'recurring donation with ID % not found', p_donation_id;
+    end if;
+
+    select * from donor where id = v_old_donation.donor_id into v_donor;
+
+    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    from earmark
+    where donation_id = p_donation_id
+    into v_old_earmarks;
+
+    select * from register_donation(
+        p_amount => v_old_donation.amount,
+        p_frequency => v_old_donation.frequency,
+        p_gateway => 'Quickpay'::payment_gateway,
+        p_method => 'Credit card'::payment_method,
+        p_tax_deductible => v_old_donation.tax_deductible,
+        p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_message => v_old_donation.message,
+        p_earmarks => v_old_earmarks,
+        p_email => v_donor.email,
+        p_tin => v_donor.tin,
+        p_name => v_donor.name,
+        p_address => v_donor.address,
+        p_postcode => v_donor.postcode,
+        p_city => v_donor.city,
+        p_country => v_donor.country,
+        p_birthday => v_donor.birthday
+    ) into v_new_donation;
+
+    update donation set emailed = 'yes' where id = v_new_donation.id;
+
+    return v_new_donation;
+end
+$$;
+
+grant
+execute on function recreate_failed_recurring_donation (uuid) to writer;
+
+--------------------------------------
+create function register_gavebrev (
+    p_name text,
+    p_email text,
+    p_tin text,
+    p_type gavebrev_type,
+    p_amount numeric,
+    p_minimal_income numeric,
+    p_started_at date,
+    p_stopped_at date
+) returns gavebrev language plpgsql as $$
+declare
+    v_donor donor%rowtype;
+    v_gavebrev gavebrev%rowtype;
+begin
+    insert into donor(email, tin, name)
+    values (p_email, p_tin, p_name)
+    on conflict (email, coalesce(tin,'')) do update
+    set name = coalesce(excluded.name, donor.name)
+    returning * into v_donor;
+
+    insert into gavebrev(donor_id, status, type, amount, minimal_income, started_at, stopped_at)
+    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_started_at, p_stopped_at)
+    returning * into v_gavebrev;
+
+    return v_gavebrev;
+end
+$$;
+
+grant
+execute on function register_gavebrev (text, text, text, gavebrev_type, numeric, numeric, date, date) to writer;
 
 -- migrate:down

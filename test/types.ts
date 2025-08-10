@@ -1,11 +1,21 @@
-import { Donation, DonorWithSensitiveInfo, PaymentGateway } from "../src";
+import type { Donation, DonationRecipient, PaymentGateway } from "../src";
+
+export type Donor = {
+  id: string;
+  created_at: Date;
+  updated_at: Date;
+  name: string;
+  email: string;
+  address: string;
+  postcode: string;
+  city: string;
+  country: string;
+  tin: string;
+  birthday: Date;
+};
 
 export type DonationWithGatewayInfoAny = Donation & {
   gateway_metadata: any;
-};
-
-export type DonorWithOldId = DonorWithSensitiveInfo & {
-  _old_id: string;
 };
 
 export type GatewayWebhook = {
@@ -30,4 +40,10 @@ export type OfficialTaxReportLine = {
   ge_cvr: number;
   ge_notes: string;
   rettekode: number;
+};
+
+export type Earmark = {
+  donation_id: string;
+  recipient: DonationRecipient;
+  percentage: number;
 };

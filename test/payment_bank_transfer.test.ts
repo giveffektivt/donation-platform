@@ -1,16 +1,21 @@
 import {
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   EmailedStatus,
   insertBankTransferData,
   PaymentGateway,
   PaymentMethod,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { findAllCharges, findAllDonations, findAllDonors } from "./repository";
+import {
+  findAllCharges,
+  findAllDonations,
+  findAllDonors,
+  findAllEarmarks,
+} from "./repository";
 
 const client = dbClient();
 
@@ -25,7 +30,7 @@ afterEach(async () => {
 test("One-time donation using bank transfer", async () => {
   const db = await client;
 
-  await insertBankTransferData(db, {
+  const donation = await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -47,6 +52,7 @@ test("One-time donation using bank transfer", async () => {
   const donations = await findAllDonations(db);
   expect(donations).toMatchObject([
     {
+      id: donation.id,
       amount: 10,
       cancelled: false,
       donor_id: donors[0].id,
@@ -54,12 +60,20 @@ test("One-time donation using bank transfer", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
   expect(donations[0].gateway_metadata.bank_msg.substring(0, 2)).toEqual("d-");
   expect(donations[0].gateway_metadata.bank_msg).toHaveLength(6);
+
+  const earmarks = await findAllEarmarks(db);
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      percentage: 100,
+    },
+  ]);
 
   const charges = await findAllCharges(db);
   expect(charges).toHaveLength(0);
@@ -68,7 +82,7 @@ test("One-time donation using bank transfer", async () => {
 test("Monthly donation using bank transfer", async () => {
   const db = await client;
 
-  await insertBankTransferData(db, {
+  const donation = await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -90,6 +104,7 @@ test("Monthly donation using bank transfer", async () => {
   const donations = await findAllDonations(db);
   expect(donations).toMatchObject([
     {
+      id: donation.id,
       amount: 10,
       cancelled: false,
       donor_id: donors[0].id,
@@ -97,12 +112,20 @@ test("Monthly donation using bank transfer", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.BankTransfer,
       method: PaymentMethod.BankTransfer,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
   expect(donations[0].gateway_metadata.bank_msg.substring(0, 2)).toEqual("d-");
   expect(donations[0].gateway_metadata.bank_msg).toHaveLength(6);
+
+  const earmarks = await findAllEarmarks(db);
+  expect(earmarks).toMatchObject([
+    {
+      donation_id: donation.id,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      percentage: 100,
+    },
+  ]);
 
   const charges = await findAllCharges(db);
   expect(charges).toHaveLength(0);

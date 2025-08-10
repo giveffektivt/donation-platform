@@ -1,22 +1,23 @@
 import { setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   insertChargesForDonationsToCreateCharges,
-  insertDonationViaBankTransfer,
-  insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
-  insertMembershipViaQuickpay,
   PaymentMethod,
-  setDonationCancelledById,
+  registerDonationViaBankTransfer,
+  registerDonationViaQuickpay,
+  registerMembershipViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import { insertChargeWithCreatedAt } from "./repository";
+import {
+  insertChargeWithCreatedAt,
+  setDonationCancelledById,
+} from "./repository";
 
 const client = dbClient();
 
@@ -31,42 +32,50 @@ afterEach(async () => {
 test("Insert charges for donations that need new charges", async () => {
   const db = await client;
 
-  // Two donors
-  const donor1 = await insertDonorWithSensitiveInfo(db, {
+  // Two donors having two donations each (3 recurring and 1 one-time)
+  const donation1 = await registerMembershipViaQuickpay(db, {
     email: "hello@example.com",
+    tin: "111111-1111",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
   });
 
-  const donor2 = await insertDonorWithSensitiveInfo(db, {
-    email: "world@example.com",
-  });
-
-  // ...having two donations each (3 recurring and 1 one-time)
-  const donation1 = await insertMembershipViaQuickpay(db, {
-    donor_id: donor1.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  const donation2 = await insertDonationViaScanpay(db, {
-    donor_id: donor1.id,
+  const donation2 = await registerDonationViaQuickpay(db, {
+    email: "hello@example.com",
     amount: 88,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
-  const donation3 = await insertDonationViaScanpay(db, {
-    donor_id: donor2.id,
+  const donation3 = await registerDonationViaQuickpay(db, {
+    email: "world@example.com",
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
+    tin: "222222-2222",
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
-  const donation4 = await insertMembershipViaQuickpay(db, {
-    donor_id: donor2.id,
-    method: PaymentMethod.MobilePay,
+  const donation4 = await registerMembershipViaQuickpay(db, {
+    email: "world@example.com",
+    tin: "222222-2222",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
   });
 
   const now = setDate(new Date(), 1);
@@ -131,13 +140,16 @@ test("Insert charges for donations that need new charges", async () => {
 test("Donation that has no charges should not have new charges created", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const _donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   expect(await insertChargesForDonationsToCreateCharges(db)).toEqual([]);
@@ -146,13 +158,16 @@ test("Donation that has no charges should not have new charges created", async (
 test("Donation that is cancelled should not have new charges created", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   await setDonationCancelledById(db, donation.id);
@@ -169,17 +184,15 @@ test("Donation that is cancelled should not have new charges created", async () 
 test("Bank transfer donation should not have new charges created", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donation = await registerDonationViaBankTransfer(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaBankTransfer(db, {
-    donor_id: donor.id,
-    gateway_metadata: { bank_msg: "1234" },
-    amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
-    frequency: DonationFrequency.Monthly,
+    amount: 100,
+    frequency: DonationFrequency.Once,
     tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   await insertChargeWithCreatedAt(db, {
@@ -194,13 +207,14 @@ test("Bank transfer donation should not have new charges created", async () => {
 test("Active donation whose past charge was unsuccessful should *still* have new charges created (until we set it as cancelled)", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
-    email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
-    method: PaymentMethod.CreditCard,
+  const donation = await registerMembershipViaQuickpay(db, {
+    email: "world@example.com",
+    tin: "111111-1111",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
   });
 
   const now = setDate(new Date(), 1);
@@ -219,5 +233,7 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     },
   ];
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(expected);
+  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(
+    expected,
+  );
 });

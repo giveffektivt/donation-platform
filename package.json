@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "psql -c 'drop database if exists test' && psql -c 'create database test' && psql -d test < db/schema.sql && PGDATABASE=test vitest --exclude '.direnv/**'",
+    "test": "psql -c 'drop database if exists test' && psql -c 'create database test' && psql -c 'alter database test set jit = off' && psql -d test < db/schema.sql && PGDATABASE=test vitest --exclude '.direnv/**'",
     "create-index": "yarn cti -b -w -q \\\" ./components ./src"
   },
   "dependencies": {

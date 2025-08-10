@@ -31,11 +31,15 @@ export async function getTransferredDistribution(
 
 export async function getTimeDistribution(
   client: PoolClient,
-  from: string | null,
-  to: string | null,
+  from: string,
+  to: string,
+  useDaily: boolean,
 ): Promise<TimeDistribution[]> {
   return (
-    await client.query("select * from time_distribution($1, $2)", [from, to])
+    await client.query(
+      `select * from time_distribution_${useDaily ? "daily" : "monthly"} where date between $1 and $2`,
+      [from, to],
+    )
   ).rows;
 }
 
@@ -93,7 +97,7 @@ export async function getFundraiserKpi(
           data.total_amount
       from
           data
-          join donation_with_contact_info d on data.id = d.id
+          join donation d on data.id = d.id
       order by
           d.created_at desc;
     `,
@@ -116,7 +120,7 @@ export async function getDailyDonatedStats(
             join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
+            and not exists (select 1 from earmark where donation_id = d.id and recipient = 'Giv Effektivts medlemskab')
         group by
             date_trunc('day', c.created_at)
         order by

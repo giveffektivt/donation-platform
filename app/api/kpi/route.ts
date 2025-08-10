@@ -12,8 +12,13 @@ import {
 } from "src";
 
 export async function GET(request: NextRequest) {
-  const from = toISO(request.nextUrl.searchParams.get("from"));
-  const to = toISO(request.nextUrl.searchParams.get("to"));
+  const params = request.nextUrl.searchParams;
+  const from = toISOOrDefault(params.get("from"), "2000-01-01T00:00:00.000Z");
+  const to = toISOOrDefault(params.get("to"), "2100-01-01T00:00:00.000Z");
+
+  const useDaily =
+    Math.abs(new Date(to).getTime() - new Date(from).getTime()) <
+    90 * 24 * 60 * 60 * 1000;
 
   let db = null;
 
@@ -25,8 +30,11 @@ export async function GET(request: NextRequest) {
       pending: await getPendingDistribution(db),
       transferred: await getTransferredDistribution(db),
       transfer_overview: await getTransferOverview(db),
-      collected: await getTimeDistribution(db, from, to),
-      clearhaus: await getClearhausUpcomingSettlement(db, process.env.CLEARHAUS_MERCHANT_ID)
+      collected: await getTimeDistribution(db, from, to, useDaily),
+      clearhaus: await getClearhausUpcomingSettlement(
+        db,
+        process.env.CLEARHAUS_MERCHANT_ID,
+      ),
     };
 
     return Response.json(result, {
@@ -42,14 +50,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function toISO(timestamp: string | null): string | null {
+function toISOOrDefault(timestamp: string | null, fallback: string): string {
   if (!timestamp) {
-    return null;
+    return fallback;
   }
-
-  try {
-    return new Date(Number.parseInt(timestamp, 10)).toISOString();
-  } catch {
-    return null;
+  const n = Number.parseInt(timestamp, 10);
+  if (Number.isNaN(n)) {
+    return fallback;
   }
+  const d = new Date(n);
+  return Number.isNaN(d.getTime()) ? fallback : d.toISOString();
 }

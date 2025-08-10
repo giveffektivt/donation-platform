@@ -1,12 +1,10 @@
 import type { PoolClient } from "pg";
 import {
-  type Donation,
   DonationFrequency,
   DonationRecipient,
   type DonationToEmail,
   type DonationWithGatewayInfoBankTransfer,
   type DonationWithGatewayInfoQuickpay,
-  type DonationWithGatewayInfoScanpay,
   type EmailedStatus,
   type FailedRecurringDonation,
   type Fundraiser,
@@ -32,19 +30,12 @@ export async function setDonationEmailed(
   ]);
 }
 
-export async function setDonationCancelledById(client: PoolClient, id: string) {
-  return await client.query(
-    "update donation set cancelled = true where id = $1",
-    [id],
-  );
-}
-
 export async function setDonationCancelledByQuickpayOrder(
   client: PoolClient,
   quickpay_order: string,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
+    `update donation set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
     [quickpay_order],
   );
 }
@@ -55,113 +46,167 @@ export async function setDonationMethodByQuickpayOrder(
   method: PaymentMethod,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
+    `update donation set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
     [method, quickpay_order],
   );
 }
 
-export async function insertDonationViaScanpay(
+export async function registerDonationViaQuickpay(
   client: PoolClient,
-  donation: Partial<Donation>,
-): Promise<DonationWithGatewayInfoScanpay> {
-  return (
-    await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       returning *`,
-      [
-        donation.donor_id,
-        donation.amount,
-        donation.recipient,
-        donation.frequency,
-        PaymentGateway.Scanpay,
-        donation.method,
-        donation.tax_deductible,
-        donation.fundraiser_id,
-        donation.message,
-      ],
-    )
-  ).rows[0];
-}
-
-export async function insertDonationViaQuickpay(
-  client: PoolClient,
-  donation: Partial<Donation>,
+  data: {
+    amount: number;
+    frequency: DonationFrequency;
+    method: PaymentMethod;
+    tax_deductible: boolean;
+    fundraiser_id?: string;
+    message?: string;
+    earmarks: { recipient: DonationRecipient; percentage: number }[];
+    email: string;
+    tin?: string;
+  },
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
-       returning *`,
+      `select * from register_donation(
+        p_amount => $1,
+        p_frequency => $2,
+        p_gateway => $3,
+        p_method => $4,
+        p_tax_deductible => $5,
+        p_fundraiser_id => $6,
+        p_message => $7,
+        p_earmarks => $8,
+        p_email => $9,
+        p_tin => $10
+      )`,
       [
-        donation.donor_id,
-        donation.amount,
-        donation.recipient,
-        donation.frequency,
+        data.amount,
+        data.frequency,
         PaymentGateway.Quickpay,
-        donation.method,
-        donation.tax_deductible,
-        donation.fundraiser_id,
-        donation.message,
+        data.method,
+        data.tax_deductible,
+        data.fundraiser_id,
+        data.message,
+        JSON.stringify(data.earmarks),
+        data.email,
+        data.tin,
       ],
     )
   ).rows[0];
 }
 
-export async function insertMembershipViaQuickpay(
+export async function registerMembershipViaQuickpay(
   client: PoolClient,
-  donation: Partial<Donation>,
+  data: {
+    email: string;
+    tin: string;
+    name: string;
+    address: string;
+    postcode: string;
+    city: string;
+    country: string;
+    birthday?: Date;
+  },
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
-       returning *`,
+      `select * from register_donation(
+        p_amount => $1,
+        p_frequency => $2,
+        p_gateway => $3,
+        p_method => $4,
+        p_tax_deductible => $5,
+        p_fundraiser_id => $6,
+        p_message => $7,
+        p_earmarks => $8,
+        p_email => $9,
+        p_tin => $10,
+        p_name => $11,
+        p_address => $12,
+        p_postcode => $13,
+        p_city => $14,
+        p_country => $15,
+        p_birthday => $16
+      )`,
       [
-        donation.donor_id,
         50,
-        DonationRecipient.GivEffektivtsMedlemskab,
         DonationFrequency.Yearly,
         PaymentGateway.Quickpay,
-        donation.method,
+        PaymentMethod.CreditCard,
         false,
+        null,
+        null,
+        JSON.stringify([
+          {
+            recipient: DonationRecipient.GivEffektivtsMedlemskab,
+            percentage: 100,
+          },
+        ]),
+        data.email,
+        data.tin,
+        data.name,
+        data.address,
+        data.postcode,
+        data.city,
+        data.country,
+        data.birthday,
       ],
     )
   ).rows[0];
 }
 
-export async function insertDonationViaBankTransfer(
+export async function registerDonationViaBankTransfer(
   client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoBankTransfer>,
+  data: {
+    amount: number;
+    frequency: DonationFrequency;
+    tax_deductible: boolean;
+    fundraiser_id?: string;
+    message?: string;
+    earmarks: { recipient: DonationRecipient; percentage: number }[];
+    email: string;
+    tin?: string;
+  },
 ): Promise<DonationWithGatewayInfoBankTransfer> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb)
-       returning *`,
+      `select * from register_donation(
+        p_amount => $1,
+        p_frequency => $2,
+        p_gateway => $3,
+        p_method => $4,
+        p_tax_deductible => $5,
+        p_fundraiser_id => $6,
+        p_message => $7,
+        p_earmarks => $8,
+        p_email => $9,
+        p_tin => $10
+      )`,
       [
-        donation.donor_id,
-        donation.amount,
-        donation.recipient,
-        donation.frequency,
+        data.amount,
+        data.frequency,
         PaymentGateway.BankTransfer,
         PaymentMethod.BankTransfer,
-        donation.tax_deductible,
-        donation.fundraiser_id,
-        donation.message,
+        data.tax_deductible,
+        data.fundraiser_id,
+        data.message,
+        JSON.stringify(data.earmarks),
+        data.email,
+        data.tin,
       ],
     )
   ).rows[0];
 }
 
-export async function setDonationScanpayId(
+export async function recreateFailedRecurringDonation(
   client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanpay>,
-) {
-  return await client.query(
-    `update donation_with_sensitive_info set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
-    [donation.gateway_metadata?.scanpay_id, donation.id],
-  );
+  donation_id: string,
+): Promise<DonationWithGatewayInfoQuickpay> {
+  return (
+    await client.query(`select * from recreate_failed_recurring_donation($1)`, [
+      donation_id,
+    ])
+  ).rows[0];
 }
 
 export async function setDonationQuickpayId(
@@ -169,21 +214,9 @@ export async function setDonationQuickpayId(
   donation: Partial<DonationWithGatewayInfoQuickpay>,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
+    `update donation set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
     [donation.gateway_metadata?.quickpay_id, donation.id],
   );
-}
-
-export async function getDonationIdsByOldDonorId(
-  client: PoolClient,
-  old_donor_id: string,
-): Promise<string[]> {
-  return (
-    await client.query(
-      "select donation_id from old_ids_map where old_donor_id = $1",
-      [old_donor_id],
-    )
-  ).rows.map((r) => r.donation_id);
 }
 
 export async function getFailedRecurringDonations(
@@ -199,8 +232,8 @@ export async function getFailedRecurringDonationByQuickpayOrder(
   return (
     await client.query(
       `select p.id as donor_id, p.email as donor_email, d.recipient, d.amount, p.name as donor_name, d.gateway_metadata ->> 'quickpay_order' as quickpay_order
-       from donor_with_contact_info p
-       join donation_with_sensitive_info d on p.id = d.donor_id
+       from donor p
+       join donation d on p.id = d.donor_id
        where d.gateway_metadata ->> 'quickpay_order' = $1`,
       [quickpay_order],
     )
@@ -213,7 +246,7 @@ export async function getDonationToUpdateQuickpayPaymentInfoById(
 ): Promise<DonationWithGatewayInfoQuickpay | null> {
   return (
     await client.query(
-      `select d.* from donation_with_sensitive_info d
+      `select d.* from donation d
        left join charge c on d.id = c.donation_id and c.status != 'created'
        where d.id = $1 and c.donation_id is null and d.gateway = 'Quickpay' and d.frequency != 'once' and not d.cancelled`,
       [id],
