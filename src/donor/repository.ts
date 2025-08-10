@@ -1,13 +1,13 @@
 import { PoolClient } from "pg";
-import { DonorWithSensitiveInfo } from "src";
+import { Donor } from "src";
 
-export async function insertDonorWithSensitiveInfo(
+export async function insertDonor(
   client: PoolClient,
-  donor: Partial<DonorWithSensitiveInfo>
-): Promise<DonorWithSensitiveInfo> {
+  donor: Partial<Donor>,
+): Promise<Donor> {
   return (
     await client.query(
-      "insert into donor_with_sensitive_info(name, email, address, postcode, city, tin, birthday, country) values ($1, $2, $3, $4, $5, $6, $7, $8) returning *",
+      "insert into donor(name, email, address, postcode, city, tin, birthday, country) values ($1, $2, $3, $4, $5, $6, $7, $8) returning *",
       [
         donor.name,
         donor.email,
@@ -17,7 +17,7 @@ export async function insertDonorWithSensitiveInfo(
         donor.tin,
         donor.birthday,
         donor.country,
-      ]
+      ],
     )
   ).rows[0];
 }

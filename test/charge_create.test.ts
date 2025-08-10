@@ -9,7 +9,7 @@ import {
   insertChargesForDonationsToCreateCharges,
   insertDonationViaBankTransfer,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   insertMembershipViaQuickpay,
   PaymentMethod,
   setDonationCancelledById,
@@ -32,11 +32,11 @@ test("Insert charges for donations that need new charges", async () => {
   const db = await client;
 
   // Two donors
-  const donor1 = await insertDonorWithSensitiveInfo(db, {
+  const donor1 = await insertDonor(db, {
     email: "hello@example.com",
   });
 
-  const donor2 = await insertDonorWithSensitiveInfo(db, {
+  const donor2 = await insertDonor(db, {
     email: "world@example.com",
   });
 
@@ -131,7 +131,7 @@ test("Insert charges for donations that need new charges", async () => {
 test("Donation that has no charges should not have new charges created", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -146,7 +146,7 @@ test("Donation that has no charges should not have new charges created", async (
 test("Donation that is cancelled should not have new charges created", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -169,7 +169,7 @@ test("Donation that is cancelled should not have new charges created", async () 
 test("Bank transfer donation should not have new charges created", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -194,7 +194,7 @@ test("Bank transfer donation should not have new charges created", async () => {
 test("Active donation whose past charge was unsuccessful should *still* have new charges created (until we set it as cancelled)", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 

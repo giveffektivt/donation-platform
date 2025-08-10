@@ -8,7 +8,7 @@ import {
   insertMembershipViaQuickpay,
   insertDonationViaBankTransfer,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   PaymentGateway,
   PaymentMethod,
   insertFundraiser,
@@ -29,7 +29,7 @@ afterEach(async () => {
 test("Insert donation for Giv Effektivt membership using Quickpay", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -55,7 +55,7 @@ test("Insert donation for Giv Effektivt membership using Quickpay", async () => 
 test("Insert donation using Scanpay", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -85,7 +85,7 @@ test("Insert donation using Scanpay", async () => {
 test("Insert donation using bank transfer", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -120,7 +120,7 @@ test("Insert donation with fundraiser using Quickpay", async () => {
     has_match: false,
   });
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -157,7 +157,7 @@ test("Insert donation with fundraiser using bank transfer", async () => {
     has_match: false,
   });
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -187,7 +187,7 @@ test("Insert donation with fundraiser using bank transfer", async () => {
 test("Insert donation with a custom message", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 

@@ -7,11 +7,11 @@ import {
   dbRollbackTransaction,
   DonationFrequency,
   DonationRecipient,
-  type DonorWithSensitiveInfo,
+  type Donor,
   type Gavebrev,
   GavebrevType,
   insertDonationViaQuickpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   insertGavebrev,
   insertGavebrevDonor,
   PaymentMethod,
@@ -1278,7 +1278,7 @@ const donate = async (
 ) => {
   const random = (Math.random() + 1).toString(36).substring(7);
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: `${random}@example.com`,
     tin,
   });
@@ -1386,10 +1386,7 @@ const setMaxTaxDeduction = async (
   await insertMaxTaxDeduction(db, getYear(years_ago), value);
 };
 
-const gavebrevDonor = async (
-  db: PoolClient,
-  tin: string,
-): Promise<DonorWithSensitiveInfo> => {
+const gavebrevDonor = async (db: PoolClient, tin: string): Promise<Donor> => {
   const random = (Math.random() + 1).toString(36).substring(7);
   return await insertGavebrevDonor(db, {
     name: "John Smith",

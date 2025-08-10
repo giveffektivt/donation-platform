@@ -11,32 +11,16 @@ annual_tax_report_gavebrev_results,
 annual_tax_report_gavebrev_since,
 annual_tax_report_gaveskema,
 annual_tax_report_pending_update,
-charge,
 charges_to_charge,
-charge_with_gateway_info,
 crm_export,
-donation,
 donations_to_create_charges,
 donations_to_email,
-donation_with_contact_info,
-donation_with_sensitive_info,
-donor,
-donor_with_contact_info,
-donor_with_sensitive_info,
 donor_impact_report,
 failed_recurring_donations,
-fundraiser,
-fundraiser_activity_checkin,
-gavebrev,
-gavebrev_checkin,
 gavebrev_checkins_to_create,
 ignored_renewals,
 kpi,
-old_ids_map,
 pending_distribution,
-skat,
-skat_gaveskema,
-transfer,
 transfer_overview,
 transfer_pending,
 transferred_distribution,
@@ -45,528 +29,6 @@ value_lost_analysis cascade;
 
 drop function if exists time_distribution,
 general_assembly_invitations cascade;
-
--- =========== table views ===========
---
---------------------------------------
-create view donor as
-select
-    id,
-    created_at,
-    updated_at
-from
-    _donor
-where
-    deleted_at is null;
-
-create rule donor_soft_delete as on delete to donor do instead
-update _donor
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on donor to reader;
-
-grant insert,
-update,
-delete on donor to writer;
-
---------------------------------------
-create view donor_with_contact_info as
-select
-    id,
-    name,
-    email,
-    created_at,
-    updated_at
-from
-    _donor
-where
-    deleted_at is null;
-
-create rule donor_with_contact_info_soft_delete as on delete to donor_with_contact_info do instead
-update _donor
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on donor_with_contact_info to reader_contact;
-
-grant insert,
-update,
-delete on donor_with_contact_info to writer;
-
---------------------------------------
-create view donor_with_sensitive_info as
-select
-    id,
-    name,
-    email,
-    address,
-    postcode,
-    city,
-    country,
-    tin,
-    birthday,
-    created_at,
-    updated_at
-from
-    _donor
-where
-    deleted_at is null;
-
-create rule donor_with_sensitive_info_soft_delete as on delete to donor_with_sensitive_info do instead
-update _donor
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on donor_with_sensitive_info to reader_sensitive;
-
-grant insert,
-update,
-delete on donor_with_sensitive_info to writer;
-
---------------------------------------
-create view donation as
-select
-    id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    created_at,
-    updated_at,
-    fundraiser_id
-from
-    _donation
-where
-    deleted_at is null;
-
-create rule donation_soft_delete as on delete to donation do instead
-update _donation
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on donation to reader;
-
-grant insert,
-update,
-delete on donation to writer;
-
---------------------------------------
-create view donation_with_contact_info as
-select
-    id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    fundraiser_id,
-    message,
-    created_at,
-    updated_at
-from
-    _donation
-where
-    deleted_at is null;
-
-create rule donation_with_contact_info_soft_delete as on delete to donation_with_contact_info do instead
-update _donation
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on donation_with_contact_info to reader_contact;
-
-grant insert,
-update,
-delete on donation_with_contact_info to writer;
-
---------------------------------------
-create view donation_with_sensitive_info as
-select
-    id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    fundraiser_id,
-    message,
-    gateway_metadata,
-    created_at,
-    updated_at
-from
-    _donation
-where
-    deleted_at is null;
-
-create rule donation_with_sensitive_info_soft_delete as on delete to donation_with_sensitive_info do instead
-update _donation
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on donation_with_sensitive_info to reader_sensitive;
-
-grant insert,
-update,
-delete on donation_with_sensitive_info to writer;
-
---------------------------------------
-create view charge as
-select
-    id,
-    donation_id,
-    short_id,
-    status,
-    created_at,
-    updated_at,
-    transfer_id
-from
-    _charge
-where
-    deleted_at is null;
-
-create rule charge_soft_delete as on delete to charge do instead
-update _charge
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on charge to reader;
-
-grant insert,
-update,
-delete on charge to writer;
-
---------------------------------------
-create view charge_with_gateway_info as
-select
-    id,
-    donation_id,
-    short_id,
-    status,
-    gateway_metadata,
-    created_at,
-    updated_at,
-    transfer_id
-from
-    _charge
-where
-    deleted_at is null;
-
-create rule charge_with_gateway_info_soft_delete as on delete to charge_with_gateway_info do instead
-update _charge
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on charge_with_gateway_info to reader_sensitive;
-
-grant insert,
-update,
-delete on charge_with_gateway_info to writer;
-
---------------------------------------
-create view fundraiser as
-select
-    id,
-    email,
-    title,
-    has_match,
-    match_currency,
-    key,
-    created_at,
-    updated_at
-from
-    _fundraiser
-where
-    deleted_at is null;
-
-create rule fundraiser_soft_delete as on delete to fundraiser do instead
-update _fundraiser
-set
-    deleted_at = now()
-where
-    id = old.id
-    and deleted_at is null;
-
-grant
-select
-    on fundraiser to reader;
-
-grant insert,
-update,
-delete on fundraiser to writer;
-
---------------------------------------
-create view fundraiser_activity_checkin as
-select
-    id,
-    fundraiser_id,
-    amount,
-    created_at,
-    updated_at
-from
-    _fundraiser_activity_checkin
-where
-    deleted_at is null;
-
-grant
-select
-    on fundraiser_activity_checkin to reader;
-
-grant insert,
-update,
-delete on fundraiser_activity_checkin to writer;
-
---------------------------------------
-create view gavebrev as
-select
-    id,
-    donor_id,
-    status,
-    type,
-    amount,
-    minimal_income,
-    started_at,
-    stopped_at,
-    created_at,
-    updated_at
-from
-    _gavebrev
-where
-    deleted_at is null;
-
-create rule gavebrev_soft_delete as on delete to gavebrev do instead
-update _gavebrev
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on gavebrev to reader_sensitive;
-
-grant insert,
-update,
-delete on gavebrev to writer;
-
---------------------------------------
-create view gavebrev_checkin as
-select
-    id,
-    donor_id,
-    year,
-    income_inferred,
-    income_preliminary,
-    income_verified,
-    limit_normal_donation,
-    created_at,
-    updated_at
-from
-    _gavebrev_checkin
-where
-    deleted_at is null;
-
-create rule gavebrev_checkin_soft_delete as on delete to gavebrev_checkin do instead
-update _gavebrev_checkin
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on gavebrev_checkin to reader_sensitive;
-
-grant insert,
-update,
-delete on gavebrev_checkin to writer;
-
---------------------------------------
-create view skat as
-select
-    const,
-    ge_cvr,
-    donor_cpr,
-    year,
-    blank,
-    total,
-    ll8a_or_gavebrev,
-    ge_notes,
-    rettekode,
-    id,
-    created_at,
-    updated_at
-from
-    _skat
-where
-    deleted_at is null;
-
-create rule skat_soft_delete as on delete to skat do instead
-update _skat
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on skat to reader_sensitive;
-
-grant insert,
-update,
-delete on skat to writer;
-
---------------------------------------
-create view skat_gaveskema as
-select
-    year,
-    count_donors_donated_min_200_kr,
-    count_members,
-    amount_donated_A,
-    amount_donated_L,
-    amount_donated_total,
-    id,
-    created_at,
-    updated_at
-from
-    _skat_gaveskema
-where
-    deleted_at is null;
-
-create rule skat_gaveskema_soft_delete as on delete to skat_gaveskema do instead
-update _skat_gaveskema
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on skat_gaveskema to reader_sensitive;
-
-grant insert,
-update,
-delete on skat_gaveskema to writer;
-
---------------------------------------
-create view transfer as
-select
-    id,
-    earmark,
-    recipient,
-    unit_cost_external,
-    unit_cost_conversion,
-    life_cost_external,
-    exchange_rate,
-    created_at,
-    updated_at
-from
-    _transfer
-where
-    deleted_at is null
-order by
-    created_at;
-
-create rule transfer_soft_delete as on delete to transfer do instead
-update _transfer
-set
-    deleted_at = now()
-where
-    deleted_at is null
-    and id = old.id;
-
-grant
-select
-    on transfer to everyone;
-
-grant insert,
-update,
-delete on transfer to writer;
-
--- =========== helper views ===========
---
-create view old_ids_map as
-select
-    p.id as donor_id,
-    p._old_id as old_donor_id,
-    d.id as donation_id,
-    d._old_id as old_donation_id,
-    c.id as charge_id,
-    c._old_id as old_charge_id
-from
-    _donor p
-    left join _donation d on p.id = d.donor_id
-    left join _charge c on d.id = c.donation_id
-where
-    p.deleted_at is null
-    and d.deleted_at is null
-    and c.deleted_at is null
-    and (
-        p._old_id is not null
-        or d._old_id is not null
-        or c._old_id is not null
-    );
-
-grant
-select
-    on old_ids_map to reader;
 
 --------------------------------------
 create view donations_to_create_charges as
@@ -653,7 +115,7 @@ select
     frequency,
     tax_deductible
 from
-    donor_with_sensitive_info p
+    donor p
     inner join donation d on d.donor_id = p.id
     inner join lateral (
         select
@@ -699,9 +161,9 @@ select
     c.gateway_metadata,
     d.gateway_metadata as donation_gateway_metadata
 from
-    donor_with_contact_info dc
-    inner join donation_with_sensitive_info d on d.donor_id = dc.id
-    inner join charge_with_gateway_info c on c.donation_id = d.id
+    donor dc
+    inner join donation d on d.donor_id = dc.id
+    inner join charge c on c.donation_id = d.id
 where
     gateway in ('Quickpay', 'Scanpay')
     and not cancelled
@@ -722,9 +184,9 @@ with
         select distinct
             on (d.id) d.id
         from
-            donation_with_sensitive_info d
-            inner join donor_with_contact_info p on d.donor_id = p.id
-            inner join charge_with_gateway_info c on c.donation_id = d.id
+            donation d
+            inner join donor p on d.donor_id = p.id
+            inner join charge c on c.donation_id = d.id
         where
             gateway in ('Quickpay', 'Scanpay')
             and not cancelled
@@ -756,9 +218,9 @@ from
             d.message,
             c.status
         from
-            donation_with_sensitive_info d
-            inner join donor_with_contact_info p on d.donor_id = p.id
-            inner join charge_with_gateway_info c on c.donation_id = d.id
+            donation d
+            inner join donor p on d.donor_id = p.id
+            inner join charge c on c.donation_id = d.id
         where
             d.id in (
                 select
@@ -798,7 +260,7 @@ select
     ) as year
 from
     annual_tax_report_const
-    cross join donor_with_sensitive_info p
+    cross join donor p
     inner join donation d on d.donor_id = p.id
     inner join charge c on c.donation_id = d.id
 where
@@ -837,7 +299,7 @@ from
         select
             tin
         from
-            donor_with_sensitive_info p
+            donor p
         where
             id = donor_id
         limit
@@ -889,7 +351,7 @@ select
     ) as expected_total
 from
     annual_tax_report_gavebrev_checkins c
-    inner join donor_with_sensitive_info p on p.tin = c.tin
+    inner join donor p on p.tin = c.tin
     inner join gavebrev g on g.donor_id = p.id
     and extract(
         year
@@ -911,7 +373,7 @@ with
             max(stopped_at) as stopped_at
         from
             gavebrev g
-            inner join donor_with_sensitive_info p on g.donor_id = p.id
+            inner join donor p on g.donor_id = p.id
         group by
             tin
     ),
@@ -944,7 +406,7 @@ with
             d.amount
         from
             gavebrev_tin_years_until_now i
-            inner join donor_with_sensitive_info p on i.tin = p.tin
+            inner join donor p on i.tin = p.tin
             inner join donation d on d.donor_id = p.id
             inner join charge c on c.donation_id = d.id
             and i.year = extract(
@@ -1157,7 +619,7 @@ with
             count(distinct tin) as count_members
         from
             const,
-            donor_with_sensitive_info ds
+            donor ds
             inner join donation d on d.donor_id = ds.id
             inner join charge c on c.donation_id = d.id
         where
@@ -1186,7 +648,7 @@ with
             coalesce(sum(amount), 0) as amount_donated_total
         from
             const,
-            donor_with_sensitive_info ds
+            donor ds
             inner join donation d on d.donor_id = ds.id
             inner join charge c on c.donation_id = d.id
         where
@@ -1269,7 +731,7 @@ with
             min(c.created_at) as first_donated
         from
             const
-            cross join donor_with_sensitive_info p
+            cross join donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
             left join transfer t on c.transfer_id = t.id
@@ -1306,7 +768,7 @@ with
             p.email
         from
             const
-            cross join donor_with_sensitive_info p
+            cross join donor p
             inner join donation d on d.donor_id = p.id
             inner join charge c on c.donation_id = d.id
         where
@@ -1320,7 +782,7 @@ with
         from
             const
             cross join gavebrev g
-            inner join donor_with_sensitive_info p on g.donor_id = p.id
+            inner join donor p on g.donor_id = p.id
         where
             started_at <= year_from
             and stopped_at > year_from
@@ -1333,7 +795,7 @@ with
             p.tin
         from
             const
-            cross join donor_with_sensitive_info p
+            cross join donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
         where
@@ -1416,7 +878,7 @@ with
             c.status,
             c.created_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
         where
@@ -1431,7 +893,7 @@ with
             d.id as donation_id,
             d.created_at
         from
-            donor_with_contact_info p
+            donor p
             left join donation d on p.id = d.donor_id
             left join charge c on d.id = c.donation_id
         where
@@ -1448,7 +910,7 @@ with
                     d.recipient = 'Giv Effektivts medlemskab' as is_membership,
                     c.created_at
                 from
-                    donor_with_contact_info p
+                    donor p
                     join donation d on p.id = d.donor_id
                     join charge c on d.id = c.donation_id
                 where
@@ -1464,7 +926,7 @@ with
             on (email) name,
             email
         from
-            donor_with_contact_info p
+            donor p
         where
             name is not null
     )
@@ -1725,7 +1187,7 @@ with
                         else frequency
                     end as frequency
                 from
-                    donor_with_contact_info p
+                    donor p
                     join donation d on p.id = d.donor_id
                     join charge c on c.donation_id = d.id
                 where
@@ -1743,7 +1205,7 @@ with
             date_trunc(interval_type, c.created_at) as period,
             c.created_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
         where
@@ -2089,7 +1551,7 @@ with
         select
             count(distinct p.tin)::numeric as members_confirmed
         from
-            donor_with_sensitive_info p
+            donor p
             inner join donation d on d.donor_id = p.id
             inner join charge c on c.donation_id = d.id
         where
@@ -2106,7 +1568,7 @@ with
                     on (p.tin) p.tin,
                     c.created_at
                 from
-                    donor_with_sensitive_info p
+                    donor p
                     inner join donation d on d.donor_id = p.id
                     inner join charge c on c.donation_id = d.id
                 where
@@ -2145,7 +1607,7 @@ with
                         else count(distinct tin)
                     end as donors
                 from
-                    donor_with_sensitive_info p
+                    donor p
                     join donation d on d.donor_id = p.id
                     join charge c on c.donation_id = d.id
                 where
@@ -2190,7 +1652,7 @@ with
                 select
                     max(c.created_at) as max_charged_at
                 from
-                    donor_with_sensitive_info p
+                    donor p
                     inner join donation d on d.donor_id = p.id
                     inner join charge c on c.donation_id = d.id
                 where
@@ -2261,7 +1723,7 @@ with
             round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
             round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 2) as lives
         from
-            donor_with_sensitive_info p
+            donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
             left join transfer t on c.transfer_id = t.id
@@ -2297,7 +1759,7 @@ with
             on (p.email) p.email,
             p.created_at as registered_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on d.donor_id = p.id
             join charge c on c.donation_id = d.id
         where
@@ -2311,7 +1773,7 @@ with
             on (p.email) p.email,
             p.name
         from
-            donor_with_contact_info p
+            donor p
         where
             p.name is not null
         order by
@@ -2323,7 +1785,7 @@ with
             on (p.email) p.email,
             p.tin as cvr
         from
-            donor_with_sensitive_info p
+            donor p
         where
             p.tin ~ '^\d{8}$'
             and (
@@ -2366,7 +1828,7 @@ with
                 )
             end as age
         from
-            donor_with_sensitive_info p
+            donor p
         where
             p.tin is not null
         order by
@@ -2378,7 +1840,7 @@ with
             on (p.email) p.email,
             p.name
         from
-            donor_with_sensitive_info p
+            donor p
             join donation d on d.donor_id = p.id
             join charge c on c.donation_id = d.id
         where
@@ -2392,7 +1854,7 @@ with
             sum(d.amount) as total_donated,
             count(1) as donations_count
         from
-            donor_with_contact_info p
+            donor p
             join donation d on d.donor_id = p.id
             join charge c on c.donation_id = d.id
         where
@@ -2412,7 +1874,7 @@ with
             d.cancelled as last_donation_cancelled,
             c.created_at as last_donated_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on d.donor_id = p.id
             join charge c on c.donation_id = d.id
         where
@@ -2438,7 +1900,7 @@ with
                     d.frequency = 'monthly'
             ) as first_monthly_donation_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on d.donor_id = p.id
             join charge c on c.donation_id = d.id
         where
@@ -2451,7 +1913,7 @@ with
             p.email
         from
             gavebrev g
-            join donor_with_contact_info p on g.donor_id = p.id
+            join donor p on g.donor_id = p.id
         where
             g.started_at <= date_trunc('year', now())
             and stopped_at > date_trunc('year', now())
@@ -2596,7 +2058,7 @@ with
             min(c.created_at) as min_charged_at,
             max(c.created_at) as max_charged_at
         from
-            donor_with_sensitive_info p
+            donor p
             inner join donation d on d.donor_id = p.id
             inner join charge c on c.donation_id = d.id
         where
@@ -2707,9 +2169,9 @@ select
     'GHD' as cause,
     sum(d.amount) as amount
 from
-    donor_with_contact_info p
+    donor p
     join donation d on d.donor_id = p.id
-    join charge_with_gateway_info c on c.donation_id = d.id
+    join charge c on c.donation_id = d.id
     join transfer t on c.transfer_id = t.id
 where
     c.status = 'charged'
@@ -2795,7 +2257,7 @@ with
                         else frequency
                     end as frequency
                 from
-                    donor_with_contact_info p
+                    donor p
                     join donation d on p.id = d.donor_id
                     join charge c on c.donation_id = d.id
                 where
@@ -2819,7 +2281,7 @@ with
                     date_trunc('month', c.created_at) as period,
                     c.created_at
                 from
-                    donor_with_contact_info p
+                    donor p
                     join donation d on p.id = d.donor_id
                     join charge c on d.id = c.donation_id
                 where

@@ -6,10 +6,10 @@ import {
   DonationFrequency,
   DonationRecipient,
   DonationWithGatewayInfoScanpay,
-  DonorWithSensitiveInfo,
+  Donor,
   insertCharge,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   parseDonationFrequency,
   parseDonationRecipient,
   parsePaymentMethod,
@@ -36,9 +36,9 @@ export async function insertScanpayData(
   db: PoolClient,
   submitData: SubmitDataDonation,
 ): Promise<
-  [DonorWithSensitiveInfo, DonationWithGatewayInfoScanpay, Charge | null]
+  [Donor, DonationWithGatewayInfoScanpay, Charge | null]
 > {
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: submitData.email,
     tin: submitData.tin,
   });
@@ -67,7 +67,7 @@ export async function insertScanpayData(
 }
 
 async function generateRedirectUrl(
-  donor: DonorWithSensitiveInfo,
+  donor: Donor,
   donation: DonationWithGatewayInfoScanpay,
   charge: Charge | null,
   customerIp: string,

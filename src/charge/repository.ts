@@ -12,7 +12,7 @@ export async function insertCharge(
 ): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
-      `insert into charge_with_gateway_info (donation_id, status) values ($1, $2) returning *`,
+      `insert into charge (donation_id, status) values ($1, $2) returning *`,
       [charge.donation_id, charge.status],
     )
   ).rows[0];
@@ -24,7 +24,7 @@ export async function insertInitialChargeScanpay(
 ): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
-      `insert into charge_with_gateway_info (donation_id, status)
+      `insert into charge (donation_id, status)
        select $1, 'created'
        where not exists (select id from charge where donation_id = $1 limit 1)
        returning *`,
@@ -39,8 +39,8 @@ export async function insertInitialChargeQuickpay(
 ): Promise<ChargeWithGatewayMetadata> {
   return (
     await client.query(
-      `with d as (select id from donation_with_sensitive_info where frequency in ('monthly', 'yearly') and gateway_metadata ->> 'quickpay_order' = $1 limit 1)
-       insert into charge_with_gateway_info (donation_id, status)
+      `with d as (select id from donation where frequency in ('monthly', 'yearly') and gateway_metadata ->> 'quickpay_order' = $1 limit 1)
+       insert into charge (donation_id, status)
        select id, 'created' from d
        where not exists (select id from charge where donation_id = d.id limit 1)
        returning *`,
@@ -83,7 +83,7 @@ export async function setChargeIdempotencyKey(
   charge: Partial<ChargeToChargeScanpay>,
 ) {
   return await client.query(
-    `update charge_with_gateway_info set gateway_metadata = gateway_metadata::jsonb || format('{"idempotency_key": "%s"}', $1::text)::jsonb where id=$2`,
+    `update charge set gateway_metadata = gateway_metadata::jsonb || format('{"idempotency_key": "%s"}', $1::text)::jsonb where id=$2`,
     [charge.gateway_metadata?.idempotency_key, charge.id],
   );
 }

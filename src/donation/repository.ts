@@ -44,7 +44,7 @@ export async function setDonationCancelledByQuickpayOrder(
   quickpay_order: string,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
+    `update donation set cancelled = true where gateway_metadata ->> 'quickpay_order' = $1`,
     [quickpay_order],
   );
 }
@@ -55,7 +55,7 @@ export async function setDonationMethodByQuickpayOrder(
   method: PaymentMethod,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
+    `update donation set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
     [method, quickpay_order],
   );
 }
@@ -66,7 +66,7 @@ export async function insertDonationViaScanpay(
 ): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message)
+      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message)
        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        returning *`,
       [
@@ -90,8 +90,8 @@ export async function insertDonationViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
+      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -114,8 +114,8 @@ export async function insertMembershipViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
+      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -136,8 +136,8 @@ export async function insertDonationViaBankTransfer(
 ): Promise<DonationWithGatewayInfoBankTransfer> {
   return (
     await client.query(
-      `insert into donation_with_sensitive_info (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation_with_sensitive_info', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb)
+      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
@@ -159,7 +159,7 @@ export async function setDonationScanpayId(
   donation: Partial<DonationWithGatewayInfoScanpay>,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
+    `update donation set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
     [donation.gateway_metadata?.scanpay_id, donation.id],
   );
 }
@@ -169,21 +169,9 @@ export async function setDonationQuickpayId(
   donation: Partial<DonationWithGatewayInfoQuickpay>,
 ) {
   return await client.query(
-    `update donation_with_sensitive_info set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
+    `update donation set gateway_metadata = gateway_metadata::jsonb || format('{"quickpay_id": "%s"}', $1::text)::jsonb where id=$2`,
     [donation.gateway_metadata?.quickpay_id, donation.id],
   );
-}
-
-export async function getDonationIdsByOldDonorId(
-  client: PoolClient,
-  old_donor_id: string,
-): Promise<string[]> {
-  return (
-    await client.query(
-      "select donation_id from old_ids_map where old_donor_id = $1",
-      [old_donor_id],
-    )
-  ).rows.map((r) => r.donation_id);
 }
 
 export async function getFailedRecurringDonations(
@@ -199,8 +187,8 @@ export async function getFailedRecurringDonationByQuickpayOrder(
   return (
     await client.query(
       `select p.id as donor_id, p.email as donor_email, d.recipient, d.amount, p.name as donor_name, d.gateway_metadata ->> 'quickpay_order' as quickpay_order
-       from donor_with_contact_info p
-       join donation_with_sensitive_info d on p.id = d.donor_id
+       from donor p
+       join donation d on p.id = d.donor_id
        where d.gateway_metadata ->> 'quickpay_order' = $1`,
       [quickpay_order],
     )
@@ -213,7 +201,7 @@ export async function getDonationToUpdateQuickpayPaymentInfoById(
 ): Promise<DonationWithGatewayInfoQuickpay | null> {
   return (
     await client.query(
-      `select d.* from donation_with_sensitive_info d
+      `select d.* from donation d
        left join charge c on d.id = c.donation_id and c.status != 'created'
        where d.id = $1 and c.donation_id is null and d.gateway = 'Quickpay' and d.frequency != 'once' and not d.cancelled`,
       [id],

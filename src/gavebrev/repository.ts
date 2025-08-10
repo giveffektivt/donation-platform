@@ -1,6 +1,6 @@
 import { PoolClient } from "pg";
 import {
-  DonorWithSensitiveInfo,
+  Donor,
   Gavebrev,
   GavebrevCheckin,
   GavebrevStatus,
@@ -8,19 +8,19 @@ import {
 
 export async function insertGavebrevDonor(
   client: PoolClient,
-  donor: Partial<DonorWithSensitiveInfo>
-): Promise<DonorWithSensitiveInfo> {
+  donor: Partial<Donor>
+): Promise<Donor> {
   return (
     await client.query(
       `with new_row as (
-         insert into donor_with_sensitive_info (name, email, tin)
+         insert into donor (name, email, tin)
          select $1, $2, $3
-         where not exists (select * from donor_with_sensitive_info p join gavebrev g on p.id = g.donor_id where p.tin = $3 limit 1)
+         where not exists (select * from donor p join gavebrev g on p.id = g.donor_id where p.tin = $3 limit 1)
          returning *
        )
        select * from new_row
        union
-       select * from donor_with_sensitive_info where tin = $3`,
+       select * from donor where tin = $3`,
       [donor.name, donor.email, donor.tin]
     )
   ).rows[0];

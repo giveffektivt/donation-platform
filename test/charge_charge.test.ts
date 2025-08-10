@@ -10,7 +10,7 @@ import {
   insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   insertMembershipViaQuickpay,
   PaymentMethod,
   setDonationCancelledById,
@@ -33,11 +33,11 @@ test("Find created charges to charge", async () => {
   const db = await client;
 
   // Two donors
-  const donor1 = await insertDonorWithSensitiveInfo(db, {
+  const donor1 = await insertDonor(db, {
     email: "hello@example.com",
   });
 
-  const donor2 = await insertDonorWithSensitiveInfo(db, {
+  const donor2 = await insertDonor(db, {
     email: "world@example.com",
   });
 
@@ -157,7 +157,7 @@ test("Find created charges to charge", async () => {
 test("Donation that has no charges should not be charged", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -172,7 +172,7 @@ test("Donation that has no charges should not be charged", async () => {
 test("Donation that is cancelled should not be charged", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -195,7 +195,7 @@ test("Donation that is cancelled should not be charged", async () => {
 test("Bank transfer donation should not be charged", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -220,7 +220,7 @@ test("Bank transfer donation should not be charged", async () => {
 test("Old charges in created status should *still* be charged again (until we set donation as cancelled)", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -256,7 +256,7 @@ test("Old charges in created status should *still* be charged again (until we se
 test("Charges with error status should not be charged again", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -277,7 +277,7 @@ test("Charges with error status should not be charged again", async () => {
 test("Charges with created_at in the future should not be charged yet", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 

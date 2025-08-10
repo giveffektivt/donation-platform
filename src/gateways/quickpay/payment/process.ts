@@ -6,12 +6,12 @@ import {
   DonationFrequency,
   DonationRecipient,
   type DonationWithGatewayInfoQuickpay,
+  type DonorAnon,
   type Donor,
-  type DonorWithSensitiveInfo,
   insertCharge,
   insertMembershipViaQuickpay,
   insertDonationViaQuickpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   parseDonationFrequency,
   parseDonationRecipient,
   parsePaymentMethod,
@@ -79,9 +79,9 @@ export async function insertQuickpayDataDonation(
   db: PoolClient,
   submitData: SubmitDataDonation,
 ): Promise<
-  [DonorWithSensitiveInfo, DonationWithGatewayInfoQuickpay, Charge | null]
+  [Donor, DonationWithGatewayInfoQuickpay, Charge | null]
 > {
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: submitData.email,
     tin: submitData.tin,
   });
@@ -113,9 +113,9 @@ export async function insertQuickpayDataMembership(
   db: PoolClient,
   submitData: SubmitDataMembership,
 ): Promise<
-  [DonorWithSensitiveInfo, DonationWithGatewayInfoQuickpay, Charge | null]
+  [Donor, DonationWithGatewayInfoQuickpay, Charge | null]
 > {
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     name: submitData.name,
     email: submitData.email,
     address: submitData.address,
@@ -164,10 +164,10 @@ export async function recreateQuickpayRecurringDonation(
 
 async function addQuickpayId(
   db: PoolClient,
-  donor: Donor,
+  donor: DonorAnon,
   donation: DonationWithGatewayInfoQuickpay,
   charge: Charge | null,
-): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
+): Promise<[DonorAnon, DonationWithGatewayInfoQuickpay, Charge | null]> {
   donation.gateway_metadata.quickpay_id = await (donation && charge
     ? quickpayCreatePayment(charge.short_id, donation)
     : quickpayCreateSubscription(donation));

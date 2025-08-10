@@ -7,7 +7,7 @@ import {
   EmailedStatus,
   insertMembershipViaQuickpay,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   PaymentMethod,
   setDonationCancelledByQuickpayOrder,
   setDonationEmailed,
@@ -31,7 +31,7 @@ afterEach(async () => {
 test("Update donation to mark it as emailed", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -50,7 +50,7 @@ test("Update donation to mark it as emailed", async () => {
 test("Update donation to add Scanpay ID", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -91,7 +91,7 @@ test("Update donation to add Scanpay ID", async () => {
 test("Cancel donation by its Quickpay order ID", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -113,7 +113,7 @@ test("Cancel donation by its Quickpay order ID", async () => {
 test("Cancel donation by its ID", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -135,7 +135,7 @@ test("Cancel donation by its ID", async () => {
 test("Update donation payment method by its Quickpay order ID", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 

@@ -7,7 +7,6 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
-  getDonationIdsByOldDonorId,
   getDonationsToEmail,
   getDonationToUpdateQuickpayPaymentInfoById,
   getFailedRecurringDonations,
@@ -15,7 +14,7 @@ import {
   insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   insertMembershipViaQuickpay,
   PaymentMethod,
   setDonationCancelledById,
@@ -23,7 +22,7 @@ import {
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import { insertChargeWithCreatedAt, insertOldDonor } from "./repository";
+import { insertChargeWithCreatedAt } from "./repository";
 
 const client = dbClient();
 
@@ -39,11 +38,11 @@ test("Finds first successful donations to email", async () => {
   const db = await client;
 
   // Two donors
-  const donor1 = await insertDonorWithSensitiveInfo(db, {
+  const donor1 = await insertDonor(db, {
     email: "hello@example.com",
   });
 
-  const donor2 = await insertDonorWithSensitiveInfo(db, {
+  const donor2 = await insertDonor(db, {
     email: "world@example.com",
   });
 
@@ -127,7 +126,7 @@ test("Finds first successful donations to email", async () => {
 test("Should not email to a credit card one-time donation that wasn't charged yet", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -146,7 +145,7 @@ test("Should not email to a credit card one-time donation that wasn't charged ye
 test("Should not email to a credit card one-time donation with a failed charge", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -170,7 +169,7 @@ test("Should not email to a credit card one-time donation with a failed charge",
 test("Should not email to a credit card recurring donation that wasn't charged yet", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -190,7 +189,7 @@ test("Should not email to a credit card recurring donation that wasn't charged y
 test("Should not email to a credit card recurring donation with a failed charge", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -210,7 +209,7 @@ test("Should not email to a credit card recurring donation with a failed charge"
 test("Should not email to a MobilePay one-time donation that wasn't charged yet", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -229,7 +228,7 @@ test("Should not email to a MobilePay one-time donation that wasn't charged yet"
 test("Should not email to a MobilePay one-time donation with a failed charge", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -253,7 +252,7 @@ test("Should not email to a MobilePay one-time donation with a failed charge", a
 test("Should email to a MobilePay recurring donation even if it wasn't charged yet - special case!", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -286,7 +285,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
 test("Should not email to a MobilePay recurring donation with a failed charge", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -310,7 +309,7 @@ test("Should not email to a MobilePay recurring donation with a failed charge", 
 test("Should not email to a donation that was already emailed", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -338,7 +337,7 @@ test("Should not email to a donation that was already emailed", async () => {
 test("Should not email to a donation that was already attempted to be emailed", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -363,60 +362,12 @@ test("Should not email to a donation that was already attempted to be emailed", 
   expect(await getDonationsToEmail(db)).toEqual([]);
 });
 
-test("Should find donation ID by old donor ID", async () => {
-  const db = await client;
-
-  const oldDonor = await insertOldDonor(db, {
-    email: "hello@example.com",
-    _old_id: "123",
-  });
-
-  const newDonor = await insertDonorWithSensitiveInfo(db, {
-    email: "hello@example.com",
-  });
-
-  const oldDonation1 = await insertMembershipViaQuickpay(db, {
-    donor_id: oldDonor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  const oldDonation2 = await insertMembershipViaQuickpay(db, {
-    donor_id: oldDonor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  const newDonation1 = await insertMembershipViaQuickpay(db, {
-    donor_id: newDonor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  const newDonation2 = await insertMembershipViaQuickpay(db, {
-    donor_id: newDonor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  await insertCharge(db, {
-    donation_id: oldDonation1.id,
-    status: ChargeStatus.Charged,
-  });
-
-  await insertCharge(db, {
-    donation_id: newDonation1.id,
-    status: ChargeStatus.Charged,
-  });
-
-  expect(await getDonationIdsByOldDonorId(db, oldDonor._old_id)).toEqual([
-    oldDonation1.id,
-    oldDonation2.id,
-  ]);
-});
-
 test("Finds failed recurring donations to email", async () => {
   const db = await client;
 
   const now = setDate(new Date(), 1);
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
     name: "John Smith",
   });
@@ -629,7 +580,7 @@ test("Finds donations that can get a link to renew payment", async () => {
 
   const now = setDate(new Date(), 1);
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
     name: "John Smith",
   });

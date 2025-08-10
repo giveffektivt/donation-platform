@@ -202,7 +202,7 @@ with
             min(c.created_at) as min_charged_at,
             max(c.created_at) as max_charged_at
         from
-            donor_with_sensitive_info p
+            donor p
             inner join donation d on d.donor_id = p.id
             inner join charge c on c.donation_id = d.id
         where
@@ -301,6 +301,33 @@ $$;
 
 
 --
+-- Name: record_audit_log(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.record_audit_log() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  if tg_op = 'UPDATE' and
+     (to_jsonb(new) - 'updated_at') is not distinct from (to_jsonb(old) - 'updated_at')
+  then
+    return new;
+  end if;
+
+  insert into audit_log(table_name, record_id, operation, data)
+  values (
+    tg_table_name,
+    coalesce(new.id, old.id),
+    tg_op,
+    case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end
+  );
+
+  return case when tg_op = 'DELETE' then old else new end;
+end;
+$$;
+
+
+--
 -- Name: time_distribution(timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -386,7 +413,7 @@ with
                         else frequency
                     end as frequency
                 from
-                    donor_with_contact_info p
+                    donor p
                     join donation d on p.id = d.donor_id
                     join charge c on c.donation_id = d.id
                 where
@@ -404,7 +431,7 @@ with
             date_trunc(interval_type, c.created_at) as period,
             c.created_at
         from
-            donor_with_contact_info p
+            donor p
             join donation d on p.id = d.donor_id
             join charge c on d.id = c.donation_id
         where
@@ -669,28 +696,27 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: _charge; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: charge; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt._charge (
+CREATE TABLE giveffektivt.charge (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     donation_id uuid NOT NULL,
-    short_id text DEFAULT giveffektivt.gen_short_id('_charge'::text, 'short_id'::text, 'c-'::text) NOT NULL,
+    short_id text DEFAULT giveffektivt.gen_short_id('charge'::text, 'short_id'::text, 'c-'::text) NOT NULL,
     status giveffektivt.charge_status NOT NULL,
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone,
     _old_id integer,
     transfer_id uuid
 );
 
 
 --
--- Name: _donation; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: donation; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt._donation (
+CREATE TABLE giveffektivt.donation (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     donor_id uuid NOT NULL,
     emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status NOT NULL,
@@ -704,7 +730,6 @@ CREATE TABLE giveffektivt._donation (
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone,
     _old_id integer,
     fundraiser_id uuid,
     message text
@@ -712,10 +737,10 @@ CREATE TABLE giveffektivt._donation (
 
 
 --
--- Name: _donor; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt._donor (
+CREATE TABLE giveffektivt.donor (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     name text,
     email text NOT NULL,
@@ -725,7 +750,6 @@ CREATE TABLE giveffektivt._donor (
     tin text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone,
     _old_id integer,
     country text,
     birthday date
@@ -733,41 +757,10 @@ CREATE TABLE giveffektivt._donor (
 
 
 --
--- Name: _fundraiser; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: gavebrev; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt._fundraiser (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    email text NOT NULL,
-    title text NOT NULL,
-    key uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone,
-    has_match boolean DEFAULT false NOT NULL,
-    match_currency text
-);
-
-
---
--- Name: _fundraiser_activity_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt._fundraiser_activity_checkin (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    fundraiser_id uuid NOT NULL,
-    amount numeric NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
-);
-
-
---
--- Name: _gavebrev; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt._gavebrev (
+CREATE TABLE giveffektivt.gavebrev (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     donor_id uuid NOT NULL,
     status giveffektivt.gavebrev_status NOT NULL,
@@ -777,180 +770,25 @@ CREATE TABLE giveffektivt._gavebrev (
     started_at timestamp with time zone NOT NULL,
     stopped_at timestamp with time zone NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
 --
--- Name: _gavebrev_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: transfer; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt._gavebrev_checkin (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    donor_id uuid NOT NULL,
-    year numeric NOT NULL,
-    income_inferred numeric,
-    income_preliminary numeric,
-    income_verified numeric,
-    limit_normal_donation numeric,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
-);
-
-
---
--- Name: _skat; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt._skat (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    const numeric NOT NULL,
-    ge_cvr numeric NOT NULL,
-    donor_cpr text NOT NULL,
-    year numeric NOT NULL,
-    blank text NOT NULL,
-    total numeric NOT NULL,
-    ll8a_or_gavebrev text NOT NULL,
-    ge_notes text NOT NULL,
-    rettekode numeric NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
-);
-
-
---
--- Name: _skat_gaveskema; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt._skat_gaveskema (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    year numeric NOT NULL,
-    count_donors_donated_min_200_kr numeric NOT NULL,
-    count_members numeric NOT NULL,
-    amount_donated_a numeric NOT NULL,
-    amount_donated_l numeric NOT NULL,
-    amount_donated_total numeric NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone
-);
-
-
---
--- Name: _transfer; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt._transfer (
+CREATE TABLE giveffektivt.transfer (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     recipient giveffektivt.transfer_recipient NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    deleted_at timestamp with time zone,
-    earmark giveffektivt.donation_recipient NOT NULL,
-    unit_cost_conversion numeric,
     unit_cost_external numeric,
     life_cost_external numeric,
-    exchange_rate numeric
+    exchange_rate numeric,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    unit_cost_conversion numeric
 );
-
-
---
--- Name: charge; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.charge AS
- SELECT id,
-    donation_id,
-    short_id,
-    status,
-    created_at,
-    updated_at,
-    transfer_id
-   FROM giveffektivt._charge
-  WHERE (deleted_at IS NULL);
-
-
---
--- Name: donation; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donation AS
- SELECT id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    created_at,
-    updated_at,
-    fundraiser_id
-   FROM giveffektivt._donation
-  WHERE (deleted_at IS NULL);
-
-
---
--- Name: donor_with_sensitive_info; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donor_with_sensitive_info AS
- SELECT id,
-    name,
-    email,
-    address,
-    postcode,
-    city,
-    country,
-    tin,
-    birthday,
-    created_at,
-    updated_at
-   FROM giveffektivt._donor
-  WHERE (deleted_at IS NULL);
-
-
---
--- Name: gavebrev; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.gavebrev AS
- SELECT id,
-    donor_id,
-    status,
-    type,
-    amount,
-    minimal_income,
-    started_at,
-    stopped_at,
-    created_at,
-    updated_at
-   FROM giveffektivt._gavebrev
-  WHERE (deleted_at IS NULL);
-
-
---
--- Name: transfer; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.transfer AS
- SELECT id,
-    earmark,
-    recipient,
-    unit_cost_external,
-    unit_cost_conversion,
-    life_cost_external,
-    exchange_rate,
-    created_at,
-    updated_at
-   FROM giveffektivt._transfer
-  WHERE (deleted_at IS NULL)
-  ORDER BY created_at;
 
 
 --
@@ -970,7 +808,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
             sum(d_1.amount) AS amount,
             min(c_1.created_at) AS first_donated
            FROM ((((const
-             CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+             CROSS JOIN giveffektivt.donor p)
              JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
              JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
              LEFT JOIN giveffektivt.transfer t ON ((c_1.transfer_id = t.id)))
@@ -990,7 +828,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT DISTINCT ON (p.tin) p.tin,
             p.email
            FROM (((const
-             CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+             CROSS JOIN giveffektivt.donor p)
              JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
              JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
           WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
@@ -998,14 +836,14 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT p.tin
            FROM ((const
              CROSS JOIN giveffektivt.gavebrev g)
-             JOIN giveffektivt.donor_with_sensitive_info p ON ((g.donor_id = p.id)))
+             JOIN giveffektivt.donor p ON ((g.donor_id = p.id)))
           WHERE ((g.started_at <= const.year_from) AND (g.stopped_at > const.year_from))
           GROUP BY p.tin
         ), email_to_tin_guess AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.tin
            FROM (((const
-             CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+             CROSS JOIN giveffektivt.donor p)
              JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
              JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
           WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (p.tin IS NOT NULL))
@@ -1080,7 +918,7 @@ CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
     round(sum(d.amount)) AS total,
     min(EXTRACT(year FROM c.created_at)) AS year
    FROM (((giveffektivt.annual_tax_report_const
-     CROSS JOIN giveffektivt.donor_with_sensitive_info p)
+     CROSS JOIN giveffektivt.donor p)
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND d.tax_deductible)
@@ -1097,7 +935,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
             min(g.started_at) AS started_at,
             max(g.stopped_at) AS stopped_at
            FROM (giveffektivt.gavebrev g
-             JOIN giveffektivt.donor_with_sensitive_info p ON ((g.donor_id = p.id)))
+             JOIN giveffektivt.donor p ON ((g.donor_id = p.id)))
           GROUP BY p.tin
         ), gavebrev_tin_years_until_now AS (
          SELECT g.tin,
@@ -1110,7 +948,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
             i_1.year,
             d_1.amount
            FROM (((gavebrev_tin_years_until_now i_1
-             JOIN giveffektivt.donor_with_sensitive_info p ON ((i_1.tin = p.tin)))
+             JOIN giveffektivt.donor p ON ((i_1.tin = p.tin)))
              JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
              JOIN giveffektivt.charge c ON (((c.donation_id = d_1.id) AND (i_1.year = EXTRACT(year FROM c.created_at)))))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND d_1.tax_deductible)
@@ -1139,27 +977,26 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_since AS
           WHERE (COALESCE(gavebrev.stopped_at, now()) > annual_tax_report_const.year_from)
           GROUP BY gavebrev.donor_id) a
      CROSS JOIN LATERAL ( SELECT p.tin
-           FROM giveffektivt.donor_with_sensitive_info p
+           FROM giveffektivt.donor p
           WHERE (p.id = a.donor_id)
          LIMIT 1) b);
 
 
 --
--- Name: gavebrev_checkin; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: gavebrev_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.gavebrev_checkin AS
- SELECT id,
-    donor_id,
-    year,
-    income_inferred,
-    income_preliminary,
-    income_verified,
-    limit_normal_donation,
-    created_at,
-    updated_at
-   FROM giveffektivt._gavebrev_checkin
-  WHERE (deleted_at IS NULL);
+CREATE TABLE giveffektivt.gavebrev_checkin (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    donor_id uuid NOT NULL,
+    year numeric NOT NULL,
+    income_inferred numeric,
+    income_preliminary numeric,
+    income_verified numeric,
+    limit_normal_donation numeric,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -1196,7 +1033,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
             ELSE NULL::numeric
         END)) AS expected_total
    FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
-     JOIN giveffektivt.donor_with_sensitive_info p ON ((p.tin = c.tin)))
+     JOIN giveffektivt.donor p ON ((p.tin = c.tin)))
      JOIN giveffektivt.gavebrev g ON (((g.donor_id = p.id) AND (EXTRACT(year FROM g.started_at) <= c.year))))
   GROUP BY c.tin, c.year, c.income, c.limit_normal_donation;
 
@@ -1368,7 +1205,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
         ), members AS (
          SELECT count(DISTINCT ds.tin) AS count_members
            FROM const const_1,
-            ((giveffektivt.donor_with_sensitive_info ds
+            ((giveffektivt.donor ds
              JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
@@ -1383,7 +1220,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
         ), donated_total AS (
          SELECT COALESCE(sum(d.amount), (0)::numeric) AS amount_donated_total
            FROM const const_1,
-            ((giveffektivt.donor_with_sensitive_info ds
+            ((giveffektivt.donor ds
              JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
@@ -1403,24 +1240,23 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
 
 
 --
--- Name: skat; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: skat; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.skat AS
- SELECT const,
-    ge_cvr,
-    donor_cpr,
-    year,
-    blank,
-    total,
-    ll8a_or_gavebrev,
-    ge_notes,
-    rettekode,
-    id,
-    created_at,
-    updated_at
-   FROM giveffektivt._skat
-  WHERE (deleted_at IS NULL);
+CREATE TABLE giveffektivt.skat (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    const numeric NOT NULL,
+    ge_cvr numeric NOT NULL,
+    donor_cpr text NOT NULL,
+    year numeric NOT NULL,
+    blank text NOT NULL,
+    total numeric NOT NULL,
+    ll8a_or_gavebrev text NOT NULL,
+    ge_notes text NOT NULL,
+    rettekode numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -1429,7 +1265,8 @@ CREATE VIEW giveffektivt.skat AS
 
 CREATE VIEW giveffektivt.annual_tax_report_pending_update AS
  WITH last_reported AS (
-         SELECT DISTINCT ON (skat.donor_cpr, skat.ll8a_or_gavebrev, skat.year) skat.const,
+         SELECT DISTINCT ON (skat.donor_cpr, skat.ll8a_or_gavebrev, skat.year) skat.id,
+            skat.const,
             skat.ge_cvr,
             skat.donor_cpr,
             skat.year,
@@ -1438,7 +1275,6 @@ CREATE VIEW giveffektivt.annual_tax_report_pending_update AS
             skat.ll8a_or_gavebrev,
             skat.ge_notes,
             skat.rettekode,
-            skat.id,
             skat.created_at,
             skat.updated_at
            FROM giveffektivt.skat
@@ -1455,58 +1291,33 @@ CREATE VIEW giveffektivt.annual_tax_report_pending_update AS
 
 
 --
--- Name: charge_with_gateway_info; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: audit_log; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.charge_with_gateway_info AS
- SELECT id,
-    donation_id,
-    short_id,
-    status,
-    gateway_metadata,
-    created_at,
-    updated_at,
-    transfer_id
-   FROM giveffektivt._charge
-  WHERE (deleted_at IS NULL);
-
-
---
--- Name: donation_with_sensitive_info; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donation_with_sensitive_info AS
- SELECT id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    fundraiser_id,
-    message,
-    gateway_metadata,
-    created_at,
-    updated_at
-   FROM giveffektivt._donation
-  WHERE (deleted_at IS NULL);
+CREATE TABLE giveffektivt.audit_log (
+    id bigint NOT NULL,
+    table_name text NOT NULL,
+    record_id text,
+    operation text NOT NULL,
+    changed_at timestamp with time zone DEFAULT now() NOT NULL,
+    changed_by text DEFAULT CURRENT_USER NOT NULL,
+    txid bigint DEFAULT txid_current() NOT NULL,
+    data jsonb NOT NULL
+);
 
 
 --
--- Name: donor_with_contact_info; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: audit_log_id_seq; Type: SEQUENCE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.donor_with_contact_info AS
- SELECT id,
-    name,
-    email,
-    created_at,
-    updated_at
-   FROM giveffektivt._donor
-  WHERE (deleted_at IS NULL);
+ALTER TABLE giveffektivt.audit_log ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
+    SEQUENCE NAME giveffektivt.audit_log_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
 
 
 --
@@ -1523,9 +1334,9 @@ CREATE VIEW giveffektivt.charges_to_charge AS
     d.method,
     c.gateway_metadata,
     d.gateway_metadata AS donation_gateway_metadata
-   FROM ((giveffektivt.donor_with_contact_info dc
-     JOIN giveffektivt.donation_with_sensitive_info d ON ((d.donor_id = dc.id)))
-     JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+   FROM ((giveffektivt.donor dc
+     JOIN giveffektivt.donation d ON ((d.donor_id = dc.id)))
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
   WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (c.status = 'created'::giveffektivt.charge_status) AND (c.created_at <= now()));
 
 
@@ -1552,7 +1363,7 @@ CREATE VIEW giveffektivt.donor_impact_report AS
             sum(d.amount) AS amount,
             round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
             round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
-           FROM (((giveffektivt.donor_with_sensitive_info p
+           FROM (((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
              JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
              LEFT JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
@@ -1566,7 +1377,7 @@ CREATE VIEW giveffektivt.donor_impact_report AS
     units,
     lives
    FROM data
-  ORDER BY email, data.transferred_at;
+  ORDER BY email, transferred_at;
 
 
 --
@@ -1582,7 +1393,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
             d.recipient,
             c.status,
             c.created_at
-           FROM ((giveffektivt.donor_with_contact_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
              JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
           WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
@@ -1591,7 +1402,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
          SELECT DISTINCT ON (p.id) p.id,
             d.id AS donation_id,
             d.created_at
-           FROM ((giveffektivt.donor_with_contact_info p
+           FROM ((giveffektivt.donor p
              LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
              LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
           WHERE ((c.id IS NULL) AND (d.frequency <> 'once'::giveffektivt.donation_frequency))
@@ -1602,7 +1413,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
            FROM ( SELECT p.email,
                     (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AS is_membership,
                     c.created_at
-                   FROM ((giveffektivt.donor_with_contact_info p
+                   FROM ((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
                      JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
                   WHERE (c.status = 'charged'::giveffektivt.charge_status)) unnamed_subquery
@@ -1610,7 +1421,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
         ), email_to_name AS (
          SELECT DISTINCT ON (p.email) p.name,
             p.email
-           FROM giveffektivt.donor_with_contact_info p
+           FROM giveffektivt.donor p
           WHERE (p.name IS NOT NULL)
         )
  SELECT COALESCE(lc.name, en.name) AS name,
@@ -1636,7 +1447,7 @@ CREATE VIEW giveffektivt.crm_export AS
  WITH emails AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.created_at AS registered_at
-           FROM ((giveffektivt.donor_with_contact_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE (c.status = 'charged'::giveffektivt.charge_status)
@@ -1644,13 +1455,13 @@ CREATE VIEW giveffektivt.crm_export AS
         ), names AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.name
-           FROM giveffektivt.donor_with_contact_info p
+           FROM giveffektivt.donor p
           WHERE (p.name IS NOT NULL)
           ORDER BY p.email, p.created_at
         ), cvrs AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.tin AS cvr
-           FROM giveffektivt.donor_with_sensitive_info p
+           FROM giveffektivt.donor p
           WHERE ((p.tin ~ '^\d{8}$'::text) AND ((p.country IS NULL) OR (p.country = 'Denmark'::text)))
           ORDER BY p.email, p.created_at
         ), ages AS (
@@ -1677,13 +1488,13 @@ CREATE VIEW giveffektivt.crm_export AS
                     END || "substring"(p.tin, 5, 2)) || '-'::text) || "substring"(p.tin, 3, 2)) || '-'::text) || "substring"(p.tin, 1, 2)), 'yyyy-mm-dd'::text))::timestamp with time zone))
                     ELSE NULL::double precision
                 END AS age
-           FROM giveffektivt.donor_with_sensitive_info p
+           FROM giveffektivt.donor p
           WHERE (p.tin IS NOT NULL)
           ORDER BY p.email, p.created_at
         ), members AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.name
-           FROM ((giveffektivt.donor_with_sensitive_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= (now() - '1 year'::interval)))
@@ -1691,7 +1502,7 @@ CREATE VIEW giveffektivt.crm_export AS
          SELECT p.email,
             sum(d.amount) AS total_donated,
             count(1) AS donations_count
-           FROM ((giveffektivt.donor_with_contact_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
@@ -1705,7 +1516,7 @@ CREATE VIEW giveffektivt.crm_export AS
             d.tax_deductible AS last_donation_tax_deductible,
             d.cancelled AS last_donation_cancelled,
             c.created_at AS last_donated_at
-           FROM ((giveffektivt.donor_with_contact_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
@@ -1715,7 +1526,7 @@ CREATE VIEW giveffektivt.crm_export AS
             min(c.created_at) FILTER (WHERE (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
             min(c.created_at) FILTER (WHERE (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
             min(c.created_at) FILTER (WHERE (d.frequency = 'monthly'::giveffektivt.donation_frequency)) AS first_monthly_donation_at
-           FROM ((giveffektivt.donor_with_contact_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE (c.status = 'charged'::giveffektivt.charge_status)
@@ -1723,7 +1534,7 @@ CREATE VIEW giveffektivt.crm_export AS
         ), has_gavebrev AS (
          SELECT p.email
            FROM (giveffektivt.gavebrev g
-             JOIN giveffektivt.donor_with_contact_info p ON ((g.donor_id = p.id)))
+             JOIN giveffektivt.donor p ON ((g.donor_id = p.id)))
           WHERE ((g.started_at <= date_trunc('year'::text, now())) AND (g.stopped_at > date_trunc('year'::text, now())))
           GROUP BY p.email
         ), impact AS (
@@ -1903,29 +1714,6 @@ CREATE VIEW giveffektivt.crm_export AS
 
 
 --
--- Name: donation_with_contact_info; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donation_with_contact_info AS
- SELECT id,
-    donor_id,
-    emailed,
-    amount,
-    recipient,
-    frequency,
-    cancelled,
-    gateway,
-    method,
-    tax_deductible,
-    fundraiser_id,
-    message,
-    created_at,
-    updated_at
-   FROM giveffektivt._donation
-  WHERE (deleted_at IS NULL);
-
-
---
 -- Name: donations_to_create_charges; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1960,7 +1748,7 @@ CREATE VIEW giveffektivt.donations_to_email AS
     d.recipient,
     d.frequency,
     d.tax_deductible
-   FROM ((giveffektivt.donor_with_sensitive_info p
+   FROM ((giveffektivt.donor p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
      JOIN LATERAL ( SELECT charge.id,
             charge.status
@@ -1972,27 +1760,15 @@ CREATE VIEW giveffektivt.donations_to_email AS
 
 
 --
--- Name: donor; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donor AS
- SELECT id,
-    created_at,
-    updated_at
-   FROM giveffektivt._donor
-  WHERE (deleted_at IS NULL);
-
-
---
 -- Name: failed_recurring_donations; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
 CREATE VIEW giveffektivt.failed_recurring_donations AS
  WITH paid_before AS (
          SELECT DISTINCT ON (d.id) d.id
-           FROM ((giveffektivt.donation_with_sensitive_info d
-             JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+           FROM ((giveffektivt.donation d
+             JOIN giveffektivt.donor p ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
           ORDER BY d.id
         )
@@ -2030,9 +1806,9 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
             d.fundraiser_id,
             d.message,
             c.status
-           FROM ((giveffektivt.donation_with_sensitive_info d
-             JOIN giveffektivt.donor_with_contact_info p ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+           FROM ((giveffektivt.donation d
+             JOIN giveffektivt.donor p ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE (d.id IN ( SELECT paid_before.id
                    FROM paid_before))
           ORDER BY d.id, c.created_at DESC) s
@@ -2041,34 +1817,32 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
 
 
 --
--- Name: fundraiser; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: fundraiser; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.fundraiser AS
- SELECT id,
-    email,
-    title,
-    has_match,
-    match_currency,
-    key,
-    created_at,
-    updated_at
-   FROM giveffektivt._fundraiser
-  WHERE (deleted_at IS NULL);
+CREATE TABLE giveffektivt.fundraiser (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email text NOT NULL,
+    title text NOT NULL,
+    key uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    has_match boolean DEFAULT false NOT NULL,
+    match_currency text
+);
 
 
 --
--- Name: fundraiser_activity_checkin; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: fundraiser_activity_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.fundraiser_activity_checkin AS
- SELECT id,
-    fundraiser_id,
-    amount,
-    created_at,
-    updated_at
-   FROM giveffektivt._fundraiser_activity_checkin
-  WHERE (deleted_at IS NULL);
+CREATE TABLE giveffektivt.fundraiser_activity_checkin (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    fundraiser_id uuid NOT NULL,
+    amount numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -2124,9 +1898,9 @@ CREATE VIEW giveffektivt.gwwc_money_moved AS
         END) AS recipient,
     'GHD'::text AS cause,
     sum(d.amount) AS amount
-   FROM (((giveffektivt.donor_with_contact_info p
+   FROM (((giveffektivt.donor p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN giveffektivt.charge_with_gateway_info c ON ((c.donation_id = d.id)))
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
      JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])))
   GROUP BY (to_char(c.created_at, 'YYYY-MM'::text)), t.recipient
@@ -2166,7 +1940,7 @@ CREATE VIEW giveffektivt.kpi AS
                   WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
         ), members_confirmed AS (
          SELECT (count(DISTINCT p.tin))::numeric AS members_confirmed
-           FROM ((giveffektivt.donor_with_sensitive_info p
+           FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= date_trunc('year'::text, now())))
@@ -2174,7 +1948,7 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT (count(*))::numeric AS members_pending_renewal
            FROM ( SELECT DISTINCT ON (p.tin) p.tin,
                     c.created_at
-                   FROM ((giveffektivt.donor_with_sensitive_info p
+                   FROM ((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
                   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled))
@@ -2192,7 +1966,7 @@ CREATE VIEW giveffektivt.kpi AS
                             WHEN (count(DISTINCT p.tin) = 0) THEN (1)::bigint
                             ELSE count(DISTINCT p.tin)
                         END AS donors
-                   FROM ((giveffektivt.donor_with_sensitive_info p
+                   FROM ((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
                   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
@@ -2207,7 +1981,7 @@ CREATE VIEW giveffektivt.kpi AS
         ), oldest_stopped_donation_age AS (
          SELECT floor(EXTRACT(epoch FROM (now() - min(unnamed_subquery.max_charged_at)))) AS oldest_stopped_donation_age
            FROM ( SELECT max(c.created_at) AS max_charged_at
-                   FROM ((giveffektivt.donor_with_sensitive_info p
+                   FROM ((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
                   WHERE (c.status = 'charged'::giveffektivt.charge_status)
@@ -2251,23 +2025,6 @@ CREATE VIEW giveffektivt.kpi AS
 
 
 --
--- Name: old_ids_map; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.old_ids_map AS
- SELECT p.id AS donor_id,
-    p._old_id AS old_donor_id,
-    d.id AS donation_id,
-    d._old_id AS old_donation_id,
-    c.id AS charge_id,
-    c._old_id AS old_charge_id
-   FROM ((giveffektivt._donor p
-     LEFT JOIN giveffektivt._donation d ON ((p.id = d.donor_id)))
-     LEFT JOIN giveffektivt._charge c ON ((d.id = c.donation_id)))
-  WHERE ((p.deleted_at IS NULL) AND (d.deleted_at IS NULL) AND (c.deleted_at IS NULL) AND ((p._old_id IS NOT NULL) OR (d._old_id IS NOT NULL) OR (c._old_id IS NOT NULL)));
-
-
---
 -- Name: pending_distribution; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -2302,21 +2059,20 @@ CREATE TABLE giveffektivt.schema_migrations (
 
 
 --
--- Name: skat_gaveskema; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: skat_gaveskema; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.skat_gaveskema AS
- SELECT year,
-    count_donors_donated_min_200_kr,
-    count_members,
-    amount_donated_a,
-    amount_donated_l,
-    amount_donated_total,
-    id,
-    created_at,
-    updated_at
-   FROM giveffektivt._skat_gaveskema
-  WHERE (deleted_at IS NULL);
+CREATE TABLE giveffektivt.skat_gaveskema (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    year numeric NOT NULL,
+    count_donors_donated_min_200_kr numeric NOT NULL,
+    count_members numeric NOT NULL,
+    amount_donated_a numeric NOT NULL,
+    amount_donated_l numeric NOT NULL,
+    amount_donated_total numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -2445,7 +2201,7 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
                               WHERE (d.id = m.id))) THEN 'once'::giveffektivt.donation_frequency
                             ELSE d.frequency
                         END AS frequency
-                   FROM ((giveffektivt.donor_with_contact_info p
+                   FROM ((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
                      JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
                   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))) a
@@ -2458,7 +2214,7 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
                     d.amount,
                     date_trunc('month'::text, c.created_at) AS period,
                     c.created_at
-                   FROM ((giveffektivt.donor_with_contact_info p
+                   FROM ((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
                      JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
                   WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
@@ -2520,91 +2276,99 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
 
 
 --
--- Name: _charge _charge_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: charge _charge_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._charge
+ALTER TABLE ONLY giveffektivt.charge
     ADD CONSTRAINT _charge_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _charge _charge_short_id_key; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: charge _charge_short_id_key; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._charge
+ALTER TABLE ONLY giveffektivt.charge
     ADD CONSTRAINT _charge_short_id_key UNIQUE (short_id);
 
 
 --
--- Name: _donation _donation_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: donation _donation_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._donation
+ALTER TABLE ONLY giveffektivt.donation
     ADD CONSTRAINT _donation_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _donor _donor_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: donor _donor_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._donor
+ALTER TABLE ONLY giveffektivt.donor
     ADD CONSTRAINT _donor_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _fundraiser_activity_checkin _fundraiser_activity_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: fundraiser_activity_checkin _fundraiser_activity_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._fundraiser_activity_checkin
+ALTER TABLE ONLY giveffektivt.fundraiser_activity_checkin
     ADD CONSTRAINT _fundraiser_activity_checkin_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _fundraiser _fundraiser_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: fundraiser _fundraiser_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._fundraiser
+ALTER TABLE ONLY giveffektivt.fundraiser
     ADD CONSTRAINT _fundraiser_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _gavebrev_checkin _gavebrev_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: gavebrev_checkin _gavebrev_checkin_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._gavebrev_checkin
+ALTER TABLE ONLY giveffektivt.gavebrev_checkin
     ADD CONSTRAINT _gavebrev_checkin_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _gavebrev _gavebrev_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: gavebrev _gavebrev_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._gavebrev
+ALTER TABLE ONLY giveffektivt.gavebrev
     ADD CONSTRAINT _gavebrev_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _skat_gaveskema _skat_gaveskema_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: skat_gaveskema _skat_gaveskema_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._skat_gaveskema
+ALTER TABLE ONLY giveffektivt.skat_gaveskema
     ADD CONSTRAINT _skat_gaveskema_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _skat _skat_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: skat _skat_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._skat
+ALTER TABLE ONLY giveffektivt.skat
     ADD CONSTRAINT _skat_pkey PRIMARY KEY (id);
 
 
 --
--- Name: _transfer _transfer_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: transfer _transfer_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._transfer
+ALTER TABLE ONLY giveffektivt.transfer
     ADD CONSTRAINT _transfer_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.audit_log
+    ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -2656,6 +2420,34 @@ ALTER TABLE ONLY giveffektivt.schema_migrations
 
 
 --
+-- Name: audit_log_changed_at_idx; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX audit_log_changed_at_idx ON giveffektivt.audit_log USING btree (changed_at);
+
+
+--
+-- Name: audit_log_data_idx; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX audit_log_data_idx ON giveffektivt.audit_log USING gin (data);
+
+
+--
+-- Name: audit_log_record_id_idx; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX audit_log_record_id_idx ON giveffektivt.audit_log USING btree (record_id);
+
+
+--
+-- Name: audit_log_table_name_idx; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX audit_log_table_name_idx ON giveffektivt.audit_log USING btree (table_name);
+
+
+--
 -- Name: idx_clearhaus_settlement_merchant_latest_amount; Type: INDEX; Schema: giveffektivt; Owner: -
 --
 
@@ -2663,211 +2455,45 @@ CREATE INDEX idx_clearhaus_settlement_merchant_latest_amount ON giveffektivt.cle
 
 
 --
--- Name: charge charge_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: charge charge_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE charge_soft_delete AS
-    ON DELETE TO giveffektivt.charge DO INSTEAD  UPDATE giveffektivt._charge SET deleted_at = now()
-  WHERE ((_charge.deleted_at IS NULL) AND (_charge.id = old.id));
+CREATE TRIGGER charge_update_timestamp BEFORE UPDATE ON giveffektivt.charge FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: charge_with_gateway_info charge_with_gateway_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: donation donation_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE charge_with_gateway_info_soft_delete AS
-    ON DELETE TO giveffektivt.charge_with_gateway_info DO INSTEAD  UPDATE giveffektivt._charge SET deleted_at = now()
-  WHERE ((_charge.deleted_at IS NULL) AND (_charge.id = old.id));
+CREATE TRIGGER donation_update_timestamp BEFORE UPDATE ON giveffektivt.donation FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: donation donation_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: donor donor_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE donation_soft_delete AS
-    ON DELETE TO giveffektivt.donation DO INSTEAD  UPDATE giveffektivt._donation SET deleted_at = now()
-  WHERE ((_donation.deleted_at IS NULL) AND (_donation.id = old.id));
+CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt.donor FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: _donation donation_soft_delete_cascade; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: fundraiser fundraiser_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE donation_soft_delete_cascade AS
-    ON UPDATE TO giveffektivt._donation
-   WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._charge SET deleted_at = now()
-  WHERE ((_charge.deleted_at IS NULL) AND (_charge.donation_id = old.id));
+CREATE TRIGGER fundraiser_update_timestamp BEFORE UPDATE ON giveffektivt.fundraiser FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: donation_with_contact_info donation_with_contact_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: gavebrev_checkin gavebrev_checkin_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE donation_with_contact_info_soft_delete AS
-    ON DELETE TO giveffektivt.donation_with_contact_info DO INSTEAD  UPDATE giveffektivt._donation SET deleted_at = now()
-  WHERE ((_donation.deleted_at IS NULL) AND (_donation.id = old.id));
+CREATE TRIGGER gavebrev_checkin_update_timestamp BEFORE UPDATE ON giveffektivt.gavebrev_checkin FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: donation_with_sensitive_info donation_with_sensitive_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
+-- Name: gavebrev gavebrev_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE RULE donation_with_sensitive_info_soft_delete AS
-    ON DELETE TO giveffektivt.donation_with_sensitive_info DO INSTEAD  UPDATE giveffektivt._donation SET deleted_at = now()
-  WHERE ((_donation.deleted_at IS NULL) AND (_donation.id = old.id));
-
-
---
--- Name: donor donor_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE donor_soft_delete AS
-    ON DELETE TO giveffektivt.donor DO INSTEAD  UPDATE giveffektivt._donor SET deleted_at = now()
-  WHERE ((_donor.id = old.id) AND (_donor.deleted_at IS NULL));
-
-
---
--- Name: _donor donor_soft_delete_cascade; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE donor_soft_delete_cascade AS
-    ON UPDATE TO giveffektivt._donor
-   WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._donation SET deleted_at = now()
-  WHERE ((_donation.deleted_at IS NULL) AND (_donation.donor_id = old.id));
-
-
---
--- Name: _donor donor_soft_delete_cascade_gavebrev; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE donor_soft_delete_cascade_gavebrev AS
-    ON UPDATE TO giveffektivt._donor
-   WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._gavebrev SET deleted_at = now()
-  WHERE ((_gavebrev.deleted_at IS NULL) AND (_gavebrev.donor_id = old.id));
-
-
---
--- Name: _donor donor_soft_delete_cascade_gavebrev_checkin; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE donor_soft_delete_cascade_gavebrev_checkin AS
-    ON UPDATE TO giveffektivt._donor
-   WHERE ((old.deleted_at IS NULL) AND (new.deleted_at IS NOT NULL)) DO  UPDATE giveffektivt._gavebrev_checkin SET deleted_at = now()
-  WHERE ((_gavebrev_checkin.deleted_at IS NULL) AND (_gavebrev_checkin.donor_id = old.id));
-
-
---
--- Name: donor_with_contact_info donor_with_contact_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE donor_with_contact_info_soft_delete AS
-    ON DELETE TO giveffektivt.donor_with_contact_info DO INSTEAD  UPDATE giveffektivt._donor SET deleted_at = now()
-  WHERE ((_donor.id = old.id) AND (_donor.deleted_at IS NULL));
-
-
---
--- Name: donor_with_sensitive_info donor_with_sensitive_info_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE donor_with_sensitive_info_soft_delete AS
-    ON DELETE TO giveffektivt.donor_with_sensitive_info DO INSTEAD  UPDATE giveffektivt._donor SET deleted_at = now()
-  WHERE ((_donor.id = old.id) AND (_donor.deleted_at IS NULL));
-
-
---
--- Name: fundraiser fundraiser_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE fundraiser_soft_delete AS
-    ON DELETE TO giveffektivt.fundraiser DO INSTEAD  UPDATE giveffektivt._fundraiser SET deleted_at = now()
-  WHERE ((_fundraiser.id = old.id) AND (_fundraiser.deleted_at IS NULL));
-
-
---
--- Name: gavebrev_checkin gavebrev_checkin_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE gavebrev_checkin_soft_delete AS
-    ON DELETE TO giveffektivt.gavebrev_checkin DO INSTEAD  UPDATE giveffektivt._gavebrev_checkin SET deleted_at = now()
-  WHERE ((_gavebrev_checkin.deleted_at IS NULL) AND (_gavebrev_checkin.id = old.id));
-
-
---
--- Name: gavebrev gavebrev_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE gavebrev_soft_delete AS
-    ON DELETE TO giveffektivt.gavebrev DO INSTEAD  UPDATE giveffektivt._gavebrev SET deleted_at = now()
-  WHERE ((_gavebrev.deleted_at IS NULL) AND (_gavebrev.id = old.id));
-
-
---
--- Name: skat_gaveskema skat_gaveskema_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE skat_gaveskema_soft_delete AS
-    ON DELETE TO giveffektivt.skat_gaveskema DO INSTEAD  UPDATE giveffektivt._skat_gaveskema SET deleted_at = now()
-  WHERE ((_skat_gaveskema.deleted_at IS NULL) AND (_skat_gaveskema.id = old.id));
-
-
---
--- Name: skat skat_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE skat_soft_delete AS
-    ON DELETE TO giveffektivt.skat DO INSTEAD  UPDATE giveffektivt._skat SET deleted_at = now()
-  WHERE ((_skat.deleted_at IS NULL) AND (_skat.id = old.id));
-
-
---
--- Name: transfer transfer_soft_delete; Type: RULE; Schema: giveffektivt; Owner: -
---
-
-CREATE RULE transfer_soft_delete AS
-    ON DELETE TO giveffektivt.transfer DO INSTEAD  UPDATE giveffektivt._transfer SET deleted_at = now()
-  WHERE ((_transfer.deleted_at IS NULL) AND (_transfer.id = old.id));
-
-
---
--- Name: _charge charge_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER charge_update_timestamp BEFORE UPDATE ON giveffektivt._charge FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _donation donation_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER donation_update_timestamp BEFORE UPDATE ON giveffektivt._donation FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _donor donor_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt._donor FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _fundraiser fundraiser_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER fundraiser_update_timestamp BEFORE UPDATE ON giveffektivt._fundraiser FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _gavebrev_checkin gavebrev_checkin_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER gavebrev_checkin_update_timestamp BEFORE UPDATE ON giveffektivt._gavebrev_checkin FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _gavebrev gavebrev_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER gavebrev_update_timestamp BEFORE UPDATE ON giveffektivt._gavebrev FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+CREATE TRIGGER gavebrev_update_timestamp BEFORE UPDATE ON giveffektivt.gavebrev FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
@@ -2878,72 +2504,142 @@ CREATE TRIGGER max_tax_deduction_update_timestamp BEFORE UPDATE ON giveffektivt.
 
 
 --
--- Name: _skat_gaveskema skat_gaveskema_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+-- Name: skat_gaveskema skat_gaveskema_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE TRIGGER skat_gaveskema_update_timestamp BEFORE UPDATE ON giveffektivt._skat_gaveskema FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _skat skat_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
---
-
-CREATE TRIGGER skat_update_timestamp BEFORE UPDATE ON giveffektivt._skat FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+CREATE TRIGGER skat_gaveskema_update_timestamp BEFORE UPDATE ON giveffektivt.skat_gaveskema FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: _transfer transfers_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+-- Name: skat skat_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-CREATE TRIGGER transfers_update_timestamp BEFORE UPDATE ON giveffektivt._transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
-
-
---
--- Name: _charge _charge_donation_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt._charge
-    ADD CONSTRAINT _charge_donation_id_fkey FOREIGN KEY (donation_id) REFERENCES giveffektivt._donation(id);
+CREATE TRIGGER skat_update_timestamp BEFORE UPDATE ON giveffektivt.skat FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: _charge _charge_transfer_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: transfer transfers_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._charge
-    ADD CONSTRAINT _charge_transfer_id_fkey FOREIGN KEY (transfer_id) REFERENCES giveffektivt._transfer(id);
-
-
---
--- Name: _donation _donation_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt._donation
-    ADD CONSTRAINT _donation_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
+CREATE TRIGGER transfers_update_timestamp BEFORE UPDATE ON giveffektivt.transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
--- Name: _fundraiser_activity_checkin _fundraiser_activity_checkin_fundraiser_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: charge trigger_audit_log_charge; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._fundraiser_activity_checkin
-    ADD CONSTRAINT _fundraiser_activity_checkin_fundraiser_id_fkey FOREIGN KEY (fundraiser_id) REFERENCES giveffektivt._fundraiser(id);
-
-
---
--- Name: _gavebrev_checkin _gavebrev_checkin_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt._gavebrev_checkin
-    ADD CONSTRAINT _gavebrev_checkin_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
+CREATE TRIGGER trigger_audit_log_charge AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.charge FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
 
 
 --
--- Name: _gavebrev _gavebrev_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+-- Name: donation trigger_audit_log_donation; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
-ALTER TABLE ONLY giveffektivt._gavebrev
-    ADD CONSTRAINT _gavebrev_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt._donor(id);
+CREATE TRIGGER trigger_audit_log_donation AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.donation FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: donor trigger_audit_log_donor; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_donor AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.donor FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: fundraiser trigger_audit_log_fundraiser; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_fundraiser AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.fundraiser FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: fundraiser_activity_checkin trigger_audit_log_fundraiser_activity_checkin; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_fundraiser_activity_checkin AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.fundraiser_activity_checkin FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: gavebrev trigger_audit_log_gavebrev; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_gavebrev AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.gavebrev FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: gavebrev_checkin trigger_audit_log_gavebrev_checkin; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_gavebrev_checkin AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.gavebrev_checkin FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: skat trigger_audit_log_skat; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_skat AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.skat FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: skat_gaveskema trigger_audit_log_skat_gaveskema; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_skat_gaveskema AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.skat_gaveskema FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: transfer trigger_audit_log_transfer; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_transfer AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: charge _charge_donation_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge
+    ADD CONSTRAINT _charge_donation_id_fkey FOREIGN KEY (donation_id) REFERENCES giveffektivt.donation(id);
+
+
+--
+-- Name: charge _charge_transfer_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge
+    ADD CONSTRAINT _charge_transfer_id_fkey FOREIGN KEY (transfer_id) REFERENCES giveffektivt.transfer(id);
+
+
+--
+-- Name: donation _donation_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.donation
+    ADD CONSTRAINT _donation_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt.donor(id);
+
+
+--
+-- Name: fundraiser_activity_checkin _fundraiser_activity_checkin_fundraiser_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.fundraiser_activity_checkin
+    ADD CONSTRAINT _fundraiser_activity_checkin_fundraiser_id_fkey FOREIGN KEY (fundraiser_id) REFERENCES giveffektivt.fundraiser(id);
+
+
+--
+-- Name: gavebrev_checkin _gavebrev_checkin_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.gavebrev_checkin
+    ADD CONSTRAINT _gavebrev_checkin_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt.donor(id);
+
+
+--
+-- Name: gavebrev _gavebrev_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.gavebrev
+    ADD CONSTRAINT _gavebrev_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt.donor(id);
 
 
 --
@@ -3025,4 +2721,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250330185137'),
     ('20250725112716'),
     ('20250802174406'),
+    ('20250810104141'),
     ('99999999999999');

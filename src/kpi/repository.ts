@@ -93,7 +93,7 @@ export async function getFundraiserKpi(
           data.total_amount
       from
           data
-          join donation_with_contact_info d on data.id = d.id
+          join donation d on data.id = d.id
       order by
           d.created_at desc;
     `,

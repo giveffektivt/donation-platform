@@ -6,10 +6,10 @@ import {
   dbRelease,
   type DonationToEmail,
   type DonationWithGatewayInfoBankTransfer,
-  type DonorWithSensitiveInfo,
+  type Donor,
   EmailedStatus,
   insertDonationViaBankTransfer,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   logError,
   parseDonationFrequency,
   parseDonationRecipient,
@@ -31,8 +31,8 @@ export async function processBankTransferDonation(
 export async function insertBankTransferData(
   db: PoolClient,
   submitData: SubmitDataDonation,
-): Promise<[DonorWithSensitiveInfo, DonationWithGatewayInfoBankTransfer]> {
-  const donor = await insertDonorWithSensitiveInfo(db, {
+): Promise<[Donor, DonationWithGatewayInfoBankTransfer]> {
+  const donor = await insertDonor(db, {
     email: submitData.email,
 
     tin: submitData.tin,
@@ -52,7 +52,7 @@ export async function insertBankTransferData(
 }
 
 async function sendEmails(
-  donor: DonorWithSensitiveInfo,
+  donor: Donor,
   donation: DonationWithGatewayInfoBankTransfer,
 ) {
   console.log(`Sending bank transfer donation email: ${donation.id}`);

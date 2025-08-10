@@ -8,7 +8,7 @@ import {
   insertCharge,
   insertMembershipViaQuickpay,
   insertDonationViaScanpay,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   insertInitialChargeQuickpay,
   insertInitialChargeScanpay,
   PaymentMethod,
@@ -32,7 +32,7 @@ afterEach(async () => {
 test("Insert charge for a donation", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -58,7 +58,7 @@ test("Insert charge for a donation", async () => {
 test("Insert initial charge for a donation via Scanpay only once", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -95,7 +95,7 @@ test("Insert initial charge for a donation via Scanpay only once", async () => {
 test("Insert initial charge for a donation via Quickpay only once", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -130,7 +130,7 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
 test("Do not insert initial charge for a matching donation", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -156,7 +156,7 @@ test("Do not insert initial charge for a matching donation", async () => {
 test("Update charge status", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 
@@ -180,7 +180,7 @@ test("Update charge status", async () => {
 test("Update charge Scanpay idempotency key", async () => {
   const db = await client;
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
   });
 

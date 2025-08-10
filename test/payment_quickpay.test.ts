@@ -8,7 +8,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   EmailedStatus,
-  insertDonorWithSensitiveInfo,
+  insertDonor,
   insertMembershipViaQuickpay,
   insertQuickpayDataDonation,
   insertQuickpayDataMembership,
@@ -222,7 +222,7 @@ test("Recreate failed recurring donation", async () => {
 
   const now = setDate(new Date(), 1);
 
-  const donor = await insertDonorWithSensitiveInfo(db, {
+  const donor = await insertDonor(db, {
     email: "hello@example.com",
     name: "John Smith",
   });
