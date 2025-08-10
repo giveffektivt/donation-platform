@@ -327,6 +327,50 @@ end;
 $$;
 
 
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.donor (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text,
+    email text NOT NULL,
+    address text,
+    postcode text,
+    city text,
+    tin text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    country text,
+    birthday date
+);
+
+
+--
+-- Name: register_donor(text, text, text, text, text, text, text, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.register_donor(email text, tin text DEFAULT NULL::text, name text DEFAULT NULL::text, address text DEFAULT NULL::text, postcode text DEFAULT NULL::text, city text DEFAULT NULL::text, country text DEFAULT NULL::text, birthday date DEFAULT NULL::date) RETURNS giveffektivt.donor
+    LANGUAGE sql
+    AS $$
+insert into donor(email, tin, name, address, postcode, city, country, birthday)
+values (email, tin, name, address, postcode, city, country, birthday)
+on conflict (email, coalesce(tin,'')) do update
+set
+  name     = coalesce(excluded.name, donor.name),
+  address  = coalesce(excluded.address, donor.address),
+  postcode = coalesce(excluded.postcode, donor.postcode),
+  city     = coalesce(excluded.city, donor.city),
+  country  = coalesce(excluded.country, donor.country),
+  birthday = coalesce(excluded.birthday, donor.birthday)
+returning *;
+$$;
+
+
 --
 -- Name: time_distribution(timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
@@ -691,10 +735,6 @@ end;
 $$;
 
 
-SET default_tablespace = '';
-
-SET default_table_access_method = heap;
-
 --
 -- Name: charge; Type: TABLE; Schema: giveffektivt; Owner: -
 --
@@ -707,7 +747,6 @@ CREATE TABLE giveffektivt.charge (
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    _old_id integer,
     transfer_id uuid
 );
 
@@ -730,29 +769,8 @@ CREATE TABLE giveffektivt.donation (
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    _old_id integer,
     fundraiser_id uuid,
     message text
-);
-
-
---
--- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.donor (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name text,
-    email text NOT NULL,
-    address text,
-    postcode text,
-    city text,
-    tin text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    _old_id integer,
-    country text,
-    birthday date
 );
 
 
@@ -2448,6 +2466,13 @@ CREATE INDEX audit_log_table_name_idx ON giveffektivt.audit_log USING btree (tab
 
 
 --
+-- Name: donor_unique_email_tin; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE UNIQUE INDEX donor_unique_email_tin ON giveffektivt.donor USING btree (email, COALESCE(tin, ''::text));
+
+
+--
 -- Name: idx_clearhaus_settlement_merchant_latest_amount; Type: INDEX; Schema: giveffektivt; Owner: -
 --
 
@@ -2722,4 +2747,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250725112716'),
     ('20250802174406'),
     ('20250810104141'),
+    ('20250810124953'),
     ('99999999999999');

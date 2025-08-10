@@ -7,16 +7,16 @@ export async function insertDonor(
 ): Promise<Donor> {
   return (
     await client.query(
-      "insert into donor(name, email, address, postcode, city, tin, birthday, country) values ($1, $2, $3, $4, $5, $6, $7, $8) returning *",
+      "select * from register_donor(email => $1, tin => $2, name => $3, address => $4, postcode => $5, city => $6, country => $7, birthday => $8)",
       [
-        donor.name,
         donor.email,
+        donor.tin,
+        donor.name,
         donor.address,
         donor.postcode,
         donor.city,
-        donor.tin,
-        donor.birthday,
         donor.country,
+        donor.birthday,
       ],
     )
   ).rows[0];
