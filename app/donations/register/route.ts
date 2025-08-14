@@ -35,6 +35,10 @@ export async function POST(req: Request) {
 
     const submitData: SubmitDataDonationRegister = await req.json();
 
+    if (submitData.donor.email === "error@error") {
+      throw new Error("Test of an error");
+    }
+
     const submitDataOld = {
       amount:
         typeof submitData.amount === "string"
