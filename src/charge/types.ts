@@ -34,7 +34,6 @@ export type ChargeToCharge = {
   email: string;
   gateway: PaymentGateway;
   method: PaymentMethod;
-  recipient: DonationRecipient;
 };
 
 export type ChargeToChargeScanpay = ChargeToCharge & {

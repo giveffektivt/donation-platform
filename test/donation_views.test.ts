@@ -123,6 +123,43 @@ test("Finds first successful donations to email", async () => {
   expect(toEmail).toEqual(expected);
 });
 
+test("Should not include recipient if donation is earmarked using %-split", async () => {
+  const db = await client;
+
+  const donor1 = await insertDonor(db, {
+    email: "hello@example.com",
+  });
+
+  const donation1 = await insertDonationViaScanpay(db, {
+    donor_id: donor1.id,
+    amount: 77,
+    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: true,
+  });
+
+  await insertCharge(db, {
+    donation_id: donation1.id,
+    status: ChargeStatus.Charged,
+  });
+
+  const toEmail = await getDonationsToEmail(db);
+
+  const expected = [
+    {
+      id: donation1.id,
+      email: donor1.email,
+      amount: 77,
+      recipient: null,
+      frequency: DonationFrequency.Monthly,
+      tax_deductible: true,
+    },
+  ];
+
+  expect(toEmail).toEqual(expected);
+});
+
 test("Should not email to a credit card one-time donation that wasn't charged yet", async () => {
   const db = await client;
 

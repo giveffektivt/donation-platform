@@ -1,4 +1,4 @@
-import { Donation, Donor, PaymentGateway } from "../src";
+import { Donation, DonationRecipient, Donor, PaymentGateway } from "../src";
 
 export type DonationWithGatewayInfoAny = Donation & {
   gateway_metadata: any;
@@ -26,4 +26,10 @@ export type OfficialTaxReportLine = {
   ge_cvr: number;
   ge_notes: string;
   rettekode: number;
+};
+
+export type Earmark = {
+  donation_id: string;
+  recipient: DonationRecipient;
+  percentage: number;
 };

@@ -27,6 +27,7 @@ import {
   setDonationCancelledById,
   setDonationEmailed,
   EmailedStatus,
+  insertDonationEarmark,
 } from "src";
 
 export async function processQuickpayDonation(
@@ -78,9 +79,7 @@ export async function generateRenewPaymentUrl(
 export async function insertQuickpayDataDonation(
   db: PoolClient,
   submitData: SubmitDataDonation,
-): Promise<
-  [Donor, DonationWithGatewayInfoQuickpay, Charge | null]
-> {
+): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
   const donor = await insertDonor(db, {
     email: submitData.email,
     tin: submitData.tin,
@@ -89,13 +88,19 @@ export async function insertQuickpayDataDonation(
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: submitData.amount,
-    recipient: parseDonationRecipient(submitData.recipient),
     frequency: parseDonationFrequency(submitData.frequency),
     method: parsePaymentMethod(submitData.method),
     tax_deductible: submitData.taxDeductible,
     fundraiser_id: submitData.fundraiserId,
     message: submitData.message,
   });
+
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    parseDonationRecipient(submitData.recipient),
+    100,
+  );
 
   // Only create charges at this moment for auto-captured one-time donations
   const charge =
@@ -112,9 +117,7 @@ export async function insertQuickpayDataDonation(
 export async function insertQuickpayDataMembership(
   db: PoolClient,
   submitData: SubmitDataMembership,
-): Promise<
-  [Donor, DonationWithGatewayInfoQuickpay, Charge | null]
-> {
+): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
   const donor = await insertDonor(db, {
     name: submitData.name,
     email: submitData.email,

@@ -66,13 +66,12 @@ export async function insertDonationViaScanpay(
 ): Promise<DonationWithGatewayInfoScanpay> {
   return (
     await client.query(
-      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        returning *`,
       [
         donation.donor_id,
         donation.amount,
-        donation.recipient,
         donation.frequency,
         PaymentGateway.Scanpay,
         donation.method,
@@ -90,13 +89,12 @@ export async function insertDonationViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
+      `insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
         donation.amount,
-        donation.recipient,
         donation.frequency,
         PaymentGateway.Quickpay,
         donation.method,
@@ -114,13 +112,12 @@ export async function insertMembershipViaQuickpay(
 ): Promise<DonationWithGatewayInfoQuickpay> {
   return (
     await client.query(
-      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
+      `insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
         50,
-        DonationRecipient.GivEffektivtsMedlemskab,
         DonationFrequency.Yearly,
         PaymentGateway.Quickpay,
         donation.method,
@@ -136,13 +133,12 @@ export async function insertDonationViaBankTransfer(
 ): Promise<DonationWithGatewayInfoBankTransfer> {
   return (
     await client.query(
-      `insert into donation (donor_id, amount, recipient, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, format('{"bank_msg": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb)
+      `insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, format('{"bank_msg": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb)
        returning *`,
       [
         donation.donor_id,
         donation.amount,
-        donation.recipient,
         donation.frequency,
         PaymentGateway.BankTransfer,
         PaymentMethod.BankTransfer,
@@ -150,6 +146,22 @@ export async function insertDonationViaBankTransfer(
         donation.fundraiser_id,
         donation.message,
       ],
+    )
+  ).rows[0];
+}
+
+export async function insertDonationEarmark(
+  client: PoolClient,
+  donation_id: string,
+  recipient: DonationRecipient,
+  percentage: number,
+): Promise<DonationWithGatewayInfoQuickpay> {
+  return (
+    await client.query(
+      `insert into earmark(donation_id, recipient, percentage)
+       values ($1, $2, $3)
+       returning *`,
+      [donation_id, recipient, percentage],
     )
   ).rows[0];
 }

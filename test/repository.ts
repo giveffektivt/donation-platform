@@ -10,6 +10,7 @@ import {
 } from "../src";
 import {
   DonationWithGatewayInfoAny,
+  Earmark,
   GatewayWebhook,
   TaxReportLine,
 } from "./types";
@@ -72,6 +73,10 @@ export async function findAllCharges(
   client: PoolClient,
 ): Promise<ChargeWithGatewayMetadata[]> {
   return (await client.query(`select * from charge`)).rows;
+}
+
+export async function findAllEarmarks(client: PoolClient): Promise<Earmark[]> {
+  return (await client.query(`select * from earmark`)).rows;
 }
 
 export async function findAllGatewayWebhooks(

@@ -31,11 +31,15 @@ export async function getTransferredDistribution(
 
 export async function getTimeDistribution(
   client: PoolClient,
-  from: string | null,
-  to: string | null,
+  from: string,
+  to: string,
+  useDaily: boolean,
 ): Promise<TimeDistribution[]> {
   return (
-    await client.query("select * from time_distribution($1, $2)", [from, to])
+    await client.query(
+      `select * from time_distribution_${useDaily ? "daily" : "monthly"} where date between $1 and $2`,
+      [from, to],
+    )
   ).rows;
 }
 

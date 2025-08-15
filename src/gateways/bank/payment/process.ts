@@ -8,6 +8,7 @@ import {
   type DonationWithGatewayInfoBankTransfer,
   type Donor,
   EmailedStatus,
+  insertDonationEarmark,
   insertDonationViaBankTransfer,
   insertDonor,
   logError,
@@ -47,6 +48,13 @@ export async function insertBankTransferData(
     fundraiser_id: submitData.fundraiserId,
     message: submitData.message,
   });
+
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    parseDonationRecipient(submitData.recipient),
+    100,
+  );
 
   return [donor, donation];
 }

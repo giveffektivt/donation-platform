@@ -1,4 +1,3 @@
-import { addDays } from "date-fns";
 import type { PoolClient } from "pg";
 import {
   ChargeStatus,
@@ -129,12 +128,6 @@ export async function quickpayChargeSubscription(
     return;
   }
 
-  const text_on_statement = `giveffektivt.dk${
-    charge.recipient === DonationRecipient.GivEffektivtsMedlemskab
-      ? " medlem"
-      : ""
-  }`;
-
   const isMobilePay = charge.method === PaymentMethod.MobilePay;
 
   let status = ChargeStatus.Waiting;
@@ -148,7 +141,7 @@ export async function quickpayChargeSubscription(
         amount: charge.amount * 100,
         order_id: charge.short_id,
         auto_capture: true,
-        text_on_statement,
+        text_on_statement: "giveffektivt.dk",
         description: `Giv Effektivt ${charge.short_id}`,
       },
       !isMobilePay, // MobilePay Subscriptions sends empty response on success

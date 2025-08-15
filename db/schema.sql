@@ -132,6 +132,30 @@ CREATE TYPE giveffektivt.transfer_recipient AS ENUM (
 
 
 --
+-- Name: earmark_sum_check(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.earmark_sum_check() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_donation_id uuid := coalesce(new.donation_id, old.donation_id);
+  v_sum numeric;
+begin
+  select coalesce(sum(percentage), 0) into v_sum
+  from earmark
+  where donation_id = v_donation_id;
+
+  if v_sum <> 100 then
+    raise exception 'donation % earmarks must sum to 100, got %', v_donation_id, v_sum;
+  end if;
+
+  return null;
+end;
+$$;
+
+
+--
 -- Name: gen_random_string(integer, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -372,356 +396,6 @@ $$;
 
 
 --
--- Name: time_distribution(timestamp with time zone, timestamp with time zone); Type: FUNCTION; Schema: giveffektivt; Owner: -
---
-
-CREATE FUNCTION giveffektivt.time_distribution(time_from timestamp with time zone, time_to timestamp with time zone) RETURNS TABLE(date text, amount_once_small numeric, amount_once_medium numeric, amount_once_large numeric, amount_once_major numeric, amount_monthly_small numeric, amount_monthly_medium numeric, amount_monthly_large numeric, amount_monthly_major numeric, payments_once_small numeric, payments_once_medium numeric, payments_once_large numeric, payments_once_major numeric, payments_monthly_small numeric, payments_monthly_medium numeric, payments_monthly_large numeric, payments_monthly_major numeric, payments_new_once_small numeric, payments_new_once_medium numeric, payments_new_once_large numeric, payments_new_once_major numeric, payments_new_monthly_small numeric, payments_new_monthly_medium numeric, payments_new_monthly_large numeric, payments_new_monthly_major numeric, value_added_once_small numeric, value_added_once_medium numeric, value_added_once_large numeric, value_added_once_major numeric, value_added_monthly_small numeric, value_added_monthly_medium numeric, value_added_monthly_large numeric, value_added_monthly_major numeric, value_lost_small numeric, value_lost_medium numeric, value_lost_large numeric, value_lost_major numeric, value_total numeric, monthly_donors numeric, payments_total numeric, dkk_total numeric, value_added numeric, value_added_once numeric, value_added_monthly numeric, value_lost numeric, amount_new numeric, payments_new numeric)
-    LANGUAGE plpgsql
-    AS $$
-declare
-  interval_type text;
-begin
-if time_to - time_from <= interval '3 month' then
-    interval_type := 'day';
-else
-    interval_type := 'month';
-end if;
-return query
-with
-    buckets as (
-        select
-            *
-        from
-            (
-                values
-                    ('once'::donation_frequency, 0, 1000, 'small'),
-                    ('once'::donation_frequency, 1000, 6000, 'medium'),
-                    ('once'::donation_frequency, 6000, 24000, 'large'),
-                    ('once'::donation_frequency, 24000, 999999999999, 'major'),
-                    ('monthly'::donation_frequency, 0, 200, 'small'),
-                    ('monthly'::donation_frequency, 200, 500, 'medium'),
-                    ('monthly'::donation_frequency, 500, 2000, 'large'),
-                    ('monthly'::donation_frequency, 2000, 999999999999, 'major')
-            ) as bucket_table (frequency, start, stop, bucket)
-    ),
-    monthly_donations_charged_exactly_once as (
-        select
-            id
-        from
-            (
-                select
-                    d.id,
-                    bool_or(d.cancelled) as cancelled,
-                    count(c.id) as number_of_donations,
-                    max(c.created_at) as last_donated_at
-                from
-                    donation d
-                    join charge c on d.id = c.donation_id
-                where
-                    c.status = 'charged'
-                    and recipient != 'Giv Effektivts medlemskab'
-                    and frequency = 'monthly'
-                group by
-                    d.id
-            )
-        where
-            number_of_donations = 1
-            and (
-                cancelled
-                or last_donated_at < now() - interval '40 days'
-            )
-    ),
-    successful_charges as (
-        select
-            a.*,
-            bucket
-        from
-            (
-                select
-                    date_trunc(interval_type, c.created_at) as period,
-                    date_trunc('month', c.created_at) as month,
-                    c.created_at,
-                    p.email,
-                    d.id as donation_id,
-                    d.cancelled,
-                    amount,
-                    case
-                        when exists (
-                            select
-                                1
-                            from
-                                monthly_donations_charged_exactly_once m
-                            where
-                                d.id = m.id
-                        ) then 'once'
-                        else frequency
-                    end as frequency
-                from
-                    donor p
-                    join donation d on p.id = d.donor_id
-                    join charge c on c.donation_id = d.id
-                where
-                    c.status = 'charged'
-                    and d.recipient != 'Giv Effektivts medlemskab'
-            ) a
-            join buckets b on a.frequency = b.frequency
-            and a.amount > b.start
-            and a.amount <= b.stop
-    ),
-    first_time_by_email as (
-        select distinct
-            on (email) email,
-            amount,
-            date_trunc(interval_type, c.created_at) as period,
-            c.created_at
-        from
-            donor p
-            join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-        where
-            c.status = 'charged'
-            and d.recipient != 'Giv Effektivts medlemskab'
-        order by
-            email,
-            c.created_at
-    ),
-    first_time_donations as (
-        select
-            period,
-            sum(amount) as amount,
-            count(1) as payments
-        from
-            first_time_by_email
-        where
-            (
-                time_from is null
-                or created_at >= time_from
-            )
-            and (
-                time_to is null
-                or created_at <= time_to
-            )
-        group by
-            period
-    ),
-    stopped_monthly_donations as (
-        select
-            email,
-            date_trunc(interval_type, last_donated_at + interval '1 month') as stop_period,
-            - sum(amount) as amount,
-            frequency
-        from
-            (
-                select distinct
-                    on (donation_id) email,
-                    created_at as last_donated_at,
-                    amount,
-                    frequency,
-                    cancelled
-                from
-                    successful_charges s
-                where
-                    frequency = 'monthly'
-                order by
-                    donation_id,
-                    created_at desc
-            ) a
-        where
-            last_donated_at + interval '40 days' < now()
-            or cancelled
-        group by
-            email,
-            date_trunc(interval_type, last_donated_at + interval '1 month'),
-            frequency
-    ),
-    started_donations as (
-        select
-            email,
-            period as start_period,
-            sum(amount) as amount,
-            frequency
-        from
-            (
-                select distinct
-                    on (donation_id) email,
-                    period,
-                    amount,
-                    frequency
-                from
-                    successful_charges
-                order by
-                    donation_id,
-                    created_at
-            )
-        group by
-            email,
-            period,
-            frequency
-    ),
-    changed_donations as (
-        select
-            a.*,
-            bucket
-        from
-            (
-                select
-                    coalesce(start_period, stop_period) as period,
-                    coalesce(a.frequency, b.frequency) as frequency,
-                    sum(coalesce(a.amount, 0)) + sum(coalesce(b.amount, 0)) as amount
-                from
-                    started_donations a
-                    full outer join stopped_monthly_donations b on a.email = b.email
-                    and a.frequency = b.frequency
-                    and date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
-                group by
-                    coalesce(a.email, b.email),
-                    coalesce(a.frequency, b.frequency),
-                    coalesce(start_period, stop_period)
-            ) a
-            join buckets b on a.frequency = b.frequency
-            and abs(a.amount) > b.start
-            and abs(a.amount) <= b.stop
-        where
-            (
-                time_from is null
-                or period >= time_from
-            )
-            and (
-                time_to is null
-                or period <= time_to
-            )
-    ),
-    value_added_lost as (
-        select
-            period,
-            frequency,
-            bucket,
-            /* sql-formatter-disable */
-            sum(amount * (case when amount > 0 then 1 else 0 end) * (case when frequency = 'monthly' then 18 else 1 end)) as value_added,
-            sum(amount * (case when amount < 0 then 1 else 0 end) * 18) as value_lost
-            /* sql-formatter-enable */
-        from
-            changed_donations
-        group by
-            period,
-            frequency,
-            bucket
-    ),
-    payments as (
-        select
-            period,
-            sum(amount) as amount,
-            count(distinct donation_id) as payments,
-            frequency,
-            bucket
-        from
-            successful_charges
-        where
-            (
-                time_from is null
-                or created_at >= time_from
-            )
-            and (
-                time_to is null
-                or created_at <= time_to
-            )
-        group by
-            period,
-            frequency,
-            bucket
-    ),
-    payments_new_donors as (
-        select
-            s.period,
-            sum(s.amount) as amount,
-            count(distinct donation_id) as payments,
-            frequency,
-            bucket
-        from
-            successful_charges s
-            join first_time_by_email f on s.email = f.email and s.period = f.period and s.amount = f.amount
-        where
-            (
-                time_from is null
-                or s.created_at >= time_from
-            )
-            and (
-                time_to is null
-                or s.created_at <= time_to
-            )
-        group by
-            s.period,
-            frequency,
-            bucket
-    )
-select
-    to_char(coalesce(a.period, b.period), 'yyyy') || '-' || to_char(coalesce(a.period, b.period), 'MM') || '-' || to_char(coalesce(a.period, b.period), 'dd') as date,
-    /* sql-formatter-disable */
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_once_small,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_once_medium,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'large'  then a.amount else 0 end), 0) as amount_once_large,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'major'  then a.amount else 0 end), 0) as amount_once_major,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'small'  then a.amount else 0 end), 0) as amount_monthly_small,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.amount else 0 end), 0) as amount_monthly_medium,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.amount else 0 end), 0) as amount_monthly_large,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.amount else 0 end), 0) as amount_monthly_major,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'small'  then a.payments else 0 end), 0) as payments_once_small,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_once_medium,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_once_large,
-    coalesce(sum(case when a.frequency = 'once'    and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_once_major,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'small'  then a.payments else 0 end), 0) as payments_monthly_small,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'medium' then a.payments else 0 end), 0) as payments_monthly_medium,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'large'  then a.payments else 0 end), 0) as payments_monthly_large,
-    coalesce(sum(case when a.frequency = 'monthly' and a.bucket = 'major'  then a.payments else 0 end), 0) as payments_monthly_major,
-    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'small'  then d.payments else 0 end), 0) as payments_new_once_small,
-    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'medium' then d.payments else 0 end), 0) as payments_new_once_medium,
-    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'large'  then d.payments else 0 end), 0) as payments_new_once_large,
-    coalesce(sum(case when d.frequency = 'once'    and d.bucket = 'major'  then d.payments else 0 end), 0) as payments_new_once_major,
-    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'small'  then d.payments else 0 end), 0) as payments_new_monthly_small,
-    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'medium' then d.payments else 0 end), 0) as payments_new_monthly_medium,
-    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'large'  then d.payments else 0 end), 0) as payments_new_monthly_large,
-    coalesce(sum(case when d.frequency = 'monthly' and d.bucket = 'major'  then d.payments else 0 end), 0) as payments_new_monthly_major,
-    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_once_small,
-    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_once_medium,
-    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_once_large,
-    coalesce(sum(case when b.frequency = 'once'    and b.bucket = 'major'  then b.value_added else 0 end), 0) as value_added_once_major,
-    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'small'  then b.value_added else 0 end), 0) as value_added_monthly_small,
-    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'medium' then b.value_added else 0 end), 0) as value_added_monthly_medium,
-    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'large'  then b.value_added else 0 end), 0) as value_added_monthly_large,
-    coalesce(sum(case when b.frequency = 'monthly' and b.bucket = 'major'  then b.value_added else 0 end), 0) as value_added_monthly_major,
-    coalesce(sum(case when b.bucket = 'small'  then b.value_lost else 0 end), 0) as value_lost_small,
-    coalesce(sum(case when b.bucket = 'medium' then b.value_lost else 0 end), 0) as value_lost_medium,
-    coalesce(sum(case when b.bucket = 'large'  then b.value_lost else 0 end), 0) as value_lost_large,
-    coalesce(sum(case when b.bucket = 'major'  then b.value_lost else 0 end), 0) as value_lost_major,
-    coalesce(sum(b.value_added), 0) + coalesce(sum(b.value_lost), 0) as value_total,
-    coalesce(sum(case when a.frequency = 'monthly' then a.payments else 0 end), 0) as monthly_donors,
-    coalesce(sum(a.payments), 0) as payments_total,
-    coalesce(sum(a.amount), 0) as dkk_total,
-    coalesce(sum(b.value_added), 0) as value_added,
-    coalesce(sum(case when b.frequency = 'once' then b.value_added else 0 end), 0) as value_added_once,
-    coalesce(sum(case when b.frequency = 'monthly' then b.value_added else 0 end), 0) as value_added_monthly,
-    coalesce(sum(b.value_lost), 0) as value_lost,
-    coalesce(max(c.amount), 0)::numeric as amount_new,
-    coalesce(max(c.payments), 0)::numeric as payments_new
-    /* sql-formatter-enable */
-from
-    payments a
-    full outer join value_added_lost b on a.period = b.period
-    and a.frequency = b.frequency
-    and a.bucket = b.bucket
-    full outer join first_time_donations c on a.period = c.period
-    full outer join payments_new_donors d on a.period = d.period
-    and a.frequency = d.frequency
-    and a.bucket = d.bucket
-group by
-    coalesce(a.period, b.period)
-order by
-    coalesce(a.period, b.period) desc;
-end
-$$;
-
-
---
 -- Name: trigger_update_timestamp(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -746,8 +420,21 @@ CREATE TABLE giveffektivt.charge (
     status giveffektivt.charge_status NOT NULL,
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    transfer_id uuid
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: charge_transfer; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.charge_transfer (
+    charge_id uuid NOT NULL,
+    transfer_id uuid NOT NULL,
+    donation_id uuid NOT NULL,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
@@ -760,7 +447,6 @@ CREATE TABLE giveffektivt.donation (
     donor_id uuid NOT NULL,
     emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status NOT NULL,
     amount numeric NOT NULL,
-    recipient giveffektivt.donation_recipient NOT NULL,
     frequency giveffektivt.donation_frequency NOT NULL,
     cancelled boolean DEFAULT false NOT NULL,
     method giveffektivt.payment_method NOT NULL,
@@ -772,6 +458,137 @@ CREATE TABLE giveffektivt.donation (
     fundraiser_id uuid,
     message text
 );
+
+
+--
+-- Name: donations_overview; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donations_overview AS
+ SELECT p.id AS donor_id,
+    p.name,
+    p.email,
+    p.tin,
+    d.id AS donation_id,
+    d.amount,
+    d.frequency,
+    d.cancelled,
+    d.method,
+    d.gateway,
+    d.tax_deductible,
+    c.id AS charge_id,
+    c.status,
+    c.created_at AS charged_at
+   FROM ((giveffektivt.donor p
+     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)));
+
+
+--
+-- Name: earmark; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.earmark (
+    donation_id uuid NOT NULL,
+    recipient giveffektivt.donation_recipient NOT NULL,
+    percentage numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT earmark_percentage_check CHECK (((percentage >= (0)::numeric) AND (percentage <= (100)::numeric)))
+);
+
+
+--
+-- Name: charged_donations; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_donations AS
+ SELECT donor_id,
+    name,
+    email,
+    tin,
+    donation_id,
+    amount,
+    frequency,
+    cancelled,
+    method,
+    gateway,
+    tax_deductible,
+    charge_id,
+    status,
+    charged_at
+   FROM giveffektivt.donations_overview d
+  WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
+           FROM giveffektivt.earmark e
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
+
+
+--
+-- Name: transfer; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.transfer (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    recipient giveffektivt.transfer_recipient NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    unit_cost_external numeric,
+    life_cost_external numeric,
+    exchange_rate numeric,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    unit_cost_conversion numeric
+);
+
+
+--
+-- Name: charged_donations_by_transfer; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_donations_by_transfer AS
+ SELECT cd.donor_id,
+    cd.name,
+    cd.email,
+    cd.tin,
+    cd.donation_id,
+    round(((cd.amount * e.percentage) / (100)::numeric), 1) AS amount,
+    cd.frequency,
+    cd.cancelled,
+    cd.method,
+    cd.gateway,
+    cd.tax_deductible,
+    cd.charge_id,
+    cd.charged_at,
+    e.recipient AS earmark,
+    t.id AS transfer_id
+   FROM (((giveffektivt.charged_donations cd
+     JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
+     LEFT JOIN giveffektivt.charge_transfer ct ON ((ct.charge_id = cd.charge_id)))
+     LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)));
+
+
+--
+-- Name: charged_memberships; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_memberships AS
+ SELECT donor_id,
+    name,
+    email,
+    tin,
+    donation_id,
+    amount,
+    frequency,
+    cancelled,
+    method,
+    gateway,
+    tax_deductible,
+    charge_id,
+    status,
+    charged_at
+   FROM giveffektivt.donations_overview d
+  WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
+           FROM giveffektivt.earmark e
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))));
 
 
 --
@@ -793,23 +610,6 @@ CREATE TABLE giveffektivt.gavebrev (
 
 
 --
--- Name: transfer; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.transfer (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    recipient giveffektivt.transfer_recipient NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    unit_cost_external numeric,
-    life_cost_external numeric,
-    exchange_rate numeric,
-    earmark giveffektivt.donation_recipient NOT NULL,
-    unit_cost_conversion numeric
-);
-
-
---
 -- Name: annual_email_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -818,20 +618,18 @@ CREATE VIEW giveffektivt.annual_email_report AS
          SELECT date_trunc('year'::text, (now() - '9 mons'::interval)) AS year_from,
             date_trunc('year'::text, (now() + '3 mons'::interval)) AS year_to
         ), data_per_transfer AS (
-         SELECT p.tin,
-            p.email,
-            d_1.tax_deductible,
+         SELECT cdt.tin,
+            cdt.email,
+            cdt.tax_deductible,
             min(t.recipient) AS recipient,
-            round(((sum(d_1.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit,
-            sum(d_1.amount) AS amount,
-            min(c_1.created_at) AS first_donated
-           FROM ((((const
-             CROSS JOIN giveffektivt.donor p)
-             JOIN giveffektivt.donation d_1 ON ((p.id = d_1.donor_id)))
-             JOIN giveffektivt.charge c_1 ON ((d_1.id = c_1.donation_id)))
-             LEFT JOIN giveffektivt.transfer t ON ((c_1.transfer_id = t.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
-          GROUP BY p.tin, p.email, d_1.tax_deductible, t.id
+            round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit,
+            sum(cdt.amount) AS amount,
+            min(cdt.charged_at) AS first_donated
+           FROM ((const
+             CROSS JOIN giveffektivt.charged_donations_by_transfer cdt)
+             LEFT JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
+          WHERE (cdt.charged_at <@ tstzrange(const.year_from, const.year_to, '[)'::text))
+          GROUP BY cdt.tin, cdt.email, cdt.tax_deductible, t.id
         ), data AS (
          SELECT data_per_transfer.tin,
             data_per_transfer.email,
@@ -843,13 +641,11 @@ CREATE VIEW giveffektivt.annual_email_report AS
            FROM data_per_transfer
           GROUP BY data_per_transfer.tin, data_per_transfer.email, data_per_transfer.tax_deductible, data_per_transfer.recipient
         ), members_confirmed AS (
-         SELECT DISTINCT ON (p.tin) p.tin,
-            p.email
-           FROM (((const
-             CROSS JOIN giveffektivt.donor p)
-             JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
-             JOIN giveffektivt.charge c_1 ON ((c_1.donation_id = d_1.id)))
-          WHERE ((c_1.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c_1.created_at <@ tstzrange(const.year_from, const.year_to, '[)'::text)))
+         SELECT DISTINCT ON (charged_memberships.tin) charged_memberships.tin,
+            charged_memberships.email
+           FROM (const
+             CROSS JOIN giveffektivt.charged_memberships)
+          WHERE (charged_memberships.charged_at <@ tstzrange(const.year_from, const.year_to, '[)'::text))
         ), active_gavebrev AS (
          SELECT p.tin
            FROM ((const
@@ -932,15 +728,13 @@ CREATE VIEW giveffektivt.annual_tax_report_const AS
 --
 
 CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
- SELECT p.tin,
-    round(sum(d.amount)) AS total,
-    min(EXTRACT(year FROM c.created_at)) AS year
-   FROM (((giveffektivt.annual_tax_report_const
-     CROSS JOIN giveffektivt.donor p)
-     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND d.tax_deductible)
-  GROUP BY p.tin;
+ SELECT charged_donations.tin,
+    round(sum(charged_donations.amount)) AS total,
+    min(EXTRACT(year FROM charged_donations.charged_at)) AS year
+   FROM (giveffektivt.annual_tax_report_const
+     CROSS JOIN giveffektivt.charged_donations)
+  WHERE ((charged_donations.charged_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND charged_donations.tax_deductible)
+  GROUP BY charged_donations.tin;
 
 
 --
@@ -964,12 +758,10 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
         ), gavebrev_tin_all_donations_per_year AS (
          SELECT i_1.tin,
             i_1.year,
-            d_1.amount
-           FROM (((gavebrev_tin_years_until_now i_1
-             JOIN giveffektivt.donor p ON ((i_1.tin = p.tin)))
-             JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON (((c.donation_id = d_1.id) AND (i_1.year = EXTRACT(year FROM c.created_at)))))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d_1.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND d_1.tax_deductible)
+            c.amount
+           FROM (gavebrev_tin_years_until_now i_1
+             JOIN giveffektivt.charged_donations c ON (((i_1.tin = c.tin) AND (i_1.year = EXTRACT(year FROM c.charged_at)))))
+          WHERE c.tax_deductible
         )
  SELECT i.tin,
     i.year,
@@ -1221,12 +1013,10 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
            FROM report
           WHERE ((report.ll8a_or_gavebrev = 'A'::text) AND (report.total >= (200)::numeric))
         ), members AS (
-         SELECT count(DISTINCT ds.tin) AS count_members
-           FROM const const_1,
-            ((giveffektivt.donor ds
-             JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
+         SELECT count(DISTINCT c.tin) AS count_members
+           FROM (const const_1
+             CROSS JOIN giveffektivt.charged_memberships c)
+          WHERE (c.charged_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text))
         ), donated_a AS (
          SELECT COALESCE(sum(report.total), (0)::numeric) AS amount_donated_a
            FROM report
@@ -1236,12 +1026,10 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
            FROM report
           WHERE (report.ll8a_or_gavebrev = 'L'::text)
         ), donated_total AS (
-         SELECT COALESCE(sum(d.amount), (0)::numeric) AS amount_donated_total
-           FROM const const_1,
-            ((giveffektivt.donor ds
-             JOIN giveffektivt.donation d ON ((d.donor_id = ds.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.status = 'charged'::giveffektivt.charge_status) AND (c.created_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text)))
+         SELECT COALESCE(sum(c.amount), (0)::numeric) AS amount_donated_total
+           FROM (const const_1
+             CROSS JOIN giveffektivt.charged_donations c)
+          WHERE (c.charged_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text))
         )
  SELECT EXTRACT(year FROM const.year_from) AS year,
     donors_200.count_donors_donated_min_200_kr,
@@ -1339,6 +1127,31 @@ ALTER TABLE giveffektivt.audit_log ALTER COLUMN id ADD GENERATED BY DEFAULT AS I
 
 
 --
+-- Name: charged_or_created_donations; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_or_created_donations AS
+ SELECT donor_id,
+    name,
+    email,
+    tin,
+    donation_id,
+    amount,
+    frequency,
+    cancelled,
+    method,
+    gateway,
+    tax_deductible,
+    charge_id,
+    status,
+    charged_at
+   FROM giveffektivt.donations_overview d
+  WHERE ((status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (NOT (EXISTS ( SELECT 1
+           FROM giveffektivt.earmark e
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
+
+
+--
 -- Name: charges_to_charge; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1347,7 +1160,6 @@ CREATE VIEW giveffektivt.charges_to_charge AS
     c.short_id,
     dc.email,
     d.amount,
-    d.recipient,
     d.gateway,
     d.method,
     c.gateway_metadata,
@@ -1375,18 +1187,15 @@ CREATE TABLE giveffektivt.clearhaus_settlement (
 
 CREATE VIEW giveffektivt.donor_impact_report AS
  WITH data AS (
-         SELECT p.email,
+         SELECT cdt.email,
             min(t.recipient) AS transferred_to,
             min(t.created_at) AS transferred_at,
-            sum(d.amount) AS amount,
-            round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
-            round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
-           FROM (((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-             LEFT JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
-          GROUP BY p.email, t.id
+            sum(cdt.amount) AS amount,
+            round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
+            round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
+           FROM (giveffektivt.charged_donations_by_transfer cdt
+             LEFT JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
+          GROUP BY cdt.email, t.id
         )
  SELECT email,
     COALESCE((transferred_to)::text, '== Fremtiden =='::text) AS transferred_to,
@@ -1403,17 +1212,22 @@ CREATE VIEW giveffektivt.donor_impact_report AS
 --
 
 CREATE VIEW giveffektivt.ignored_renewals AS
- WITH last_charge AS (
+ WITH membership_ids AS (
+         SELECT DISTINCT earmark.donation_id AS id
+           FROM giveffektivt.earmark
+          WHERE (earmark.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
+        ), last_charge AS (
          SELECT DISTINCT ON (p.id) p.id,
             p.name,
             p.email,
             d.amount,
-            d.recipient,
+            (m.id IS NOT NULL) AS is_membership,
             c.status,
             c.created_at
-           FROM ((giveffektivt.donor p
+           FROM (((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
              JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+             LEFT JOIN membership_ids m ON ((m.id = d.id)))
           WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
           ORDER BY p.id, c.created_at DESC
         ), never_activated AS (
@@ -1429,11 +1243,12 @@ CREATE VIEW giveffektivt.ignored_renewals AS
             unnamed_subquery.is_membership,
             unnamed_subquery.created_at
            FROM ( SELECT p.email,
-                    (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AS is_membership,
+                    (m.id IS NOT NULL) AS is_membership,
                     c.created_at
-                   FROM ((giveffektivt.donor p
+                   FROM (((giveffektivt.donor p
                      JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
                      JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
+                     LEFT JOIN membership_ids m ON ((m.id = d.id)))
                   WHERE (c.status = 'charged'::giveffektivt.charge_status)) unnamed_subquery
           ORDER BY unnamed_subquery.email, unnamed_subquery.is_membership, unnamed_subquery.created_at DESC
         ), email_to_name AS (
@@ -1445,13 +1260,13 @@ CREATE VIEW giveffektivt.ignored_renewals AS
  SELECT COALESCE(lc.name, en.name) AS name,
     lc.email,
     lc.amount,
-    lc.recipient,
+    lc.is_membership,
     na.donation_id,
     na.created_at AS expired_at,
     ((now())::date - (na.created_at)::date) AS days_ago
    FROM (((last_charge lc
      JOIN never_activated na ON ((lc.id = na.id)))
-     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND ((lc.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) = lp.is_membership))))
+     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND (lp.is_membership = lp.is_membership))))
      LEFT JOIN email_to_name en ON ((lc.email = en.email)))
   WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
   ORDER BY na.created_at;
@@ -1510,45 +1325,35 @@ CREATE VIEW giveffektivt.crm_export AS
           WHERE (p.tin IS NOT NULL)
           ORDER BY p.email, p.created_at
         ), members AS (
-         SELECT DISTINCT ON (p.email) p.email,
-            p.name
-           FROM ((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= (now() - '1 year'::interval)))
+         SELECT DISTINCT ON (charged_memberships.email) charged_memberships.email,
+            charged_memberships.name
+           FROM giveffektivt.charged_memberships
+          WHERE (charged_memberships.charged_at >= (now() - '1 year'::interval))
         ), donations AS (
-         SELECT p.email,
-            sum(d.amount) AS total_donated,
+         SELECT charged_donations.email,
+            sum(charged_donations.amount) AS total_donated,
             count(1) AS donations_count
-           FROM ((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
-          GROUP BY p.email
+           FROM giveffektivt.charged_donations
+          GROUP BY charged_donations.email
         ), latest_donations AS (
-         SELECT DISTINCT ON (p.email) p.email,
-            d.amount AS last_donated_amount,
-            d.method AS last_donated_method,
-            d.frequency AS last_donated_frequency,
-            d.recipient AS last_donated_recipient,
-            d.tax_deductible AS last_donation_tax_deductible,
-            d.cancelled AS last_donation_cancelled,
-            c.created_at AS last_donated_at
-           FROM ((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
-          ORDER BY p.email, c.created_at DESC
+         SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
+            charged_donations.amount AS last_donated_amount,
+            charged_donations.method AS last_donated_method,
+            charged_donations.frequency AS last_donated_frequency,
+            charged_donations.tax_deductible AS last_donation_tax_deductible,
+            charged_donations.cancelled AS last_donation_cancelled,
+            charged_donations.charged_at AS last_donated_at
+           FROM giveffektivt.charged_donations
+          ORDER BY charged_donations.email, charged_donations.charged_at DESC
         ), first_donations AS (
-         SELECT p.email,
-            min(c.created_at) FILTER (WHERE (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
-            min(c.created_at) FILTER (WHERE (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
-            min(c.created_at) FILTER (WHERE (d.frequency = 'monthly'::giveffektivt.donation_frequency)) AS first_monthly_donation_at
-           FROM ((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE (c.status = 'charged'::giveffektivt.charge_status)
-          GROUP BY p.email
+         SELECT d.email,
+            min(d.charged_at) FILTER (WHERE (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
+            min(d.charged_at) FILTER (WHERE (e.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
+            min(d.charged_at) FILTER (WHERE (d.frequency = 'monthly'::giveffektivt.donation_frequency)) AS first_monthly_donation_at
+           FROM (giveffektivt.donations_overview d
+             JOIN giveffektivt.earmark e ON ((d.donation_id = e.donation_id)))
+          WHERE (d.status = 'charged'::giveffektivt.charge_status)
+          GROUP BY d.email
         ), has_gavebrev AS (
          SELECT p.email
            FROM (giveffektivt.gavebrev g
@@ -1625,14 +1430,14 @@ CREATE VIEW giveffektivt.crm_export AS
             ignored_renewals.donation_id AS expired_membership_id,
             ignored_renewals.expired_at AS expired_membership_at
            FROM giveffektivt.ignored_renewals
-          WHERE (ignored_renewals.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
+          WHERE ignored_renewals.is_membership
           ORDER BY ignored_renewals.email, ignored_renewals.expired_at DESC
         ), expired_donations AS (
          SELECT DISTINCT ON (ignored_renewals.email) ignored_renewals.email,
             ignored_renewals.donation_id AS expired_donation_id,
             ignored_renewals.expired_at AS expired_donation_at
            FROM giveffektivt.ignored_renewals
-          WHERE (ignored_renewals.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
+          WHERE (NOT ignored_renewals.is_membership)
           ORDER BY ignored_renewals.email, ignored_renewals.expired_at DESC
         ), renewals AS (
          SELECT COALESCE(m.email, d.email) AS email,
@@ -1653,7 +1458,6 @@ CREATE VIEW giveffektivt.crm_export AS
             l.last_donated_amount,
             l.last_donated_method,
             l.last_donated_frequency,
-            l.last_donated_recipient,
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
@@ -1701,7 +1505,6 @@ CREATE VIEW giveffektivt.crm_export AS
     last_donated_amount,
     last_donated_method,
     last_donated_frequency,
-    last_donated_recipient,
     last_donation_tax_deductible,
     last_donation_cancelled,
     last_donated_at,
@@ -1760,20 +1563,31 @@ CREATE VIEW giveffektivt.donations_to_create_charges AS
 --
 
 CREATE VIEW giveffektivt.donations_to_email AS
+ WITH latest_charge AS (
+         SELECT DISTINCT ON (charge.donation_id) charge.donation_id,
+            charge.id,
+            charge.status
+           FROM giveffektivt.charge
+          ORDER BY charge.donation_id, charge.created_at DESC
+        ), single_recipient AS (
+         SELECT earmark.donation_id,
+                CASE
+                    WHEN (count(*) = 1) THEN max(earmark.recipient)
+                    ELSE NULL::giveffektivt.donation_recipient
+                END AS recipient
+           FROM giveffektivt.earmark
+          GROUP BY earmark.donation_id
+        )
  SELECT d.id,
     p.email,
     d.amount,
-    d.recipient,
+    sr.recipient,
     d.frequency,
     d.tax_deductible
-   FROM ((giveffektivt.donor p
+   FROM (((giveffektivt.donor p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN LATERAL ( SELECT charge.id,
-            charge.status
-           FROM giveffektivt.charge
-          WHERE (charge.donation_id = d.id)
-          ORDER BY charge.created_at DESC
-         LIMIT 1) c ON ((1 = 1)))
+     JOIN latest_charge c ON ((c.donation_id = d.id)))
+     LEFT JOIN single_recipient sr ON ((sr.donation_id = d.id)))
   WHERE ((d.emailed = 'no'::giveffektivt.emailed_status) AND ((c.status = 'charged'::giveffektivt.charge_status) OR ((d.method = 'MobilePay'::giveffektivt.payment_method) AND (d.frequency <> 'once'::giveffektivt.donation_frequency) AND (c.status <> 'error'::giveffektivt.charge_status))));
 
 
@@ -1789,6 +1603,14 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
           ORDER BY d.id
+        ), single_recipient AS (
+         SELECT earmark.donation_id,
+                CASE
+                    WHEN (count(*) = 1) THEN max(earmark.recipient)
+                    ELSE NULL::giveffektivt.donation_recipient
+                END AS recipient
+           FROM giveffektivt.earmark
+          GROUP BY earmark.donation_id
         )
  SELECT failed_at,
     charge_id,
@@ -1818,15 +1640,16 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
             p.email AS donor_email,
             d.id AS donation_id,
             d.gateway_metadata,
-            d.recipient,
+            sr.recipient,
             d.frequency,
             d.tax_deductible,
             d.fundraiser_id,
             d.message,
             c.status
-           FROM ((giveffektivt.donation d
+           FROM (((giveffektivt.donation d
              JOIN giveffektivt.donor p ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+             LEFT JOIN single_recipient sr ON ((sr.donation_id = d.id)))
           WHERE (d.id IN ( SELECT paid_before.id
                    FROM paid_before))
           ORDER BY d.id, c.created_at DESC) s
@@ -1908,21 +1731,31 @@ CREATE TABLE giveffektivt.general_assembly_voting_code (
 --
 
 CREATE VIEW giveffektivt.gwwc_money_moved AS
- SELECT to_char(c.created_at, 'YYYY-MM'::text) AS month,
+ SELECT to_char(cdt.charged_at, 'YYYY-MM'::text) AS month,
     (t.recipient ||
         CASE
             WHEN (min(t.created_at) < '2024-11-29 00:00:00+00'::timestamp with time zone) THEN ' (via GiveWell)'::text
             ELSE ''::text
         END) AS recipient,
     'GHD'::text AS cause,
-    sum(d.amount) AS amount
-   FROM (((giveffektivt.donor p
-     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-     JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])))
-  GROUP BY (to_char(c.created_at, 'YYYY-MM'::text)), t.recipient
-  ORDER BY (to_char(c.created_at, 'YYYY-MM'::text));
+    sum(cdt.amount) AS amount
+   FROM (giveffektivt.charged_donations_by_transfer cdt
+     LEFT JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
+  GROUP BY (to_char(cdt.charged_at, 'YYYY-MM'::text)), t.recipient
+  ORDER BY (to_char(cdt.charged_at, 'YYYY-MM'::text));
+
+
+--
+-- Name: transfer_pending; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer_pending AS
+ SELECT charged_at,
+    amount,
+    earmark
+   FROM giveffektivt.charged_donations_by_transfer cdt
+  WHERE ((earmark <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (transfer_id IS NULL))
+  ORDER BY charged_at;
 
 
 --
@@ -1931,64 +1764,50 @@ CREATE VIEW giveffektivt.gwwc_money_moved AS
 
 CREATE VIEW giveffektivt.kpi AS
  WITH dkk_total AS (
-         SELECT round(sum(d.amount)) AS dkk_total
-           FROM (giveffektivt.donation d
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
+         SELECT round(sum(charged_donations.amount)) AS dkk_total
+           FROM giveffektivt.charged_donations
         ), dkk_total_ops AS (
-         SELECT round(sum(d.amount)) AS dkk_total_ops
-           FROM (giveffektivt.donation d
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient))
+         SELECT round(sum(cd.amount)) AS dkk_total_ops
+           FROM (giveffektivt.charged_donations cd
+             JOIN giveffektivt.earmark e ON ((e.donation_id = cd.donation_id)))
+          WHERE (e.recipient = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient)
         ), dkk_pending_transfer AS (
-         SELECT COALESCE(round(sum(d.amount)), (0)::numeric) AS dkk_pending_transfer
-           FROM (giveffektivt.donation d
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NULL))
+         SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer
+           FROM giveffektivt.transfer_pending
         ), dkk_last_30_days AS (
-         SELECT round(sum(d.amount)) AS dkk_last_30_days
-           FROM (giveffektivt.donation d
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= (date_trunc('day'::text, now()) - '30 days'::interval)))
+         SELECT round(sum(charged_donations.amount)) AS dkk_last_30_days
+           FROM giveffektivt.charged_donations
+          WHERE (charged_donations.charged_at >= (date_trunc('day'::text, now()) - '30 days'::interval))
         ), dkk_recurring_next_year AS (
          SELECT ((12)::numeric * sum(c1.amount)) AS dkk_recurring_next_year
-           FROM ( SELECT DISTINCT ON (d.id) d.amount
-                   FROM (giveffektivt.charge c
-                     JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
+           FROM ( SELECT DISTINCT ON (charged_or_created_donations.donation_id) charged_or_created_donations.amount
+                   FROM giveffektivt.charged_or_created_donations
+                  WHERE ((charged_or_created_donations.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT charged_or_created_donations.cancelled) AND (charged_or_created_donations.charged_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
         ), members_confirmed AS (
-         SELECT (count(DISTINCT p.tin))::numeric AS members_confirmed
-           FROM ((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (c.created_at >= date_trunc('year'::text, now())))
+         SELECT (count(DISTINCT charged_memberships.tin))::numeric AS members_confirmed
+           FROM giveffektivt.charged_memberships
+          WHERE (charged_memberships.charged_at >= date_trunc('year'::text, now()))
         ), members_pending_renewal AS (
          SELECT (count(*))::numeric AS members_pending_renewal
-           FROM ( SELECT DISTINCT ON (p.tin) p.tin,
-                    c.created_at
-                   FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled))
-                  ORDER BY p.tin, c.created_at DESC) a
-          WHERE (a.created_at < date_trunc('year'::text, now()))
+           FROM ( SELECT DISTINCT ON (charged_memberships.tin) charged_memberships.tin,
+                    charged_memberships.charged_at
+                   FROM giveffektivt.charged_memberships
+                  WHERE (NOT charged_memberships.cancelled)
+                  ORDER BY charged_memberships.tin, charged_memberships.charged_at DESC) a
+          WHERE (a.charged_at < date_trunc('year'::text, now()))
         ), monthly_donors AS (
-         SELECT (count(DISTINCT c.donation_id))::numeric AS monthly_donors
-           FROM (giveffektivt.charge c
-             JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
-          WHERE ((c.status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (NOT d.cancelled) AND (c.created_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
+         SELECT (count(DISTINCT charged_or_created_donations.donation_id))::numeric AS monthly_donors
+           FROM giveffektivt.charged_or_created_donations
+          WHERE ((charged_or_created_donations.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT charged_or_created_donations.cancelled) AND (charged_or_created_donations.charged_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
         ), number_of_donors AS (
          SELECT sum(unnamed_subquery.donors) AS number_of_donors
-           FROM ( SELECT p.email,
+           FROM ( SELECT charged_donations.email,
                         CASE
-                            WHEN (count(DISTINCT p.tin) = 0) THEN (1)::bigint
-                            ELSE count(DISTINCT p.tin)
+                            WHEN (count(DISTINCT charged_donations.tin) = 0) THEN (1)::bigint
+                            ELSE count(DISTINCT charged_donations.tin)
                         END AS donors
-                   FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
-                  GROUP BY p.email) unnamed_subquery
+                   FROM giveffektivt.charged_donations
+                  GROUP BY charged_donations.email) unnamed_subquery
         ), number_of_gavebrev AS (
          SELECT (count(1))::numeric AS number_of_gavebrev
            FROM giveffektivt.gavebrev
@@ -1998,12 +1817,10 @@ CREATE VIEW giveffektivt.kpi AS
            FROM giveffektivt.max_tax_deduction
         ), oldest_stopped_donation_age AS (
          SELECT floor(EXTRACT(epoch FROM (now() - min(unnamed_subquery.max_charged_at)))) AS oldest_stopped_donation_age
-           FROM ( SELECT max(c.created_at) AS max_charged_at
-                   FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE (c.status = 'charged'::giveffektivt.charge_status)
-                  GROUP BY p.email) unnamed_subquery
+           FROM ( SELECT max(donations_overview.charged_at) AS max_charged_at
+                   FROM giveffektivt.donations_overview
+                  WHERE (donations_overview.status = 'charged'::giveffektivt.charge_status)
+                  GROUP BY donations_overview.email) unnamed_subquery
         ), missing_gavebrev_income_proof AS (
          SELECT (count(1))::numeric AS missing_gavebrev_income_proof
            FROM giveffektivt.gavebrev_checkin
@@ -2047,14 +1864,13 @@ CREATE VIEW giveffektivt.kpi AS
 --
 
 CREATE VIEW giveffektivt.pending_distribution AS
- SELECT d.recipient,
-    round(sum(d.amount)) AS dkk_total,
+ SELECT earmark,
+    round(sum(amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
-   FROM (giveffektivt.donation d
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NULL))
-  GROUP BY d.recipient
-  ORDER BY (round(sum(d.amount))) DESC;
+   FROM giveffektivt.charged_donations_by_transfer cdt
+  WHERE ((earmark <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (transfer_id IS NULL))
+  GROUP BY earmark
+  ORDER BY (round(sum(amount))) DESC;
 
 
 --
@@ -2094,6 +1910,700 @@ CREATE TABLE giveffektivt.skat_gaveskema (
 
 
 --
+-- Name: time_distribution_daily; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.time_distribution_daily AS
+ WITH buckets AS (
+         SELECT bucket_table.frequency,
+            bucket_table.start,
+            bucket_table.stop,
+            bucket_table.bucket
+           FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
+        ), monthly_donations_charged_exactly_once AS (
+         SELECT unnamed_subquery.donation_id
+           FROM ( SELECT charged_donations.donation_id,
+                    bool_or(charged_donations.cancelled) AS cancelled,
+                    count(charged_donations.charge_id) AS number_of_donations,
+                    max(charged_donations.charged_at) AS last_donated_at
+                   FROM giveffektivt.charged_donations
+                  WHERE (charged_donations.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  GROUP BY charged_donations.donation_id) unnamed_subquery
+          WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.cancelled OR (unnamed_subquery.last_donated_at < (now() - '40 days'::interval))))
+        ), successful_charges AS (
+         SELECT a_1.period,
+            a_1.month,
+            a_1.charged_at,
+            a_1.email,
+            a_1.donation_id,
+            a_1.cancelled,
+            a_1.amount,
+            a_1.frequency,
+            b_1.bucket
+           FROM (( SELECT date_trunc('day'::text, cd.charged_at) AS period,
+                    date_trunc('day'::text, cd.charged_at) AS month,
+                    cd.charged_at,
+                    cd.email,
+                    cd.donation_id,
+                    cd.cancelled,
+                    cd.amount,
+                        CASE
+                            WHEN (EXISTS ( SELECT 1
+                               FROM monthly_donations_charged_exactly_once m
+                              WHERE (cd.donation_id = m.donation_id))) THEN 'once'::giveffektivt.donation_frequency
+                            ELSE cd.frequency
+                        END AS frequency
+                   FROM giveffektivt.charged_donations cd) a_1
+             JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (a_1.amount > (b_1.start)::numeric) AND (a_1.amount <= (b_1.stop)::numeric))))
+        ), first_time_by_email AS (
+         SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
+            charged_donations.amount,
+            date_trunc('day'::text, charged_donations.charged_at) AS period,
+            charged_donations.charged_at
+           FROM giveffektivt.charged_donations
+          ORDER BY charged_donations.email, charged_donations.charged_at
+        ), first_time_donations AS (
+         SELECT first_time_by_email.period,
+            sum(first_time_by_email.amount) AS amount,
+            count(1) AS payments
+           FROM first_time_by_email
+          GROUP BY first_time_by_email.period
+        ), stopped_monthly_donations AS (
+         SELECT a_1.email,
+            date_trunc('day'::text, (a_1.last_donated_at + '1 mon'::interval)) AS stop_period,
+            (- sum(a_1.amount)) AS amount,
+            a_1.frequency
+           FROM ( SELECT DISTINCT ON (s.donation_id) s.email,
+                    s.charged_at AS last_donated_at,
+                    s.amount,
+                    s.frequency,
+                    s.cancelled
+                   FROM successful_charges s
+                  WHERE (s.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  ORDER BY s.donation_id, s.charged_at DESC) a_1
+          WHERE (((a_1.last_donated_at + '40 days'::interval) < now()) OR a_1.cancelled)
+          GROUP BY a_1.email, (date_trunc('day'::text, (a_1.last_donated_at + '1 mon'::interval))), a_1.frequency
+        ), started_donations AS (
+         SELECT unnamed_subquery.email,
+            unnamed_subquery.period AS start_period,
+            sum(unnamed_subquery.amount) AS amount,
+            unnamed_subquery.frequency
+           FROM ( SELECT DISTINCT ON (successful_charges.donation_id) successful_charges.email,
+                    successful_charges.period,
+                    successful_charges.amount,
+                    successful_charges.frequency
+                   FROM successful_charges
+                  ORDER BY successful_charges.donation_id, successful_charges.charged_at) unnamed_subquery
+          GROUP BY unnamed_subquery.email, unnamed_subquery.period, unnamed_subquery.frequency
+        ), changed_donations AS (
+         SELECT a_1.period,
+            a_1.frequency,
+            a_1.amount,
+            b_1.bucket
+           FROM (( SELECT COALESCE(a_2.start_period, b_2.stop_period) AS period,
+                    COALESCE(a_2.frequency, b_2.frequency) AS frequency,
+                    (sum(COALESCE(a_2.amount, (0)::numeric)) + sum(COALESCE(b_2.amount, (0)::numeric))) AS amount
+                   FROM (started_donations a_2
+                     FULL JOIN stopped_monthly_donations b_2 ON (((a_2.email = b_2.email) AND (a_2.frequency = b_2.frequency) AND (date_trunc('day'::text, a_2.start_period) = date_trunc('day'::text, b_2.stop_period)))))
+                  GROUP BY COALESCE(a_2.email, b_2.email), COALESCE(a_2.frequency, b_2.frequency), COALESCE(a_2.start_period, b_2.stop_period)) a_1
+             JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (abs(a_1.amount) > (b_1.start)::numeric) AND (abs(a_1.amount) <= (b_1.stop)::numeric))))
+        ), value_added_lost AS (
+         SELECT changed_donations.period,
+            changed_donations.frequency,
+            changed_donations.bucket,
+            sum(((changed_donations.amount * (
+                CASE
+                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
+                    ELSE 0
+                END)::numeric) * (
+                CASE
+                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
+                    ELSE 1
+                END)::numeric)) AS value_added,
+            sum(((changed_donations.amount * (
+                CASE
+                    WHEN (changed_donations.amount < (0)::numeric) THEN 1
+                    ELSE 0
+                END)::numeric) * (18)::numeric)) AS value_lost
+           FROM changed_donations
+          GROUP BY changed_donations.period, changed_donations.frequency, changed_donations.bucket
+        ), payments AS (
+         SELECT successful_charges.period,
+            sum(successful_charges.amount) AS amount,
+            count(DISTINCT successful_charges.donation_id) AS payments,
+            successful_charges.frequency,
+            successful_charges.bucket
+           FROM successful_charges
+          GROUP BY successful_charges.period, successful_charges.frequency, successful_charges.bucket
+        ), payments_new_donors AS (
+         SELECT s.period,
+            sum(s.amount) AS amount,
+            count(DISTINCT s.donation_id) AS payments,
+            s.frequency,
+            s.bucket
+           FROM (successful_charges s
+             JOIN first_time_by_email f ON (((s.email = f.email) AND (s.period = f.period) AND (s.amount = f.amount))))
+          GROUP BY s.period, s.frequency, s.bucket
+        )
+ SELECT ((((to_char(COALESCE(a.period, b.period), 'yyyy'::text) || '-'::text) || to_char(COALESCE(a.period, b.period), 'MM'::text)) || '-'::text) || to_char(COALESCE(a.period, b.period), 'dd'::text)) AS date,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'small'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'medium'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'large'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'major'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'small'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'medium'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'large'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'major'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'small'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'medium'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'large'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'major'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'small'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'medium'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'large'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'major'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'small'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_small,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'medium'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_medium,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'large'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_large,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'major'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_major,
+    (COALESCE(sum(b.value_added), (0)::numeric) + COALESCE(sum(b.value_lost), (0)::numeric)) AS value_total,
+    COALESCE(sum(
+        CASE
+            WHEN (a.frequency = 'monthly'::giveffektivt.donation_frequency) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS monthly_donors,
+    COALESCE(sum(a.payments), (0)::numeric) AS payments_total,
+    COALESCE(sum(a.amount), (0)::numeric) AS dkk_total,
+    COALESCE(sum(b.value_added), (0)::numeric) AS value_added,
+    COALESCE(sum(
+        CASE
+            WHEN (b.frequency = 'once'::giveffektivt.donation_frequency) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once,
+    COALESCE(sum(
+        CASE
+            WHEN (b.frequency = 'monthly'::giveffektivt.donation_frequency) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly,
+    COALESCE(sum(b.value_lost), (0)::numeric) AS value_lost,
+    COALESCE(max(c.amount), (0)::numeric) AS amount_new,
+    (COALESCE(max(c.payments), (0)::bigint))::numeric AS payments_new
+   FROM (((payments a
+     FULL JOIN value_added_lost b ON (((a.period = b.period) AND (a.frequency = b.frequency) AND (a.bucket = b.bucket))))
+     FULL JOIN first_time_donations c ON ((a.period = c.period)))
+     FULL JOIN payments_new_donors d ON (((a.period = d.period) AND (a.frequency = d.frequency) AND (a.bucket = d.bucket))))
+  GROUP BY COALESCE(a.period, b.period)
+  ORDER BY COALESCE(a.period, b.period) DESC;
+
+
+--
+-- Name: time_distribution_monthly; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.time_distribution_monthly AS
+ WITH buckets AS (
+         SELECT bucket_table.frequency,
+            bucket_table.start,
+            bucket_table.stop,
+            bucket_table.bucket
+           FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
+        ), monthly_donations_charged_exactly_once AS (
+         SELECT unnamed_subquery.donation_id
+           FROM ( SELECT charged_donations.donation_id,
+                    bool_or(charged_donations.cancelled) AS cancelled,
+                    count(charged_donations.charge_id) AS number_of_donations,
+                    max(charged_donations.charged_at) AS last_donated_at
+                   FROM giveffektivt.charged_donations
+                  WHERE (charged_donations.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  GROUP BY charged_donations.donation_id) unnamed_subquery
+          WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.cancelled OR (unnamed_subquery.last_donated_at < (now() - '40 days'::interval))))
+        ), successful_charges AS (
+         SELECT a_1.period,
+            a_1.month,
+            a_1.charged_at,
+            a_1.email,
+            a_1.donation_id,
+            a_1.cancelled,
+            a_1.amount,
+            a_1.frequency,
+            b_1.bucket
+           FROM (( SELECT date_trunc('month'::text, cd.charged_at) AS period,
+                    date_trunc('month'::text, cd.charged_at) AS month,
+                    cd.charged_at,
+                    cd.email,
+                    cd.donation_id,
+                    cd.cancelled,
+                    cd.amount,
+                        CASE
+                            WHEN (EXISTS ( SELECT 1
+                               FROM monthly_donations_charged_exactly_once m
+                              WHERE (cd.donation_id = m.donation_id))) THEN 'once'::giveffektivt.donation_frequency
+                            ELSE cd.frequency
+                        END AS frequency
+                   FROM giveffektivt.charged_donations cd) a_1
+             JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (a_1.amount > (b_1.start)::numeric) AND (a_1.amount <= (b_1.stop)::numeric))))
+        ), first_time_by_email AS (
+         SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
+            charged_donations.amount,
+            date_trunc('month'::text, charged_donations.charged_at) AS period,
+            charged_donations.charged_at
+           FROM giveffektivt.charged_donations
+          ORDER BY charged_donations.email, charged_donations.charged_at
+        ), first_time_donations AS (
+         SELECT first_time_by_email.period,
+            sum(first_time_by_email.amount) AS amount,
+            count(1) AS payments
+           FROM first_time_by_email
+          GROUP BY first_time_by_email.period
+        ), stopped_monthly_donations AS (
+         SELECT a_1.email,
+            date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval)) AS stop_period,
+            (- sum(a_1.amount)) AS amount,
+            a_1.frequency
+           FROM ( SELECT DISTINCT ON (s.donation_id) s.email,
+                    s.charged_at AS last_donated_at,
+                    s.amount,
+                    s.frequency,
+                    s.cancelled
+                   FROM successful_charges s
+                  WHERE (s.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  ORDER BY s.donation_id, s.charged_at DESC) a_1
+          WHERE (((a_1.last_donated_at + '40 days'::interval) < now()) OR a_1.cancelled)
+          GROUP BY a_1.email, (date_trunc('month'::text, (a_1.last_donated_at + '1 mon'::interval))), a_1.frequency
+        ), started_donations AS (
+         SELECT unnamed_subquery.email,
+            unnamed_subquery.period AS start_period,
+            sum(unnamed_subquery.amount) AS amount,
+            unnamed_subquery.frequency
+           FROM ( SELECT DISTINCT ON (successful_charges.donation_id) successful_charges.email,
+                    successful_charges.period,
+                    successful_charges.amount,
+                    successful_charges.frequency
+                   FROM successful_charges
+                  ORDER BY successful_charges.donation_id, successful_charges.charged_at) unnamed_subquery
+          GROUP BY unnamed_subquery.email, unnamed_subquery.period, unnamed_subquery.frequency
+        ), changed_donations AS (
+         SELECT a_1.period,
+            a_1.frequency,
+            a_1.amount,
+            b_1.bucket
+           FROM (( SELECT COALESCE(a_2.start_period, b_2.stop_period) AS period,
+                    COALESCE(a_2.frequency, b_2.frequency) AS frequency,
+                    (sum(COALESCE(a_2.amount, (0)::numeric)) + sum(COALESCE(b_2.amount, (0)::numeric))) AS amount
+                   FROM (started_donations a_2
+                     FULL JOIN stopped_monthly_donations b_2 ON (((a_2.email = b_2.email) AND (a_2.frequency = b_2.frequency) AND (date_trunc('month'::text, a_2.start_period) = date_trunc('month'::text, b_2.stop_period)))))
+                  GROUP BY COALESCE(a_2.email, b_2.email), COALESCE(a_2.frequency, b_2.frequency), COALESCE(a_2.start_period, b_2.stop_period)) a_1
+             JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (abs(a_1.amount) > (b_1.start)::numeric) AND (abs(a_1.amount) <= (b_1.stop)::numeric))))
+        ), value_added_lost AS (
+         SELECT changed_donations.period,
+            changed_donations.frequency,
+            changed_donations.bucket,
+            sum(((changed_donations.amount * (
+                CASE
+                    WHEN (changed_donations.amount > (0)::numeric) THEN 1
+                    ELSE 0
+                END)::numeric) * (
+                CASE
+                    WHEN (changed_donations.frequency = 'monthly'::giveffektivt.donation_frequency) THEN 18
+                    ELSE 1
+                END)::numeric)) AS value_added,
+            sum(((changed_donations.amount * (
+                CASE
+                    WHEN (changed_donations.amount < (0)::numeric) THEN 1
+                    ELSE 0
+                END)::numeric) * (18)::numeric)) AS value_lost
+           FROM changed_donations
+          GROUP BY changed_donations.period, changed_donations.frequency, changed_donations.bucket
+        ), payments AS (
+         SELECT successful_charges.period,
+            sum(successful_charges.amount) AS amount,
+            count(DISTINCT successful_charges.donation_id) AS payments,
+            successful_charges.frequency,
+            successful_charges.bucket
+           FROM successful_charges
+          GROUP BY successful_charges.period, successful_charges.frequency, successful_charges.bucket
+        ), payments_new_donors AS (
+         SELECT s.period,
+            sum(s.amount) AS amount,
+            count(DISTINCT s.donation_id) AS payments,
+            s.frequency,
+            s.bucket
+           FROM (successful_charges s
+             JOIN first_time_by_email f ON (((s.email = f.email) AND (s.period = f.period) AND (s.amount = f.amount))))
+          GROUP BY s.period, s.frequency, s.bucket
+        )
+ SELECT ((((to_char(COALESCE(a.period, b.period), 'yyyy'::text) || '-'::text) || to_char(COALESCE(a.period, b.period), 'MM'::text)) || '-'::text) || to_char(COALESCE(a.period, b.period), 'dd'::text)) AS date,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.amount
+            ELSE (0)::numeric
+        END), (0)::numeric) AS amount_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'once'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'small'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'medium'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'large'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((a.frequency = 'monthly'::giveffektivt.donation_frequency) AND (a.bucket = 'major'::text)) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'small'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'medium'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'large'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'once'::giveffektivt.donation_frequency) AND (d.bucket = 'major'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'small'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'medium'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'large'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((d.frequency = 'monthly'::giveffektivt.donation_frequency) AND (d.bucket = 'major'::text)) THEN d.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS payments_new_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'small'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'medium'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'large'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'once'::giveffektivt.donation_frequency) AND (b.bucket = 'major'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once_major,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'small'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_small,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'medium'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_medium,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'large'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_large,
+    COALESCE(sum(
+        CASE
+            WHEN ((b.frequency = 'monthly'::giveffektivt.donation_frequency) AND (b.bucket = 'major'::text)) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly_major,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'small'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_small,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'medium'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_medium,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'large'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_large,
+    COALESCE(sum(
+        CASE
+            WHEN (b.bucket = 'major'::text) THEN b.value_lost
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_lost_major,
+    (COALESCE(sum(b.value_added), (0)::numeric) + COALESCE(sum(b.value_lost), (0)::numeric)) AS value_total,
+    COALESCE(sum(
+        CASE
+            WHEN (a.frequency = 'monthly'::giveffektivt.donation_frequency) THEN a.payments
+            ELSE (0)::bigint
+        END), (0)::numeric) AS monthly_donors,
+    COALESCE(sum(a.payments), (0)::numeric) AS payments_total,
+    COALESCE(sum(a.amount), (0)::numeric) AS dkk_total,
+    COALESCE(sum(b.value_added), (0)::numeric) AS value_added,
+    COALESCE(sum(
+        CASE
+            WHEN (b.frequency = 'once'::giveffektivt.donation_frequency) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_once,
+    COALESCE(sum(
+        CASE
+            WHEN (b.frequency = 'monthly'::giveffektivt.donation_frequency) THEN b.value_added
+            ELSE (0)::numeric
+        END), (0)::numeric) AS value_added_monthly,
+    COALESCE(sum(b.value_lost), (0)::numeric) AS value_lost,
+    COALESCE(max(c.amount), (0)::numeric) AS amount_new,
+    (COALESCE(max(c.payments), (0)::bigint))::numeric AS payments_new
+   FROM (((payments a
+     FULL JOIN value_added_lost b ON (((a.period = b.period) AND (a.frequency = b.frequency) AND (a.bucket = b.bucket))))
+     FULL JOIN first_time_donations c ON ((a.period = c.period)))
+     FULL JOIN payments_new_donors d ON (((a.period = d.period) AND (a.frequency = d.frequency) AND (a.bucket = d.bucket))))
+  GROUP BY COALESCE(a.period, b.period)
+  ORDER BY COALESCE(a.period, b.period) DESC;
+
+
+--
 -- Name: transfer_overview; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -2114,48 +2624,24 @@ CREATE VIEW giveffektivt.transfer_overview AS
             WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure'::text
             ELSE NULL::text
         END AS unit,
-    round(sum(d.amount)) AS total_dkk,
-    round((sum(d.amount) / max(t.exchange_rate))) AS total_usd,
+    round(sum(cdt.amount)) AS total_dkk,
+    round((sum(cdt.amount) / max(t.exchange_rate))) AS total_usd,
     round(max(t.unit_cost_external), 2) AS unit_cost_external,
     round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
     round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
-    round(((sum(d.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
+    round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
     round(max(t.life_cost_external), 2) AS life_cost_external,
     round((max(t.life_cost_external) * max(t.exchange_rate)), 2) AS life_cost_dkk,
-    round(((sum(d.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
-    max(c.created_at) AS computed_at,
+    round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
+    max(cdt.charged_at) AS computed_at,
         CASE
             WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
             ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
         END AS transferred_at
-   FROM ((giveffektivt.donation d
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-     JOIN giveffektivt.transfer t ON (((c.transfer_id = t.id) OR ((c.transfer_id IS NULL) AND (d.recipient = t.earmark) AND (t.created_at > now())))))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])))
+   FROM (giveffektivt.charged_donations_by_transfer cdt
+     JOIN giveffektivt.transfer t ON (((cdt.transfer_id = t.id) OR ((cdt.transfer_id IS NULL) AND (cdt.earmark = t.earmark) AND (t.created_at > now())))))
   GROUP BY t.id, t.earmark, t.recipient, t.created_at
-  ORDER BY t.created_at, (sum(d.amount)) DESC;
-
-
---
--- Name: transfer_pending; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.transfer_pending AS
- WITH data AS (
-         SELECT c.created_at AS donated_at,
-            d.amount,
-            d.recipient,
-            sum(d.amount) OVER (ORDER BY c.created_at) AS potential_cutoff
-           FROM (giveffektivt.donation d
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NULL))
-        )
- SELECT donated_at,
-    amount,
-    recipient,
-    potential_cutoff
-   FROM data
-  ORDER BY donated_at;
+  ORDER BY t.created_at, (sum(cdt.amount)) DESC;
 
 
 --
@@ -2164,14 +2650,12 @@ CREATE VIEW giveffektivt.transfer_pending AS
 
 CREATE VIEW giveffektivt.transferred_distribution AS
  SELECT t.recipient,
-    round(sum(d.amount)) AS dkk_total,
+    round(sum(cdt.amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
-   FROM ((giveffektivt.donation d
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-     JOIN giveffektivt.transfer t ON ((c.transfer_id = t.id)))
-  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (c.transfer_id IS NOT NULL))
+   FROM (giveffektivt.charged_donations_by_transfer cdt
+     JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
   GROUP BY t.recipient
-  ORDER BY (round(sum(d.amount))) DESC;
+  ORDER BY (round(sum(cdt.amount))) DESC;
 
 
 --
@@ -2186,57 +2670,50 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
             bucket_table.bucket
            FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
         ), monthly_donations_charged_exactly_once AS (
-         SELECT unnamed_subquery.id
-           FROM ( SELECT d.id,
-                    bool_or(d.cancelled) AS cancelled,
-                    count(c.id) AS number_of_donations,
-                    max(c.created_at) AS last_donated_at
-                   FROM (giveffektivt.donation d
-                     JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient) AND (d.frequency = 'monthly'::giveffektivt.donation_frequency))
-                  GROUP BY d.id) unnamed_subquery
+         SELECT unnamed_subquery.donation_id
+           FROM ( SELECT charged_donations.donation_id,
+                    bool_or(charged_donations.cancelled) AS cancelled,
+                    count(charged_donations.charge_id) AS number_of_donations,
+                    max(charged_donations.charged_at) AS last_donated_at
+                   FROM giveffektivt.charged_donations
+                  WHERE (charged_donations.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  GROUP BY charged_donations.donation_id) unnamed_subquery
           WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.cancelled OR (unnamed_subquery.last_donated_at < (now() - '40 days'::interval))))
         ), successful_charges AS (
          SELECT a.period,
             a.month,
-            a.created_at,
+            a.charged_at,
             a.email,
             a.donation_id,
             a.cancelled,
             a.amount,
             a.frequency,
             b.bucket
-           FROM (( SELECT date_trunc('month'::text, c.created_at) AS period,
-                    date_trunc('month'::text, c.created_at) AS month,
-                    c.created_at,
-                    p.email,
-                    d.id AS donation_id,
-                    d.cancelled,
-                    d.amount,
+           FROM (( SELECT date_trunc('month'::text, cd.charged_at) AS period,
+                    date_trunc('month'::text, cd.charged_at) AS month,
+                    cd.charged_at,
+                    cd.email,
+                    cd.donation_id,
+                    cd.cancelled,
+                    cd.amount,
                         CASE
                             WHEN (EXISTS ( SELECT 1
                                FROM monthly_donations_charged_exactly_once m
-                              WHERE (d.id = m.id))) THEN 'once'::giveffektivt.donation_frequency
-                            ELSE d.frequency
+                              WHERE (cd.donation_id = m.donation_id))) THEN 'once'::giveffektivt.donation_frequency
+                            ELSE cd.frequency
                         END AS frequency
-                   FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-                     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))) a
+                   FROM giveffektivt.charged_donations cd) a
              JOIN buckets b ON (((a.frequency = b.frequency) AND (a.amount > (b.start)::numeric) AND (a.amount <= (b.stop)::numeric))))
         ), first_time_donations AS (
          SELECT unnamed_subquery.period,
             sum(unnamed_subquery.amount) AS amount,
             count(1) AS payments
-           FROM ( SELECT DISTINCT ON (p.email) p.email,
-                    d.amount,
-                    date_trunc('month'::text, c.created_at) AS period,
-                    c.created_at
-                   FROM ((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-                     JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-                  WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (d.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))
-                  ORDER BY p.email, c.created_at) unnamed_subquery
+           FROM ( SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
+                    charged_donations.amount,
+                    date_trunc('month'::text, charged_donations.charged_at) AS period,
+                    charged_donations.charged_at
+                   FROM giveffektivt.charged_donations
+                  ORDER BY charged_donations.email, charged_donations.charged_at) unnamed_subquery
           GROUP BY unnamed_subquery.period
         ), stopped_monthly_donations AS (
          SELECT a.email,
@@ -2244,13 +2721,13 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
             (- sum(a.amount)) AS amount,
             a.frequency
            FROM ( SELECT DISTINCT ON (s.donation_id) s.email,
-                    s.created_at AS last_donated_at,
+                    s.charged_at AS last_donated_at,
                     s.amount,
                     s.frequency,
                     s.cancelled
                    FROM successful_charges s
                   WHERE (s.frequency = 'monthly'::giveffektivt.donation_frequency)
-                  ORDER BY s.donation_id, s.created_at DESC) a
+                  ORDER BY s.donation_id, s.charged_at DESC) a
           WHERE (((a.last_donated_at + '40 days'::interval) < now()) OR a.cancelled)
           GROUP BY a.email, (date_trunc('month'::text, (a.last_donated_at + '1 mon'::interval))), a.frequency
         ), started_donations AS (
@@ -2263,7 +2740,7 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
                     successful_charges.amount,
                     successful_charges.frequency
                    FROM successful_charges
-                  ORDER BY successful_charges.donation_id, successful_charges.created_at) unnamed_subquery
+                  ORDER BY successful_charges.donation_id, successful_charges.charged_at) unnamed_subquery
           GROUP BY unnamed_subquery.email, unnamed_subquery.period, unnamed_subquery.frequency
         ), changed_donations AS (
          SELECT a.period,
@@ -2390,11 +2867,35 @@ ALTER TABLE ONLY giveffektivt.audit_log
 
 
 --
+-- Name: charge charge_id_donation_id_uniq; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge
+    ADD CONSTRAINT charge_id_donation_id_uniq UNIQUE (id, donation_id);
+
+
+--
+-- Name: charge_transfer charge_transfer_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge_transfer
+    ADD CONSTRAINT charge_transfer_pkey PRIMARY KEY (charge_id, transfer_id, earmark);
+
+
+--
 -- Name: clearhaus_settlement clearhaus_settlement_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
 ALTER TABLE ONLY giveffektivt.clearhaus_settlement
     ADD CONSTRAINT clearhaus_settlement_pkey PRIMARY KEY (merchant_id, created_at);
+
+
+--
+-- Name: earmark earmark_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.earmark
+    ADD CONSTRAINT earmark_pkey PRIMARY KEY (donation_id, recipient);
 
 
 --
@@ -2435,6 +2936,14 @@ ALTER TABLE ONLY giveffektivt.scanpay_seq
 
 ALTER TABLE ONLY giveffektivt.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: transfer transfer_id_earmark_uniq; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.transfer
+    ADD CONSTRAINT transfer_id_earmark_uniq UNIQUE (id, earmark);
 
 
 --
@@ -2498,6 +3007,13 @@ CREATE TRIGGER donation_update_timestamp BEFORE UPDATE ON giveffektivt.donation 
 --
 
 CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt.donor FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: earmark earmark_sum_check; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER earmark_sum_check AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.earmark DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION giveffektivt.earmark_sum_check();
 
 
 --
@@ -2628,14 +3144,6 @@ ALTER TABLE ONLY giveffektivt.charge
 
 
 --
--- Name: charge _charge_transfer_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt.charge
-    ADD CONSTRAINT _charge_transfer_id_fkey FOREIGN KEY (transfer_id) REFERENCES giveffektivt.transfer(id);
-
-
---
 -- Name: donation _donation_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -2665,6 +3173,38 @@ ALTER TABLE ONLY giveffektivt.gavebrev_checkin
 
 ALTER TABLE ONLY giveffektivt.gavebrev
     ADD CONSTRAINT _gavebrev_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt.donor(id);
+
+
+--
+-- Name: charge_transfer charge_transfer_charge_id_donation_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge_transfer
+    ADD CONSTRAINT charge_transfer_charge_id_donation_id_fkey FOREIGN KEY (charge_id, donation_id) REFERENCES giveffektivt.charge(id, donation_id);
+
+
+--
+-- Name: charge_transfer charge_transfer_donation_id_earmark_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge_transfer
+    ADD CONSTRAINT charge_transfer_donation_id_earmark_fkey FOREIGN KEY (donation_id, earmark) REFERENCES giveffektivt.earmark(donation_id, recipient);
+
+
+--
+-- Name: charge_transfer charge_transfer_transfer_id_earmark_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.charge_transfer
+    ADD CONSTRAINT charge_transfer_transfer_id_earmark_fkey FOREIGN KEY (transfer_id, earmark) REFERENCES giveffektivt.transfer(id, earmark);
+
+
+--
+-- Name: earmark earmark_donation_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.earmark
+    ADD CONSTRAINT earmark_donation_id_fkey FOREIGN KEY (donation_id) REFERENCES giveffektivt.donation(id);
 
 
 --
@@ -2748,4 +3288,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250802174406'),
     ('20250810104141'),
     ('20250810124953'),
+    ('20250810164551'),
     ('99999999999999');

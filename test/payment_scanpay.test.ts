@@ -55,7 +55,6 @@ test("One-time donation using Scanpay", async () => {
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.MobilePay,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
@@ -101,7 +100,6 @@ test("Monthly donation using Scanpay", async () => {
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.Scanpay,
       method: PaymentMethod.CreditCard,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
       tax_deductible: false,
     },
   ]);
