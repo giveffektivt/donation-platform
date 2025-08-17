@@ -75,7 +75,7 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
         "card lost or stolen",
         "user action required",
         "rejected user_action_required",
-      ].includes(msg.toLocaleLowerCase());
+      ].includes((msg ?? "").toLocaleLowerCase());
 
     const log =
       status === ChargeStatus.Error && !isCardExpired ? logError : console.log;
