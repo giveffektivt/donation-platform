@@ -1,28 +1,17 @@
 import type { PoolClient } from "pg";
 import {
   ChargeStatus,
-  insertInitialChargeScanpay,
   logError,
   type ScanpayChange,
   setChargeStatusByShortId,
-  setDonationScanpayId,
 } from "src";
 
 /** Add scanpayId to a donation */
-async function handleSubscriber(db: PoolClient, change: ScanpayChange) {
-  const donationIds = change.ref.split("_");
-
-  for (const donationId of donationIds) {
-    await setDonationScanpayId(db, {
-      id: donationId,
-      gateway_metadata: {
-        scanpay_id: change.id,
-      },
-    });
-
-    // Now that we know Scanpay ID, create initial charges for this donation
-    await insertInitialChargeScanpay(db, { donation_id: donationId });
-  }
+async function handleSubscriber(_db: PoolClient, change: ScanpayChange) {
+  console.error(
+    `New ScanPay subscriptions are not supported: ${JSON.stringify(change)}`,
+  );
+  throw new Error("New ScanPay subscriptions are not supported");
 }
 
 /** Add gateway response to a charge */

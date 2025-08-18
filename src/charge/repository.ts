@@ -18,21 +18,6 @@ export async function insertCharge(
   ).rows[0];
 }
 
-export async function insertInitialChargeScanpay(
-  client: PoolClient,
-  charge: Partial<Charge>,
-): Promise<ChargeWithGatewayMetadata> {
-  return (
-    await client.query(
-      `insert into charge (donation_id, status)
-       select $1, 'created'
-       where not exists (select id from charge where donation_id = $1 limit 1)
-       returning *`,
-      [charge.donation_id],
-    )
-  ).rows[0];
-}
-
 export async function insertInitialChargeQuickpay(
   client: PoolClient,
   quickpay_order: string,

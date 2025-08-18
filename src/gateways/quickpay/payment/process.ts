@@ -28,6 +28,7 @@ import {
   setDonationEmailed,
   EmailedStatus,
   insertDonationEarmark,
+  copyDonationEarmarks,
 } from "src";
 
 export async function processQuickpayDonation(
@@ -134,6 +135,13 @@ export async function insertQuickpayDataMembership(
     method: PaymentMethod.CreditCard,
   });
 
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
+
   return [donor, donation, null];
 }
 
@@ -159,6 +167,8 @@ export async function recreateQuickpayRecurringDonation(
           fundraiser_id: info.fundraiser_id,
           message: info.message,
         });
+
+  await copyDonationEarmarks(db, info.donation_id, donation.id);
 
   await setDonationEmailed(db, donation, EmailedStatus.Yes);
 

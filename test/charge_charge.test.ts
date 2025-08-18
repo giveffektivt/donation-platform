@@ -1,15 +1,13 @@
 import { addDays, setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
+  DonationFrequency,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   getChargesToCharge,
   insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
-  insertDonationViaScanpay,
   insertDonor,
   insertMembershipViaQuickpay,
   PaymentMethod,
@@ -42,19 +40,17 @@ test("Find created charges to charge", async () => {
   });
 
   // ...having two donations each (3 recurring and 1 one-time)
-  const donation1 = await insertDonationViaScanpay(db, {
+  const donation1 = await insertDonationViaQuickpay(db, {
     donor_id: donor1.id,
     amount: 100,
-    recipient: DonationRecipient.MedicinModMalaria,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
 
-  const donation2 = await insertDonationViaScanpay(db, {
+  const donation2 = await insertDonationViaQuickpay(db, {
     donor_id: donor1.id,
     amount: 88,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
@@ -63,7 +59,6 @@ test("Find created charges to charge", async () => {
   const donation3 = await insertDonationViaQuickpay(db, {
     donor_id: donor2.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
@@ -110,7 +105,6 @@ test("Find created charges to charge", async () => {
       id: charge1.id,
       amount: donation1.amount,
       email: donor1.email,
-      recipient: donation1.recipient,
       gateway: donation1.gateway,
       method: donation1.method,
     },
@@ -118,7 +112,6 @@ test("Find created charges to charge", async () => {
       id: charge2.id,
       amount: donation1.amount,
       email: donor1.email,
-      recipient: donation1.recipient,
       gateway: donation1.gateway,
       method: donation1.method,
     },
@@ -126,7 +119,6 @@ test("Find created charges to charge", async () => {
       id: charge3.id,
       amount: donation2.amount,
       email: donor1.email,
-      recipient: donation2.recipient,
       gateway: donation2.gateway,
       method: donation2.method,
     },
@@ -134,7 +126,6 @@ test("Find created charges to charge", async () => {
       id: charge4.id,
       amount: donation3.amount,
       email: donor2.email,
-      recipient: donation3.recipient,
       gateway: donation3.gateway,
       method: donation3.method,
     },
@@ -142,7 +133,6 @@ test("Find created charges to charge", async () => {
       id: charge5.id,
       amount: donation4.amount,
       email: donor2.email,
-      recipient: donation4.recipient,
       gateway: donation4.gateway,
       method: donation4.method,
     },
@@ -161,7 +151,7 @@ test("Donation that has no charges should not be charged", async () => {
     email: "hello@example.com",
   });
 
-  const _donation = await insertMembershipViaQuickpay(db, {
+  await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -203,7 +193,6 @@ test("Bank transfer donation should not be charged", async () => {
     donor_id: donor.id,
     gateway_metadata: { bank_msg: "1234" },
     amount: 88,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Once,
     tax_deductible: true,
   });
@@ -246,7 +235,6 @@ test("Old charges in created status should *still* be charged again (until we se
       id: oldCharge.id,
       amount: donation.amount,
       email: donor.email,
-      recipient: donation.recipient,
     },
   ];
 

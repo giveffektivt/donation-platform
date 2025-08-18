@@ -1,9 +1,9 @@
 import {
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   EmailedStatus,
   insertBankTransferData,
   PaymentGateway,

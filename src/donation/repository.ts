@@ -2,7 +2,7 @@ import type { PoolClient } from "pg";
 import {
   type Donation,
   DonationFrequency,
-  DonationRecipient,
+  type DonationRecipient,
   type DonationToEmail,
   type DonationWithGatewayInfoBankTransfer,
   type DonationWithGatewayInfoQuickpay,
@@ -58,29 +58,6 @@ export async function setDonationMethodByQuickpayOrder(
     `update donation set method = $1 where gateway_metadata ->> 'quickpay_order' = $2`,
     [method, quickpay_order],
   );
-}
-
-export async function insertDonationViaScanpay(
-  client: PoolClient,
-  donation: Partial<Donation>,
-): Promise<DonationWithGatewayInfoScanpay> {
-  return (
-    await client.query(
-      `insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)
-       returning *`,
-      [
-        donation.donor_id,
-        donation.amount,
-        donation.frequency,
-        PaymentGateway.Scanpay,
-        donation.method,
-        donation.tax_deductible,
-        donation.fundraiser_id,
-        donation.message,
-      ],
-    )
-  ).rows[0];
 }
 
 export async function insertDonationViaQuickpay(
@@ -166,14 +143,21 @@ export async function insertDonationEarmark(
   ).rows[0];
 }
 
-export async function setDonationScanpayId(
+export async function copyDonationEarmarks(
   client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanpay>,
+  from_donation_id: string,
+  to_donation_id: string,
 ) {
-  return await client.query(
-    `update donation set gateway_metadata = gateway_metadata::jsonb || format('{"scanpay_id": %s}', $1::numeric)::jsonb where id=$2`,
-    [donation.gateway_metadata?.scanpay_id, donation.id],
-  );
+  return (
+    await client.query(
+      `insert into earmark(donation_id, recipient, percentage)
+     select $1, recipient, percentage
+     from earmark
+     where donation_id = $2
+     returning *`,
+      [to_donation_id, from_donation_id],
+    )
+  ).rows;
 }
 
 export async function setDonationQuickpayId(

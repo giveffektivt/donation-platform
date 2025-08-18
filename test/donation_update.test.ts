@@ -1,22 +1,20 @@
 import {
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   EmailedStatus,
-  insertMembershipViaQuickpay,
-  insertDonationViaScanpay,
   insertDonor,
+  insertMembershipViaQuickpay,
   PaymentMethod,
+  setDonationCancelledById,
   setDonationCancelledByQuickpayOrder,
   setDonationEmailed,
-  setDonationScanpayId,
   setDonationMethodByQuickpayOrder,
-  setDonationCancelledById,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { findDonationQuickpay, findDonationScanpay, setDonationCancelled } from "./repository";
+import { findDonationQuickpay } from "./repository";
 
 const client = dbClient();
 
@@ -44,48 +42,9 @@ test("Update donation to mark it as emailed", async () => {
 
   await setDonationEmailed(db, donation, EmailedStatus.Yes);
 
-  expect((await findDonationQuickpay(db, donation)).emailed).toBe(EmailedStatus.Yes);
-});
-
-test("Update donation to add Scanpay ID", async () => {
-  const db = await client;
-
-  const donor = await insertDonor(db, {
-    email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaScanpay(db, {
-    donor_id: donor.id,
-    amount: 88,
-    recipient: DonationRecipient.MyggenetModMalaria,
-    frequency: DonationFrequency.Monthly,
-    method: PaymentMethod.CreditCard,
-    tax_deductible: true,
-  });
-
-  expect((await findDonationScanpay(db, donation)).gateway_metadata).toEqual({});
-
-  await setDonationScanpayId(db, {
-    id: donation.id,
-    gateway_metadata: {
-      scanpay_id: 1234,
-    },
-  });
-
-  expect((await findDonationScanpay(db, donation)).gateway_metadata).toEqual({
-    scanpay_id: 1234,
-  });
-
-  await setDonationScanpayId(db, {
-    id: donation.id,
-    gateway_metadata: {
-      scanpay_id: 5678,
-    },
-  });
-
-  expect((await findDonationScanpay(db, donation)).gateway_metadata).toEqual({
-    scanpay_id: 5678,
-  });
+  expect((await findDonationQuickpay(db, donation)).emailed).toBe(
+    EmailedStatus.Yes,
+  );
 });
 
 test("Cancel donation by its Quickpay order ID", async () => {
@@ -106,7 +65,10 @@ test("Cancel donation by its Quickpay order ID", async () => {
   await setDonationCancelledByQuickpayOrder(db, "some-incorrect-order");
   expect((await findDonationQuickpay(db, donation)).cancelled).toBe(false);
 
-  await setDonationCancelledByQuickpayOrder(db, donation.gateway_metadata.quickpay_order);
+  await setDonationCancelledByQuickpayOrder(
+    db,
+    donation.gateway_metadata.quickpay_order,
+  );
   expect((await findDonationQuickpay(db, donation)).cancelled).toBe(true);
 });
 
@@ -144,11 +106,25 @@ test("Update donation payment method by its Quickpay order ID", async () => {
     method: PaymentMethod.CreditCard,
   });
 
-  expect((await findDonationQuickpay(db, donation)).method).toBe(PaymentMethod.CreditCard);
+  expect((await findDonationQuickpay(db, donation)).method).toBe(
+    PaymentMethod.CreditCard,
+  );
 
-  await setDonationMethodByQuickpayOrder(db, "some-incorrect-order", PaymentMethod.MobilePay);
-  expect((await findDonationQuickpay(db, donation)).method).toBe(PaymentMethod.CreditCard);
+  await setDonationMethodByQuickpayOrder(
+    db,
+    "some-incorrect-order",
+    PaymentMethod.MobilePay,
+  );
+  expect((await findDonationQuickpay(db, donation)).method).toBe(
+    PaymentMethod.CreditCard,
+  );
 
-  await setDonationMethodByQuickpayOrder(db, donation.gateway_metadata.quickpay_order, PaymentMethod.MobilePay);
-  expect((await findDonationQuickpay(db, donation)).method).toBe(PaymentMethod.MobilePay);
+  await setDonationMethodByQuickpayOrder(
+    db,
+    donation.gateway_metadata.quickpay_order,
+    PaymentMethod.MobilePay,
+  );
+  expect((await findDonationQuickpay(db, donation)).method).toBe(
+    PaymentMethod.MobilePay,
+  );
 });

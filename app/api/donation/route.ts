@@ -1,12 +1,11 @@
 import {
   getBankAccount,
   logError,
-  parsePaymentMethod,
   PaymentGateway,
   PaymentMethod,
+  parsePaymentMethod,
   processBankTransferDonation,
   processQuickpayDonation,
-  processScanpayDonation,
   type SubmitDataDonation,
   SubscribeToNewsletter,
   validationSchemaDonation,
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
       .shape(validationSchemaDonation)
       .validate(await req.json());
 
-    const [response, donorId] = await processPayment(submitData, ip);
+    const [response, donorId] = await processPayment(submitData);
 
     if (submitData.subscribeToNewsletter) {
       try {
@@ -62,7 +61,6 @@ export async function POST(req: Request) {
 
 async function processPayment(
   submitData: SubmitDataDonation,
-  ip: string,
 ): Promise<[Data, string]> {
   switch (parsePaymentMethod(submitData.method)) {
     case PaymentMethod.BankTransfer: {
@@ -85,20 +83,6 @@ async function processPayment(
       switch (process.env.PAYMENT_GATEWAY) {
         case PaymentGateway.Quickpay: {
           const [redirect, donorId] = await processQuickpayDonation(submitData);
-          return [
-            {
-              message: "OK",
-              redirect,
-            },
-            donorId,
-          ];
-        }
-
-        case PaymentGateway.Scanpay: {
-          const [redirect, donorId] = await processScanpayDonation(
-            submitData,
-            ip,
-          );
           return [
             {
               message: "OK",

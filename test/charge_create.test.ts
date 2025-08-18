@@ -1,14 +1,13 @@
 import { setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
+  DonationFrequency,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   insertChargesForDonationsToCreateCharges,
   insertDonationViaBankTransfer,
-  insertDonationViaScanpay,
+  insertDonationViaQuickpay,
   insertDonor,
   insertMembershipViaQuickpay,
   PaymentMethod,
@@ -46,19 +45,17 @@ test("Insert charges for donations that need new charges", async () => {
     method: PaymentMethod.CreditCard,
   });
 
-  const donation2 = await insertDonationViaScanpay(db, {
+  const donation2 = await insertDonationViaQuickpay(db, {
     donor_id: donor1.id,
     amount: 88,
-    recipient: DonationRecipient.MyggenetModMalaria,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
 
-  const donation3 = await insertDonationViaScanpay(db, {
+  const donation3 = await insertDonationViaQuickpay(db, {
     donor_id: donor2.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
@@ -135,7 +132,7 @@ test("Donation that has no charges should not have new charges created", async (
     email: "hello@example.com",
   });
 
-  const _donation = await insertMembershipViaQuickpay(db, {
+  await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
@@ -177,7 +174,6 @@ test("Bank transfer donation should not have new charges created", async () => {
     donor_id: donor.id,
     gateway_metadata: { bank_msg: "1234" },
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     tax_deductible: false,
   });
@@ -219,5 +215,7 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     },
   ];
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(expected);
+  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(
+    expected,
+  );
 });

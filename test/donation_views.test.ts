@@ -1,19 +1,19 @@
 import { setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  DonationFrequency,
-  DonationRecipient,
   EmailedStatus,
   getDonationsToEmail,
   getDonationToUpdateQuickpayPaymentInfoById,
   getFailedRecurringDonations,
   insertCharge,
+  insertDonationEarmark,
   insertDonationViaBankTransfer,
   insertDonationViaQuickpay,
-  insertDonationViaScanpay,
   insertDonor,
   insertMembershipViaQuickpay,
   PaymentMethod,
@@ -51,20 +51,37 @@ test("Finds first successful donations to email", async () => {
     donor_id: donor1.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation1.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
-  const donation2 = await insertDonationViaScanpay(db, {
+  const donation2 = await insertDonationViaQuickpay(db, {
     donor_id: donor1.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation2.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   const donation3 = await insertMembershipViaQuickpay(db, {
     donor_id: donor2.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation3.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   // ...each successfully charged (one even twice)
   await insertCharge(db, {
@@ -130,14 +147,26 @@ test("Should not include recipient if donation is earmarked using %-split", asyn
     email: "hello@example.com",
   });
 
-  const donation1 = await insertDonationViaScanpay(db, {
+  const donation1 = await insertDonationViaQuickpay(db, {
     donor_id: donor1.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+
+  await insertDonationEarmark(
+    db,
+    donation1.id,
+    DonationRecipient.GivEffektivtsAnbefaling,
+    90,
+  );
+  await insertDonationEarmark(
+    db,
+    donation1.id,
+    DonationRecipient.GivEffektivtsArbejdeOgVækst,
+    10,
+  );
 
   await insertCharge(db, {
     donation_id: donation1.id,
@@ -170,11 +199,16 @@ test("Should not email to a credit card one-time donation that wasn't charged ye
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 77,
-    recipient: DonationRecipient.GivEffektivtsAnbefaling,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   expect(await getDonationsToEmail(db)).toEqual([]);
 });
@@ -189,11 +223,16 @@ test("Should not email to a credit card one-time donation with a failed charge",
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 77,
-    recipient: DonationRecipient.GivEffektivtsAnbefaling,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -214,6 +253,12 @@ test("Should not email to a credit card recurring donation that wasn't charged y
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -234,6 +279,12 @@ test("Should not email to a credit card recurring donation with a failed charge"
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -253,11 +304,16 @@ test("Should not email to a MobilePay one-time donation that wasn't charged yet"
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   expect(await getDonationsToEmail(db)).toEqual([]);
 });
@@ -272,11 +328,16 @@ test("Should not email to a MobilePay one-time donation with a failed charge", a
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -296,11 +357,16 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -329,11 +395,16 @@ test("Should not email to a MobilePay recurring donation with a failed charge", 
   const donation = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 77,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -354,6 +425,12 @@ test("Should not email to a donation that was already emailed", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -382,6 +459,12 @@ test("Should not email to a donation that was already attempted to be emailed", 
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertCharge(db, {
     donation_id: donation.id,
@@ -414,6 +497,12 @@ test("Finds failed recurring donations to email", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation1.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
@@ -431,13 +520,18 @@ test("Finds failed recurring donations to email", async () => {
   const donation2 = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 11,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
     fundraiser_id: "00000000-0000-0000-0000-000000000000",
     message: "hello world",
   });
+  await insertDonationEarmark(
+    db,
+    donation2.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subMonths(now, 3)),
@@ -462,12 +556,24 @@ test("Finds failed recurring donations to email", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation3.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   // Membership that got stuck in 'waiting' charge
   const donation4 = await insertMembershipViaQuickpay(db, {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation4.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
@@ -480,6 +586,12 @@ test("Finds failed recurring donations to email", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation5.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
@@ -491,11 +603,16 @@ test("Finds failed recurring donations to email", async () => {
   const donation6 = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 11,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation6.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subMonths(now, 3)),
@@ -543,11 +660,16 @@ test("Finds failed recurring donations to email", async () => {
   const donation8 = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 33,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation8.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subMonths(now, 1)),
@@ -559,10 +681,15 @@ test("Finds failed recurring donations to email", async () => {
   const donation9 = await insertDonationViaBankTransfer(db, {
     donor_id: donor.id,
     amount: 44,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation9.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subMonths(now, 2)),
@@ -586,7 +713,7 @@ test("Finds failed recurring donations to email", async () => {
       donor_email: donor.email,
       donation_id: donation1.id,
       amount: donation1.amount,
-      recipient: donation1.recipient,
+      recipient: DonationRecipient.GivEffektivtsMedlemskab,
       frequency: donation1.frequency,
       tax_deductible: donation1.tax_deductible,
       method: donation1.method,
@@ -597,7 +724,7 @@ test("Finds failed recurring donations to email", async () => {
       donor_email: donor.email,
       donation_id: donation2.id,
       amount: donation2.amount,
-      recipient: donation2.recipient,
+      recipient: DonationRecipient.VitaminModMangelsygdomme,
       frequency: donation2.frequency,
       tax_deductible: donation2.tax_deductible,
       method: donation2.method,
@@ -627,6 +754,12 @@ test("Finds donations that can get a link to renew payment", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation1.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   // Monthly donation with no charges yet
   const donation2 = await insertDonationViaQuickpay(db, {
@@ -637,16 +770,27 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation2.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   // Monthly donation with pre-created charge in 'created' state
   const donation3 = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 11,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation3.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
@@ -659,6 +803,12 @@ test("Finds donations that can get a link to renew payment", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation4.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 1)),
@@ -670,11 +820,16 @@ test("Finds donations that can get a link to renew payment", async () => {
   const donation5 = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 11,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation5.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
@@ -687,6 +842,12 @@ test("Finds donations that can get a link to renew payment", async () => {
     donor_id: donor.id,
     method: PaymentMethod.CreditCard,
   });
+  await insertDonationEarmark(
+    db,
+    donation6.id,
+    DonationRecipient.GivEffektivtsMedlemskab,
+    100,
+  );
 
   await setDonationCancelledById(db, donation6.id);
 
@@ -694,11 +855,16 @@ test("Finds donations that can get a link to renew payment", async () => {
   const donation7 = await insertDonationViaQuickpay(db, {
     donor_id: donor.id,
     amount: 11,
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation7.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   // Bank-transfer donation
   const donation8 = await insertDonationViaBankTransfer(db, {
@@ -708,6 +874,12 @@ test("Finds donations that can get a link to renew payment", async () => {
     frequency: DonationFrequency.Monthly,
     tax_deductible: true,
   });
+  await insertDonationEarmark(
+    db,
+    donation8.id,
+    DonationRecipient.VitaminModMangelsygdomme,
+    100,
+  );
 
   // ...should allow only the first two donations to renew payment
   expect(
