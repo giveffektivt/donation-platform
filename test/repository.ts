@@ -2,12 +2,12 @@ import type { PoolClient } from "pg";
 import type {
   Charge,
   ChargeWithGatewayMetadata,
-  Donor,
   Gavebrev,
   GavebrevCheckin,
 } from "../src";
 import type {
   DonationWithGatewayInfoAny,
+  Donor,
   Earmark,
   GatewayWebhook,
   TaxReportLine,

@@ -1,4 +1,3 @@
-import { afterEach, beforeEach, expect, test } from "vitest";
 import {
   dbBeginTransaction,
   dbClient,
@@ -6,6 +5,7 @@ import {
   insertGatewayWebhook,
   PaymentGateway,
 } from "src";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllGatewayWebhooks } from "./repository";
 
 const client = dbClient();
@@ -39,7 +39,7 @@ test("Insert gateway webhook as JSON string", async () => {
   await insertGatewayWebhook(
     db,
     PaymentGateway.Quickpay,
-    '{ "hello": "world" }'
+    '{ "hello": "world" }',
   );
 
   expect(await findAllGatewayWebhooks(db)).toMatchObject([

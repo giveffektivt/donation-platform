@@ -12,8 +12,8 @@ import {
   PaymentGateway,
   PaymentMethod,
   recreateQuickpayRecurringDonation,
-  setDonationQuickpayId,
   registerDonationViaQuickpay,
+  setDonationQuickpayId,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";

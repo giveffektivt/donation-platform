@@ -4,7 +4,6 @@ import {
   ChargeStatus,
   DonationFrequency,
   DonationRecipient,
-  type Donor,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
@@ -12,8 +11,8 @@ import {
   GavebrevType,
   PaymentMethod,
   registerDonationViaQuickpay,
-  setGavebrevStopped,
   registerGavebrev,
+  setGavebrevStopped,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import {
