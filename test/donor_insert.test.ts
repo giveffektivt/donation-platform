@@ -57,6 +57,7 @@ test("Insert donor same email different tin", async () => {
   });
 
   const allDonors = await findAllDonors(db);
+  allDonors.sort((a, b) => (a.address ?? "").localeCompare(b.address ?? ""));
 
   expect(allDonors).toMatchObject([
     {

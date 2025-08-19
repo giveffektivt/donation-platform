@@ -6,13 +6,13 @@ import {
   dbRollbackTransaction,
   EmailedStatus,
   PaymentMethod,
+  registerDonationViaQuickpay,
   setDonationCancelledByQuickpayOrder,
   setDonationEmailed,
   setDonationMethodByQuickpayOrder,
-  registerDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { findDonationQuickpay } from "./repository";
+import { findAllDonations } from "./repository";
 
 const client = dbClient();
 
@@ -43,9 +43,9 @@ test("Update donation to mark it as emailed", async () => {
 
   await setDonationEmailed(db, donation, EmailedStatus.Yes);
 
-  expect((await findDonationQuickpay(db, donation)).emailed).toBe(
-    EmailedStatus.Yes,
-  );
+  expect(await findAllDonations(db)).toMatchObject([
+    { emailed: EmailedStatus.Yes },
+  ]);
 });
 
 test("Cancel donation by its Quickpay order ID", async () => {
@@ -64,16 +64,14 @@ test("Cancel donation by its Quickpay order ID", async () => {
   });
 
   expect(donation.cancelled).toBe(false);
-  expect((await findDonationQuickpay(db, donation)).cancelled).toBe(false);
-
+  expect(await findAllDonations(db)).toMatchObject([{ cancelled: false }]);
   await setDonationCancelledByQuickpayOrder(db, "some-incorrect-order");
-  expect((await findDonationQuickpay(db, donation)).cancelled).toBe(false);
-
+  expect(await findAllDonations(db)).toMatchObject([{ cancelled: false }]);
   await setDonationCancelledByQuickpayOrder(
     db,
     donation.gateway_metadata.quickpay_order,
   );
-  expect((await findDonationQuickpay(db, donation)).cancelled).toBe(true);
+  expect(await findAllDonations(db)).toMatchObject([{ cancelled: true }]);
 });
 
 test("Update donation payment method by its Quickpay order ID", async () => {
@@ -91,25 +89,25 @@ test("Update donation payment method by its Quickpay order ID", async () => {
     ],
   });
 
-  expect((await findDonationQuickpay(db, donation)).method).toBe(
-    PaymentMethod.CreditCard,
-  );
+  expect(await findAllDonations(db)).toMatchObject([
+    { method: PaymentMethod.CreditCard },
+  ]);
 
   await setDonationMethodByQuickpayOrder(
     db,
     "some-incorrect-order",
     PaymentMethod.MobilePay,
   );
-  expect((await findDonationQuickpay(db, donation)).method).toBe(
-    PaymentMethod.CreditCard,
-  );
+  expect(await findAllDonations(db)).toMatchObject([
+    { method: PaymentMethod.CreditCard },
+  ]);
 
   await setDonationMethodByQuickpayOrder(
     db,
     donation.gateway_metadata.quickpay_order,
     PaymentMethod.MobilePay,
   );
-  expect((await findDonationQuickpay(db, donation)).method).toBe(
-    PaymentMethod.MobilePay,
-  );
+  expect(await findAllDonations(db)).toMatchObject([
+    { method: PaymentMethod.MobilePay },
+  ]);
 });

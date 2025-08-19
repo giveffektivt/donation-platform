@@ -1,4 +1,18 @@
-import { Donation, DonationRecipient, Donor, PaymentGateway } from "../src";
+import type { Donation, DonationRecipient, PaymentGateway } from "../src";
+
+export type Donor = {
+  id: string;
+  created_at: Date;
+  updated_at: Date;
+  name: string;
+  email: string;
+  address: string;
+  postcode: string;
+  city: string;
+  country: string;
+  tin: string;
+  birthday: Date;
+};
 
 export type DonationWithGatewayInfoAny = Donation & {
   gateway_metadata: any;

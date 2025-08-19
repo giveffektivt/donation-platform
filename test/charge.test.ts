@@ -8,11 +8,11 @@ import {
   insertCharge,
   insertInitialChargeQuickpay,
   PaymentMethod,
-  setChargeStatus,
   registerDonationViaQuickpay,
+  setChargeStatus,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import { findAllCharges, findCharge } from "./repository";
+import { findAllCharges } from "./repository";
 
 const client = dbClient();
 
@@ -45,9 +45,14 @@ test("Insert charge for a donation", async () => {
   });
 
   expect(charge).toMatchObject({
+    id: charge.id,
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });
+
+  expect(await findAllCharges(db)).toMatchObject([
+    { id: charge.id, donation_id: donation.id, status: ChargeStatus.Created },
+  ]);
 
   expect(charge.short_id.substring(0, 2)).toEqual("c-");
   expect(charge.short_id).toHaveLength(6);
@@ -77,6 +82,9 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });
+  expect(await findAllCharges(db)).toMatchObject([
+    { id: charge.id, donation_id: donation.id, status: ChargeStatus.Created },
+  ]);
 
   expect(charge.short_id.substring(0, 2)).toEqual("c-");
   expect(charge.short_id).toHaveLength(6);
@@ -138,8 +146,13 @@ test("Update charge status", async () => {
   });
 
   expect(charge.status).toBe(ChargeStatus.Created);
+  expect(await findAllCharges(db)).toMatchObject([
+    { id: charge.id, donation_id: donation.id, status: ChargeStatus.Created },
+  ]);
 
   await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
 
-  expect((await findCharge(db, charge)).status).toBe(ChargeStatus.Error);
+  expect(await findAllCharges(db)).toMatchObject([
+    { id: charge.id, donation_id: donation.id, status: ChargeStatus.Error },
+  ]);
 });

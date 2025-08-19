@@ -6,14 +6,13 @@ import {
   findAllGavebrev,
   type Gavebrev,
   GavebrevType,
-  insertGavebrevDonor,
-  insertGavebrev,
   parseGavebrevStatus,
-  setGavebrevStatus,
+  registerGavebrev,
   type SubmitDataGavebrev,
   type SubmitDataGavebrevStatus,
-  setGavebrevStopped,
   type SubmitDataGavebrevStop,
+  setGavebrevStatus,
+  setGavebrevStopped,
 } from "src";
 
 export async function createGavebrev(
@@ -45,22 +44,16 @@ export async function insertGavebrevData(
   db: PoolClient,
   submitData: SubmitDataGavebrev,
 ): Promise<Gavebrev> {
-  const donor = await insertGavebrevDonor(db, {
+  return await registerGavebrev(db, {
     name: submitData.name,
     email: submitData.email,
     tin: submitData.tin,
-  });
-
-  const gavebrev = await insertGavebrev(db, {
-    donor_id: donor.id,
     type: submitData.percentage ? GavebrevType.Percentage : GavebrevType.Amount,
     amount: submitData.percentage || submitData.amount,
     minimal_income: submitData.minimalIncome,
     started_at: new Date(Date.UTC(submitData.startYear, 0, 1)),
     stopped_at: new Date(Date.UTC(submitData.startYear + 10, 0, 1)),
   });
-
-  return gavebrev;
 }
 
 export async function doUpdateGavebrevStatus(

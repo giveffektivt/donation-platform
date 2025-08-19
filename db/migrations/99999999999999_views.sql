@@ -33,6 +33,7 @@ value_lost_analysis cascade;
 
 drop function if exists register_donor,
 register_donation,
+register_gavebrev,
 recreate_failed_recurring_donation,
 general_assembly_invitations cascade;
 
@@ -40,12 +41,37 @@ general_assembly_invitations cascade;
 create view donations_overview as
 select
     p.id as donor_id,
-    p.name,
-    p.email,
-    p.tin,
+    case
+        when pg_has_role(current_user, 'reader_contact', 'member') then p.name
+        else '***'
+    end as name,
+    case
+        when pg_has_role(current_user, 'reader_contact', 'member') then p.email
+        else '***'
+    end as email,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then p.tin
+        else '***'
+    end as tin,
     d.id as donation_id,
-    d.amount,
     d.frequency,
+    d.amount,
+    coalesce(
+        (
+            select
+                string_agg(
+                    e.recipient || '=' || e.percentage || '%',
+                    ', '
+                    order by
+                        e.percentage desc
+                )
+            from
+                earmark e
+            where
+                e.donation_id = d.id
+        ),
+        ''
+    ) as earmarks,
     d.cancelled,
     d.method,
     d.gateway,
@@ -56,7 +82,13 @@ select
 from
     donor p
     join donation d on d.donor_id = p.id
-    join charge c on c.donation_id = d.id;
+    join charge c on c.donation_id = d.id
+order by
+    c.created_at desc nulls last;
+
+grant
+select
+    on donations_overview to reader;
 
 --------------------------------------
 create view charged_donations as
@@ -76,6 +108,10 @@ where
             and e.recipient = 'Giv Effektivts medlemskab'
     );
 
+grant
+select
+    on charged_donations to reader;
+
 --------------------------------------
 create view charged_or_created_donations as
 select
@@ -94,6 +130,10 @@ where
             and e.recipient = 'Giv Effektivts medlemskab'
     );
 
+grant
+select
+    on charged_or_created_donations to reader;
+
 --------------------------------------
 create view charged_memberships as
 select
@@ -111,6 +151,10 @@ where
             e.donation_id = d.donation_id
             and e.recipient = 'Giv Effektivts medlemskab'
     );
+
+grant
+select
+    on charged_memberships to reader;
 
 --------------------------------------
 create view charged_donations_by_transfer as
@@ -134,7 +178,13 @@ from
     charged_donations cd
     join earmark e on cd.donation_id = e.donation_id
     left join charge_transfer ct on ct.charge_id = cd.charge_id
-    left join transfer t on ct.transfer_id = t.id;
+    left join transfer t on ct.transfer_id = t.id
+order by
+    cd.charged_at desc;
+
+grant
+select
+    on charged_donations_by_transfer to reader;
 
 --------------------------------------
 create view donations_to_create_charges as
@@ -2700,6 +2750,26 @@ begin
 end
 $$;
 
+grant
+execute on function register_donation (
+    numeric,
+    donation_frequency,
+    payment_gateway,
+    payment_method,
+    boolean,
+    uuid,
+    text,
+    jsonb,
+    text,
+    text,
+    text,
+    text,
+    text,
+    text,
+    text,
+    date
+) to writer;
+
 create function recreate_failed_recurring_donation (p_donation_id uuid) returns donation language plpgsql as $$
 declare
     v_donor donor%rowtype;
@@ -2746,5 +2816,39 @@ begin
     return v_new_donation;
 end
 $$;
+
+grant
+execute on function recreate_failed_recurring_donation (uuid) to writer;
+
+create function register_gavebrev (
+    p_name text,
+    p_email text,
+    p_tin text,
+    p_type gavebrev_type,
+    p_amount numeric,
+    p_minimal_income numeric,
+    p_started_at date,
+    p_stopped_at date
+) returns gavebrev language plpgsql as $$
+declare
+    v_donor donor%rowtype;
+    v_gavebrev gavebrev%rowtype;
+begin
+    insert into donor(email, tin, name)
+    values (p_email, p_tin, p_name)
+    on conflict (email, coalesce(tin,'')) do update
+    set name = coalesce(excluded.name, donor.name)
+    returning * into v_donor;
+
+    insert into gavebrev(donor_id, status, type, amount, minimal_income, started_at, stopped_at)
+    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_started_at, p_stopped_at)
+    returning * into v_gavebrev;
+
+    return v_gavebrev;
+end
+$$;
+
+grant
+execute on function register_gavebrev (text, text, text, gavebrev_type, numeric, numeric, date, date) to writer;
 
 -- migrate:down

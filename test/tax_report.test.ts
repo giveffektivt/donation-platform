@@ -10,14 +10,14 @@ import {
   dbRollbackTransaction,
   type Gavebrev,
   GavebrevType,
-  insertGavebrev,
-  insertGavebrevDonor,
   PaymentMethod,
-  setGavebrevStopped,
   registerDonationViaQuickpay,
+  setGavebrevStopped,
+  registerGavebrev,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import {
+  findAllDonors,
   findAnnualTaxReport,
   findAnnualTaxReportOfficial,
   insertChargeWithCreatedAt,
@@ -1275,10 +1275,8 @@ const donate = async (
   db: PoolClient,
   { tin, amount, tax_deductible = true, years_ago = 0 }: donateArgs,
 ) => {
-  const random = (Math.random() + 1).toString(36).substring(7);
-
   const donation = await registerDonationViaQuickpay(db, {
-    email: `${random}@example.com`,
+    email: `${tin}@example.com`,
     amount,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
@@ -1319,11 +1317,11 @@ const gavebrev = async (
 ): Promise<Gavebrev> => {
   const startYear = getYear(years_ago);
 
-  const donor = await gavebrevDonor(db, tin);
-
   if (amount) {
-    return await insertGavebrev(db, {
-      donor_id: donor.id,
+    return await registerGavebrev(db, {
+      name: "John Smith",
+      email: `${tin}@example.com`,
+      tin,
       type: GavebrevType.Amount,
       amount,
       minimal_income: when_income_over,
@@ -1332,8 +1330,10 @@ const gavebrev = async (
     });
   }
   if (percentage) {
-    return await insertGavebrev(db, {
-      donor_id: donor.id,
+    return await registerGavebrev(db, {
+      name: "John Smith",
+      email: `${tin}@example.com`,
+      tin,
       type: GavebrevType.Percentage,
       amount: percentage,
       minimal_income: of_income_over,
@@ -1358,11 +1358,7 @@ const incomeEveryone = async (
     limit_normal_donation = 0,
   }: incomeEveryoneArgs,
 ) => {
-  for (let i = 1; i <= 10; i++) {
-    const tin = `${`${i}`.repeat(6)}-${`${i}`.repeat(4)}`;
-
-    const donor = await gavebrevDonor(db, tin);
-
+  for (const donor of await findAllDonors(db)) {
     await insertGavebrevCheckin(db, {
       donor_id: donor.id,
       year: getYear(years_ago),
@@ -1382,15 +1378,6 @@ const setMaxTaxDeduction = async (
   { value = 0, years_ago = 0 }: maxTaxDeductionArgs,
 ) => {
   await insertMaxTaxDeduction(db, getYear(years_ago), value);
-};
-
-const gavebrevDonor = async (db: PoolClient, tin: string): Promise<Donor> => {
-  const random = (Math.random() + 1).toString(36).substring(7);
-  return await insertGavebrevDonor(db, {
-    name: "John Smith",
-    email: `${random}@example.com`,
-    tin,
-  });
 };
 
 const getDate = (years_ago = 0) =>

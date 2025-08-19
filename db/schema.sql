@@ -538,6 +538,50 @@ $$;
 
 
 --
+-- Name: gavebrev; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.gavebrev (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    donor_id uuid NOT NULL,
+    status giveffektivt.gavebrev_status NOT NULL,
+    type giveffektivt.gavebrev_type NOT NULL,
+    amount numeric NOT NULL,
+    minimal_income numeric,
+    started_at timestamp with time zone NOT NULL,
+    stopped_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: register_gavebrev(text, text, text, giveffektivt.gavebrev_type, numeric, numeric, date, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.register_gavebrev(p_name text, p_email text, p_tin text, p_type giveffektivt.gavebrev_type, p_amount numeric, p_minimal_income numeric, p_started_at date, p_stopped_at date) RETURNS giveffektivt.gavebrev
+    LANGUAGE plpgsql
+    AS $$
+declare
+    v_donor donor%rowtype;
+    v_gavebrev gavebrev%rowtype;
+begin
+    insert into donor(email, tin, name)
+    values (p_email, p_tin, p_name)
+    on conflict (email, coalesce(tin,'')) do update
+    set name = coalesce(excluded.name, donor.name)
+    returning * into v_donor;
+
+    insert into gavebrev(donor_id, status, type, amount, minimal_income, started_at, stopped_at)
+    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_started_at, p_stopped_at)
+    returning * into v_gavebrev;
+
+    return v_gavebrev;
+end
+$$;
+
+
+--
 -- Name: trigger_update_timestamp(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -600,30 +644,6 @@ CREATE TABLE giveffektivt.donor (
 
 
 --
--- Name: donations_overview; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.donations_overview AS
- SELECT p.id AS donor_id,
-    p.name,
-    p.email,
-    p.tin,
-    d.id AS donation_id,
-    d.amount,
-    d.frequency,
-    d.cancelled,
-    d.method,
-    d.gateway,
-    d.tax_deductible,
-    c.id AS charge_id,
-    c.status,
-    c.created_at AS charged_at
-   FROM ((giveffektivt.donor p
-     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)));
-
-
---
 -- Name: earmark; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
@@ -638,6 +658,43 @@ CREATE TABLE giveffektivt.earmark (
 
 
 --
+-- Name: donations_overview; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donations_overview AS
+ SELECT p.id AS donor_id,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_contact'::name, 'member'::text) THEN p.name
+            ELSE '***'::text
+        END AS name,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_contact'::name, 'member'::text) THEN p.email
+            ELSE '***'::text
+        END AS email,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN p.tin
+            ELSE '***'::text
+        END AS tin,
+    d.id AS donation_id,
+    d.frequency,
+    d.amount,
+    COALESCE(( SELECT string_agg((((e.recipient || '='::text) || e.percentage) || '%'::text), ', '::text ORDER BY e.percentage DESC) AS string_agg
+           FROM giveffektivt.earmark e
+          WHERE (e.donation_id = d.id)), ''::text) AS earmarks,
+    d.cancelled,
+    d.method,
+    d.gateway,
+    d.tax_deductible,
+    c.id AS charge_id,
+    c.status,
+    c.created_at AS charged_at
+   FROM ((giveffektivt.donor p
+     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+     JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+  ORDER BY c.created_at DESC NULLS LAST;
+
+
+--
 -- Name: charged_donations; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -647,8 +704,9 @@ CREATE VIEW giveffektivt.charged_donations AS
     email,
     tin,
     donation_id,
-    amount,
     frequency,
+    amount,
+    earmarks,
     cancelled,
     method,
     gateway,
@@ -702,7 +760,8 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
    FROM (((giveffektivt.charged_donations cd
      JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
      LEFT JOIN giveffektivt.charge_transfer ct ON ((ct.charge_id = cd.charge_id)))
-     LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)));
+     LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)))
+  ORDER BY cd.charged_at DESC;
 
 
 --
@@ -715,8 +774,9 @@ CREATE VIEW giveffektivt.charged_memberships AS
     email,
     tin,
     donation_id,
-    amount,
     frequency,
+    amount,
+    earmarks,
     cancelled,
     method,
     gateway,
@@ -728,24 +788,6 @@ CREATE VIEW giveffektivt.charged_memberships AS
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
           WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))));
-
-
---
--- Name: gavebrev; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.gavebrev (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    donor_id uuid NOT NULL,
-    status giveffektivt.gavebrev_status NOT NULL,
-    type giveffektivt.gavebrev_type NOT NULL,
-    amount numeric NOT NULL,
-    minimal_income numeric,
-    started_at timestamp with time zone NOT NULL,
-    stopped_at timestamp with time zone NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
 
 
 --
@@ -1275,8 +1317,9 @@ CREATE VIEW giveffektivt.charged_or_created_donations AS
     email,
     tin,
     donation_id,
-    amount,
     frequency,
+    amount,
+    earmarks,
     cancelled,
     method,
     gateway,

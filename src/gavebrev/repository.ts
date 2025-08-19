@@ -1,47 +1,41 @@
-import { PoolClient } from "pg";
-import {
-  Donor,
-  Gavebrev,
-  GavebrevCheckin,
-  GavebrevStatus,
-} from "src";
+import type { PoolClient } from "pg";
+import type { Gavebrev, GavebrevStatus, GavebrevType } from "src";
 
-export async function insertGavebrevDonor(
+export async function registerGavebrev(
   client: PoolClient,
-  donor: Partial<Donor>
-): Promise<Donor> {
-  return (
-    await client.query(
-      `with new_row as (
-         insert into donor (name, email, tin)
-         select $1, $2, $3
-         where not exists (select * from donor p join gavebrev g on p.id = g.donor_id where p.tin = $3 limit 1)
-         returning *
-       )
-       select * from new_row
-       union
-       select * from donor where tin = $3`,
-      [donor.name, donor.email, donor.tin]
-    )
-  ).rows[0];
-}
-
-export async function insertGavebrev(
-  client: PoolClient,
-  gavebrev: Partial<Gavebrev>
+  data: {
+    name: string;
+    email: string;
+    tin: string;
+    type: GavebrevType;
+    amount: number;
+    minimal_income?: number;
+    started_at: Date;
+    stopped_at: Date;
+  },
 ): Promise<Gavebrev> {
   return (
     await client.query(
-      "insert into gavebrev(donor_id, status, type, amount, minimal_income, started_at, stopped_at) values ($1, $2, $3, $4, $5, $6, $7) returning *",
+      `select * from register_gavebrev(
+        p_name => $1,
+        p_email => $2,
+        p_tin => $3,
+        p_type => $4,
+        p_amount => $5,
+        p_minimal_income => $6,
+        p_started_at => $7,
+        p_stopped_at => $8
+      )`,
       [
-        gavebrev.donor_id,
-        GavebrevStatus.Created,
-        gavebrev.type,
-        gavebrev.amount,
-        gavebrev.minimal_income,
-        gavebrev.started_at,
-        gavebrev.stopped_at,
-      ]
+        data.name,
+        data.email,
+        data.tin,
+        data.type,
+        data.amount,
+        data.minimal_income,
+        data.started_at,
+        data.stopped_at,
+      ],
     )
   ).rows[0];
 }
@@ -49,12 +43,12 @@ export async function insertGavebrev(
 export async function setGavebrevStatus(
   client: PoolClient,
   id: string,
-  status: GavebrevStatus
+  status: GavebrevStatus,
 ): Promise<number> {
   return (
     await client.query(
       "update gavebrev set status = $1 where id = $2 returning 1",
-      [status, id]
+      [status, id],
     )
   ).rows.length;
 }
@@ -62,12 +56,12 @@ export async function setGavebrevStatus(
 export async function setGavebrevStopped(
   client: PoolClient,
   id: string,
-  stoppedAt: Date
+  stoppedAt: Date,
 ): Promise<number> {
   return (
     await client.query(
       "update gavebrev set stopped_at = $1 where id = $2 returning 1",
-      [stoppedAt, id]
+      [stoppedAt, id],
     )
   ).rows.length;
 }
@@ -75,7 +69,7 @@ export async function setGavebrevStopped(
 export async function findAllGavebrev(client: PoolClient): Promise<Gavebrev[]> {
   return (
     await client.query(
-      "select id, status from gavebrev where stopped_at > now()"
+      "select id, status from gavebrev where stopped_at > now()",
     )
   ).rows;
 }

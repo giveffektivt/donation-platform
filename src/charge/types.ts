@@ -1,7 +1,6 @@
-import {
+import type {
   DonationGatewayMetadataQuickpay,
   DonationGatewayMetadataScanpay,
-  DonationRecipient,
   PaymentGateway,
   PaymentMethod,
 } from "src";

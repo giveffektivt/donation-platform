@@ -2,8 +2,6 @@ import type { PoolClient } from "pg";
 import type {
   Charge,
   ChargeWithGatewayMetadata,
-  DonationWithGatewayInfoQuickpay,
-  DonationWithGatewayInfoScanpay,
   Donor,
   Gavebrev,
   GavebrevCheckin,
@@ -32,32 +30,6 @@ export async function setDonationCancelledById(client: PoolClient, id: string) {
     "update donation set cancelled = true where id = $1",
     [id],
   );
-}
-
-export async function findCharge(
-  client: PoolClient,
-  charge: Partial<Charge>,
-): Promise<ChargeWithGatewayMetadata> {
-  return (await client.query(`select * from charge where id=$1`, [charge.id]))
-    .rows[0];
-}
-
-export async function findDonationScanpay(
-  client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoScanpay>,
-): Promise<DonationWithGatewayInfoScanpay> {
-  return (
-    await client.query(`select * from donation where id=$1`, [donation.id])
-  ).rows[0];
-}
-
-export async function findDonationQuickpay(
-  client: PoolClient,
-  donation: Partial<DonationWithGatewayInfoQuickpay>,
-): Promise<DonationWithGatewayInfoQuickpay> {
-  return (
-    await client.query(`select * from donation where id=$1`, [donation.id])
-  ).rows[0];
 }
 
 export async function findAllDonors(client: PoolClient): Promise<Donor[]> {
