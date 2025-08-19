@@ -2,7 +2,6 @@ import type { PoolClient } from "pg";
 import {
   ChargeStatus,
   type ChargeToChargeQuickpay,
-  DonationRecipient,
   type DonationWithGatewayInfoQuickpay,
   logError,
   PaymentMethod,
@@ -17,7 +16,7 @@ export async function quickpayCreatePayment(
   const response = await request(
     "POST",
     "payments",
-    buildAuthorizationHeader(donation.recipient),
+    buildAuthorizationHeader(donation.gateway_metadata.quickpay_legacy),
     {
       currency: "dkk",
       order_id: charge_short_id,
@@ -41,27 +40,15 @@ export async function quickpayCreatePayment(
 export async function quickpayCreateSubscription(
   donation: DonationWithGatewayInfoQuickpay,
 ): Promise<string> {
-  const description = `Giv Effektivt ${
-    donation.recipient === DonationRecipient.GivEffektivtsMedlemskab
-      ? "medlem"
-      : "donation"
-  }`;
-
-  const text_on_statement = `giveffektivt.dk${
-    donation.recipient === DonationRecipient.GivEffektivtsMedlemskab
-      ? " medlem"
-      : ""
-  }`;
-
   const response = await request(
     "POST",
     "subscriptions",
-    buildAuthorizationHeader(donation.recipient),
+    buildAuthorizationHeader(donation.gateway_metadata.quickpay_legacy),
     {
       currency: "dkk",
       order_id: donation.gateway_metadata.quickpay_order,
-      description,
-      text_on_statement,
+      description: "Giv Effektivt",
+      text_on_statement: "giveffektivt.dk",
     },
   );
 
@@ -78,7 +65,7 @@ export async function quickpayOneTimeUrl(
   const response = await request(
     "PUT",
     `payments/${donation.gateway_metadata.quickpay_id}/link`,
-    buildAuthorizationHeader(donation.recipient),
+    buildAuthorizationHeader(donation.gateway_metadata.quickpay_legacy),
     {
       amount: donation.amount * 100,
       continue_url: successUrl,
@@ -102,7 +89,7 @@ export async function quickpaySubscriptionUrl(
   const response = await request(
     "PUT",
     `subscriptions/${donation.gateway_metadata.quickpay_id}/link`,
-    buildAuthorizationHeader(donation.recipient),
+    buildAuthorizationHeader(donation.gateway_metadata.quickpay_legacy),
     {
       amount: donation.amount * 100,
       continue_url: successUrl,
@@ -136,7 +123,9 @@ export async function quickpayChargeSubscription(
     await request(
       "POST",
       `subscriptions/${charge.donation_gateway_metadata.quickpay_id}/recurring`,
-      buildAuthorizationHeader(charge.recipient),
+      buildAuthorizationHeader(
+        charge.donation_gateway_metadata.quickpay_legacy,
+      ),
       {
         amount: charge.amount * 100,
         order_id: charge.short_id,
@@ -181,16 +170,13 @@ async function request(
   }
 }
 
-function buildAuthorizationHeader(recipient: DonationRecipient) {
-  const apiKey = [
-    DonationRecipient.GivEffektivtsMedlemskab,
-    DonationRecipient.GivEffektivtsArbejdeOgVækst,
-  ].includes(recipient)
+function buildAuthorizationHeader(isLegacy?: boolean) {
+  const apiKey = isLegacy
     ? process.env.QUICKPAY_MEMBERSHIP_API_KEY
     : process.env.QUICKPAY_DONATION_API_KEY;
 
   if (!apiKey) {
-    throw new Error(`No Quickpay API key defined for recipient ${recipient}`);
+    throw new Error(`No Quickpay API key defined for isLegacy=${isLegacy}`);
   }
 
   const base64key = Buffer.from(`:${apiKey}`).toString("base64");

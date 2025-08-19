@@ -75,9 +75,18 @@ select
     d.cancelled,
     d.method,
     d.gateway,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then d.gateway_metadata
+        else null
+    end as donation_gateway_metadata,
     d.tax_deductible,
     c.id as charge_id,
+    c.short_id as charge_short_id,
     c.status,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then c.gateway_metadata
+        else null
+    end as charge_gateway_metadata,
     c.created_at as charged_at
 from
     donor p

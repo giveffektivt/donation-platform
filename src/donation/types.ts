@@ -66,6 +66,7 @@ export type DonationWithGatewayInfoBankTransfer = Donation & {
 export type DonationGatewayMetadataQuickpay = {
   quickpay_id: string;
   quickpay_order: string;
+  quickpay_legacy?: boolean;
 };
 
 export type DonationGatewayMetadataScanpay = {

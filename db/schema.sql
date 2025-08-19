@@ -684,9 +684,18 @@ CREATE VIEW giveffektivt.donations_overview AS
     d.cancelled,
     d.method,
     d.gateway,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN d.gateway_metadata
+            ELSE NULL::jsonb
+        END AS donation_gateway_metadata,
     d.tax_deductible,
     c.id AS charge_id,
+    c.short_id AS charge_short_id,
     c.status,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN c.gateway_metadata
+            ELSE NULL::jsonb
+        END AS charge_gateway_metadata,
     c.created_at AS charged_at
    FROM ((giveffektivt.donor p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
@@ -710,9 +719,12 @@ CREATE VIEW giveffektivt.charged_donations AS
     cancelled,
     method,
     gateway,
+    donation_gateway_metadata,
     tax_deductible,
     charge_id,
+    charge_short_id,
     status,
+    charge_gateway_metadata,
     charged_at
    FROM giveffektivt.donations_overview d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
@@ -780,9 +792,12 @@ CREATE VIEW giveffektivt.charged_memberships AS
     cancelled,
     method,
     gateway,
+    donation_gateway_metadata,
     tax_deductible,
     charge_id,
+    charge_short_id,
     status,
+    charge_gateway_metadata,
     charged_at
    FROM giveffektivt.donations_overview d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
@@ -1323,9 +1338,12 @@ CREATE VIEW giveffektivt.charged_or_created_donations AS
     cancelled,
     method,
     gateway,
+    donation_gateway_metadata,
     tax_deductible,
     charge_id,
+    charge_short_id,
     status,
+    charge_gateway_metadata,
     charged_at
    FROM giveffektivt.donations_overview d
   WHERE ((status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (NOT (EXISTS ( SELECT 1
@@ -3471,4 +3489,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250810104141'),
     ('20250810124953'),
     ('20250810164551'),
+    ('20250819212352'),
     ('99999999999999');
