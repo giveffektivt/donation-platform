@@ -6,12 +6,10 @@ import {
   dbClient,
   dbRollbackTransaction,
   insertCharge,
-  insertDonationViaQuickpay,
-  insertDonor,
   insertInitialChargeQuickpay,
-  insertMembershipViaQuickpay,
   PaymentMethod,
   setChargeStatus,
+  registerDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllCharges, findCharge } from "./repository";
@@ -29,13 +27,16 @@ afterEach(async () => {
 test("Insert charge for a donation", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   const charge = await insertCharge(db, {
@@ -55,13 +56,16 @@ test("Insert charge for a donation", async () => {
 test("Insert initial charge for a donation via Quickpay only once", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   const charge = await insertInitialChargeQuickpay(
@@ -90,18 +94,18 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
 test("Do not insert initial charge for a matching donation", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertDonationViaQuickpay(db, {
-    donor_id: donor.id,
-    method: PaymentMethod.CreditCard,
-    amount: 0.1,
-    recipient: DonationRecipient.MyggenetModMalaria,
+    amount: 100,
     frequency: DonationFrequency.Match,
+    method: PaymentMethod.CreditCard,
     tax_deductible: false,
     fundraiser_id: "00000000-0000-0000-0000-000000000000",
+    message: "Thanks!",
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   const charge = await insertInitialChargeQuickpay(
@@ -116,13 +120,16 @@ test("Do not insert initial charge for a matching donation", async () => {
 test("Update charge status", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   const charge = await insertCharge(db, {

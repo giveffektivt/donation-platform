@@ -356,42 +356,184 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: donation; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt.donor (
+CREATE TABLE giveffektivt.donation (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name text,
-    email text NOT NULL,
-    address text,
-    postcode text,
-    city text,
-    tin text,
+    donor_id uuid NOT NULL,
+    emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status NOT NULL,
+    amount numeric NOT NULL,
+    frequency giveffektivt.donation_frequency NOT NULL,
+    cancelled boolean DEFAULT false NOT NULL,
+    method giveffektivt.payment_method NOT NULL,
+    tax_deductible boolean NOT NULL,
+    gateway giveffektivt.payment_gateway NOT NULL,
+    gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    country text,
-    birthday date
+    fundraiser_id uuid,
+    message text
 );
 
 
 --
--- Name: register_donor(text, text, text, text, text, text, text, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: recreate_failed_recurring_donation(uuid); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.register_donor(email text, tin text DEFAULT NULL::text, name text DEFAULT NULL::text, address text DEFAULT NULL::text, postcode text DEFAULT NULL::text, city text DEFAULT NULL::text, country text DEFAULT NULL::text, birthday date DEFAULT NULL::date) RETURNS giveffektivt.donor
-    LANGUAGE sql
+CREATE FUNCTION giveffektivt.recreate_failed_recurring_donation(p_donation_id uuid) RETURNS giveffektivt.donation
+    LANGUAGE plpgsql
     AS $$
-insert into donor(email, tin, name, address, postcode, city, country, birthday)
-values (email, tin, name, address, postcode, city, country, birthday)
-on conflict (email, coalesce(tin,'')) do update
-set
-  name     = coalesce(excluded.name, donor.name),
-  address  = coalesce(excluded.address, donor.address),
-  postcode = coalesce(excluded.postcode, donor.postcode),
-  city     = coalesce(excluded.city, donor.city),
-  country  = coalesce(excluded.country, donor.country),
-  birthday = coalesce(excluded.birthday, donor.birthday)
-returning *;
+declare
+    v_donor donor%rowtype;
+    v_old_earmarks jsonb;
+    v_old_donation donation%rowtype;
+    v_new_donation donation%rowtype;
+begin
+    update donation set cancelled = true where id = p_donation_id;
+
+    select * from donation where id = p_donation_id into v_old_donation;
+
+    if v_old_donation.id is null then
+        raise exception 'recurring donation with ID % not found', p_donation_id;
+    end if;
+
+    select * from donor where id = v_old_donation.donor_id into v_donor;
+
+    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    from earmark
+    where donation_id = p_donation_id
+    into v_old_earmarks;
+
+    select * from register_donation(
+        p_amount => v_old_donation.amount,
+        p_frequency => v_old_donation.frequency,
+        p_gateway => 'Quickpay'::payment_gateway,
+        p_method => 'Credit card'::payment_method,
+        p_tax_deductible => v_old_donation.tax_deductible,
+        p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_message => v_old_donation.message,
+        p_earmarks => v_old_earmarks,
+        p_email => v_donor.email,
+        p_tin => v_donor.tin,
+        p_name => v_donor.name,
+        p_address => v_donor.address,
+        p_postcode => v_donor.postcode,
+        p_city => v_donor.city,
+        p_country => v_donor.country,
+        p_birthday => v_donor.birthday
+    ) into v_new_donation;
+
+    update donation set emailed = 'yes' where id = v_new_donation.id;
+
+    return v_new_donation;
+end
+$$;
+
+
+--
+-- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, uuid, text, jsonb, text, text, text, text, text, text, text, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_fundraiser_id uuid, p_message text, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date) RETURNS giveffektivt.donation
+    LANGUAGE plpgsql
+    AS $$
+declare
+    v_donor donor%rowtype;
+    v_donation donation%rowtype;
+    v_total numeric;
+    v_dup text;
+    v_has_nonpos boolean;
+    v_membership_present boolean;
+    v_gateway_metadata jsonb;
+begin
+    if p_tax_deductible and p_tin is null then
+        raise exception 'tax-deductible donation requires tin';
+    end if;
+
+    if jsonb_typeof(p_earmarks) <> 'array' or jsonb_array_length(p_earmarks) = 0 then
+        raise exception 'earmarks must be a non-empty JSON array of {recipient, percentage}';
+    end if;
+
+    select exists(
+        select 1 from jsonb_array_elements(p_earmarks) e
+        where e->>'recipient' = 'Giv Effektivts medlemskab'
+    ) into v_membership_present;
+
+    if jsonb_array_length(p_earmarks) > 1 and v_membership_present then
+        raise exception 'including membership with another earmark is not supported yet';
+    end if;
+
+    select coalesce(sum((e->>'percentage')::numeric),0) into v_total
+    from jsonb_array_elements(p_earmarks) e;
+
+    if round(v_total, 6) <> 100 then
+        raise exception 'sum of earmark percentages must be 100, got %', v_total;
+    end if;
+
+    select exists(
+        select 1
+        from jsonb_array_elements(p_earmarks) e
+        where (e->>'percentage')::numeric <= 0
+    ) into v_has_nonpos;
+
+    if v_has_nonpos then
+        raise exception 'all earmark percentages must be > 0';
+    end if;
+
+    select r into v_dup
+    from (
+        select (e->>'recipient') as r, count(*) as c
+        from jsonb_array_elements(p_earmarks) e
+        group by 1
+        having count(*) > 1
+    ) d
+    limit 1;
+
+    if v_dup is not null then
+        raise exception 'duplicate earmark %', v_dup;
+    end if;
+
+    if p_gateway = 'Quickpay' then
+        v_gateway_metadata := format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb;
+    elsif p_gateway = 'Bank transfer' then
+        v_gateway_metadata := format('{"bank_msg": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb;
+    else
+        raise exception 'unsupported gateway: %', p_gateway;
+    end if;
+
+    insert into donor(email, tin, name, address, postcode, city, country, birthday)
+    values (p_email, p_tin, p_name, p_address, p_postcode, p_city, p_country, p_birthday)
+    on conflict (email, coalesce(tin,'')) do update
+    set
+        name     = coalesce(excluded.name, donor.name),
+        address  = coalesce(excluded.address, donor.address),
+        postcode = coalesce(excluded.postcode, donor.postcode),
+        city     = coalesce(excluded.city, donor.city),
+        country  = coalesce(excluded.country, donor.country),
+        birthday = coalesce(excluded.birthday, donor.birthday)
+    returning * into v_donor;
+
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+    values (
+        v_donor.id,
+        p_amount,
+        p_frequency,
+        p_gateway,
+        p_method,
+        p_tax_deductible,
+        p_fundraiser_id,
+        p_message,
+        v_gateway_metadata
+    )
+    returning * into v_donation;
+
+    insert into earmark (donation_id, recipient, percentage)
+    select v_donation.id, (e->>'recipient')::donation_recipient, (e->>'percentage')::numeric
+    from jsonb_array_elements(p_earmarks) e;
+
+    return v_donation;
+end
 $$;
 
 
@@ -439,24 +581,21 @@ CREATE TABLE giveffektivt.charge_transfer (
 
 
 --
--- Name: donation; Type: TABLE; Schema: giveffektivt; Owner: -
+-- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
-CREATE TABLE giveffektivt.donation (
+CREATE TABLE giveffektivt.donor (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
-    donor_id uuid NOT NULL,
-    emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status NOT NULL,
-    amount numeric NOT NULL,
-    frequency giveffektivt.donation_frequency NOT NULL,
-    cancelled boolean DEFAULT false NOT NULL,
-    method giveffektivt.payment_method NOT NULL,
-    tax_deductible boolean NOT NULL,
-    gateway giveffektivt.payment_gateway NOT NULL,
-    gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    name text,
+    email text NOT NULL,
+    address text,
+    postcode text,
+    city text,
+    tin text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    fundraiser_id uuid,
-    message text
+    country text,
+    birthday date
 );
 
 

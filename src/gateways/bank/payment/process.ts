@@ -1,66 +1,60 @@
 import type { PoolClient } from "pg";
 import {
   type BankTransferInfo,
+  type DonationRecipient,
+  type DonationToEmail,
+  type DonationWithGatewayInfoBankTransfer,
   dbClient,
   dbExecuteInTransaction,
   dbRelease,
-  type DonationToEmail,
-  type DonationWithGatewayInfoBankTransfer,
-  type Donor,
   EmailedStatus,
-  insertDonationEarmark,
-  insertDonationViaBankTransfer,
-  insertDonor,
   logError,
   parseDonationFrequency,
   parseDonationRecipient,
+  registerDonationViaBankTransfer,
+  type SubmitDataDonation,
   sendPaymentEmail,
   setDonationEmailed,
-  type SubmitDataDonation,
 } from "src";
 
 export async function processBankTransferDonation(
   submitData: SubmitDataDonation,
 ): Promise<[string, string]> {
-  const [donor, donation] = await dbExecuteInTransaction(
+  const donation = await dbExecuteInTransaction(
     async (db) => await insertBankTransferData(db, submitData),
   );
-  await sendEmails(donor, donation);
-  return [donation.gateway_metadata.bank_msg, donor.id];
+  await sendEmails(
+    submitData.email,
+    parseDonationRecipient(submitData.recipient),
+    donation,
+  );
+  return [donation.gateway_metadata.bank_msg, donation.donor_id];
 }
 
 export async function insertBankTransferData(
   db: PoolClient,
   submitData: SubmitDataDonation,
-): Promise<[Donor, DonationWithGatewayInfoBankTransfer]> {
-  const donor = await insertDonor(db, {
+): Promise<DonationWithGatewayInfoBankTransfer> {
+  return await registerDonationViaBankTransfer(db, {
     email: submitData.email,
-
     tin: submitData.tin,
-  });
-
-  const donation = await insertDonationViaBankTransfer(db, {
-    donor_id: donor.id,
     amount: submitData.amount,
-    recipient: parseDonationRecipient(submitData.recipient),
     frequency: parseDonationFrequency(submitData.frequency),
     tax_deductible: submitData.taxDeductible,
     fundraiser_id: submitData.fundraiserId,
     message: submitData.message,
+    earmarks: [
+      {
+        recipient: parseDonationRecipient(submitData.recipient),
+        percentage: 100,
+      },
+    ],
   });
-
-  await insertDonationEarmark(
-    db,
-    donation.id,
-    parseDonationRecipient(submitData.recipient),
-    100,
-  );
-
-  return [donor, donation];
 }
 
 async function sendEmails(
-  donor: Donor,
+  email: string,
+  recipient: DonationRecipient,
   donation: DonationWithGatewayInfoBankTransfer,
 ) {
   console.log(`Sending bank transfer donation email: ${donation.id}`);
@@ -73,9 +67,9 @@ async function sendEmails(
   // Donation email
   const donationToEmail: DonationToEmail = {
     id: donation.id,
-    email: donor.email,
+    email: email,
     amount: donation.amount,
-    recipient: donation.recipient,
+    recipient: recipient,
     frequency: donation.frequency,
     tax_deductible: donation.tax_deductible,
   };

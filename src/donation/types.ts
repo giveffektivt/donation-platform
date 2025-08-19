@@ -40,7 +40,6 @@ export type Donation = {
   donor_id: string;
   emailed: EmailedStatus;
   amount: number;
-  recipient: DonationRecipient;
   frequency: DonationFrequency;
   cancelled: boolean;
   gateway: PaymentGateway;

@@ -2,68 +2,63 @@ import type { PoolClient } from "pg";
 import {
   type Charge,
   ChargeStatus,
-  dbExecuteInTransaction,
   DonationFrequency,
   DonationRecipient,
   type DonationWithGatewayInfoQuickpay,
-  type DonorAnon,
-  type Donor,
+  dbExecuteInTransaction,
   insertCharge,
-  insertMembershipViaQuickpay,
-  insertDonationViaQuickpay,
-  insertDonor,
+  PaymentMethod,
   parseDonationFrequency,
   parseDonationRecipient,
   parsePaymentMethod,
-  PaymentMethod,
   quickpayCreatePayment,
   quickpayCreateSubscription,
   quickpayOneTimeUrl,
   quickpaySubscriptionUrl,
-  setDonationQuickpayId,
+  recreateFailedRecurringDonation,
+  registerMembershipViaQuickpay,
   type SubmitDataDonation,
   type SubmitDataMembership,
-  type FailedRecurringDonation,
-  setDonationCancelledById,
-  setDonationEmailed,
-  EmailedStatus,
-  insertDonationEarmark,
-  copyDonationEarmarks,
+  setDonationQuickpayId,
+  registerDonationViaQuickpay,
 } from "src";
 
 export async function processQuickpayDonation(
   submitData: SubmitDataDonation,
 ): Promise<[string, string]> {
-  const [donor, donation, charge] = await dbExecuteInTransaction(
+  const [donation, charge] = await dbExecuteInTransaction(
     async (db) =>
       await addQuickpayId(
         db,
         ...(await insertQuickpayDataDonation(db, submitData)),
       ),
   );
-  return [await generateRedirectUrl(donation, charge), donor.id];
+  return [
+    await generateRedirectUrl(donation, charge, false),
+    donation.donor_id,
+  ];
 }
 
 export async function processQuickpayMembership(
   submitData: SubmitDataMembership,
 ): Promise<[string, string]> {
-  const [donor, donation, charge] = await dbExecuteInTransaction(
+  const [donation, charge] = await dbExecuteInTransaction(
     async (db) =>
       await addQuickpayId(
         db,
         ...(await insertQuickpayDataMembership(db, submitData)),
       ),
   );
-  return [await generateRedirectUrl(donation, charge), donor.id];
+  return [await generateRedirectUrl(donation, charge, true), donation.donor_id];
 }
 
 export async function recreateQuickpayFailedRecurringDonation(
   db: PoolClient,
-  info: FailedRecurringDonation,
+  donation_id: string,
 ): Promise<string> {
   const donation = await addQuickpayIdForRecurringDonation(
     db,
-    await recreateQuickpayRecurringDonation(db, info),
+    await recreateQuickpayRecurringDonation(db, donation_id),
   );
   return await generateRenewUrl(donation);
 }
@@ -80,28 +75,23 @@ export async function generateRenewPaymentUrl(
 export async function insertQuickpayDataDonation(
   db: PoolClient,
   submitData: SubmitDataDonation,
-): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
-  const donor = await insertDonor(db, {
+): Promise<[DonationWithGatewayInfoQuickpay, Charge | null]> {
+  const donation = await registerDonationViaQuickpay(db, {
     email: submitData.email,
     tin: submitData.tin,
-  });
-
-  const donation = await insertDonationViaQuickpay(db, {
-    donor_id: donor.id,
     amount: submitData.amount,
     frequency: parseDonationFrequency(submitData.frequency),
     method: parsePaymentMethod(submitData.method),
     tax_deductible: submitData.taxDeductible,
     fundraiser_id: submitData.fundraiserId,
     message: submitData.message,
+    earmarks: [
+      {
+        recipient: parseDonationRecipient(submitData.recipient),
+        percentage: 100,
+      },
+    ],
   });
-
-  await insertDonationEarmark(
-    db,
-    donation.id,
-    parseDonationRecipient(submitData.recipient),
-    100,
-  );
 
   // Only create charges at this moment for auto-captured one-time donations
   const charge =
@@ -112,82 +102,47 @@ export async function insertQuickpayDataDonation(
         })
       : null;
 
-  return [donor, donation, charge];
+  return [donation, charge];
 }
 
 export async function insertQuickpayDataMembership(
   db: PoolClient,
   submitData: SubmitDataMembership,
-): Promise<[Donor, DonationWithGatewayInfoQuickpay, Charge | null]> {
-  const donor = await insertDonor(db, {
-    name: submitData.name,
-    email: submitData.email,
-    address: submitData.address,
-    postcode: submitData.postcode,
-    city: submitData.city,
-    country: submitData.country,
-    tin: submitData.tin,
-    birthday: submitData.birthday,
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  await insertDonationEarmark(
-    db,
-    donation.id,
-    DonationRecipient.GivEffektivtsMedlemskab,
-    100,
-  );
-
-  return [donor, donation, null];
+): Promise<[DonationWithGatewayInfoQuickpay, Charge | null]> {
+  return [
+    await registerMembershipViaQuickpay(db, {
+      name: submitData.name,
+      email: submitData.email,
+      address: submitData.address,
+      postcode: submitData.postcode,
+      city: submitData.city,
+      country: submitData.country,
+      tin: submitData.tin,
+      birthday: submitData.birthday,
+    }),
+    null,
+  ];
 }
 
 export async function recreateQuickpayRecurringDonation(
   db: PoolClient,
-  info: FailedRecurringDonation,
+  donation_id: string,
 ): Promise<DonationWithGatewayInfoQuickpay> {
-  await setDonationCancelledById(db, info.donation_id);
-
-  const donation =
-    info.recipient === DonationRecipient.GivEffektivtsMedlemskab
-      ? await insertMembershipViaQuickpay(db, {
-          donor_id: info.donor_id,
-          method: info.method,
-        })
-      : await insertDonationViaQuickpay(db, {
-          donor_id: info.donor_id,
-          amount: info.amount,
-          recipient: info.recipient,
-          frequency: info.frequency,
-          method: info.method,
-          tax_deductible: info.tax_deductible,
-          fundraiser_id: info.fundraiser_id,
-          message: info.message,
-        });
-
-  await copyDonationEarmarks(db, info.donation_id, donation.id);
-
-  await setDonationEmailed(db, donation, EmailedStatus.Yes);
-
-  return donation;
+  return await recreateFailedRecurringDonation(db, donation_id);
 }
 
 async function addQuickpayId(
   db: PoolClient,
-  donor: DonorAnon,
   donation: DonationWithGatewayInfoQuickpay,
   charge: Charge | null,
-): Promise<[DonorAnon, DonationWithGatewayInfoQuickpay, Charge | null]> {
+): Promise<[DonationWithGatewayInfoQuickpay, Charge | null]> {
   donation.gateway_metadata.quickpay_id = await (donation && charge
     ? quickpayCreatePayment(charge.short_id, donation)
     : quickpayCreateSubscription(donation));
 
   await setDonationQuickpayId(db, donation);
 
-  return [donor, donation, charge];
+  return [donation, charge];
 }
 
 async function addQuickpayIdForRecurringDonation(
@@ -205,11 +160,11 @@ async function addQuickpayIdForRecurringDonation(
 async function generateRedirectUrl(
   donation: DonationWithGatewayInfoQuickpay,
   charge: Charge | null,
+  isMembership: boolean,
 ): Promise<string> {
-  const successUrl =
-    donation.recipient !== DonationRecipient.GivEffektivtsMedlemskab
-      ? process.env.SUCCESS_URL
-      : process.env.SUCCESS_URL_MEMBERSHIP_ONLY;
+  const successUrl = isMembership
+    ? process.env.SUCCESS_URL_MEMBERSHIP_ONLY
+    : process.env.SUCCESS_URL;
 
   const url = await (charge
     ? quickpayOneTimeUrl(donation, successUrl)

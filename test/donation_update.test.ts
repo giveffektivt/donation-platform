@@ -5,13 +5,11 @@ import {
   dbClient,
   dbRollbackTransaction,
   EmailedStatus,
-  insertDonor,
-  insertMembershipViaQuickpay,
   PaymentMethod,
-  setDonationCancelledById,
   setDonationCancelledByQuickpayOrder,
   setDonationEmailed,
   setDonationMethodByQuickpayOrder,
+  registerDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findDonationQuickpay } from "./repository";
@@ -29,13 +27,16 @@ afterEach(async () => {
 test("Update donation to mark it as emailed", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   expect(donation.emailed).toBe(EmailedStatus.No);
@@ -50,13 +51,16 @@ test("Update donation to mark it as emailed", async () => {
 test("Cancel donation by its Quickpay order ID", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   expect(donation.cancelled).toBe(false);
@@ -72,38 +76,19 @@ test("Cancel donation by its Quickpay order ID", async () => {
   expect((await findDonationQuickpay(db, donation)).cancelled).toBe(true);
 });
 
-test("Cancel donation by its ID", async () => {
-  const db = await client;
-
-  const donor = await insertDonor(db, {
-    email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
-    method: PaymentMethod.CreditCard,
-  });
-
-  expect(donation.cancelled).toBe(false);
-  expect((await findDonationQuickpay(db, donation)).cancelled).toBe(false);
-
-  await setDonationCancelledById(db, "00000000-0000-0000-0000-000000000000");
-  expect((await findDonationQuickpay(db, donation)).cancelled).toBe(false);
-
-  await setDonationCancelledById(db, donation.id);
-  expect((await findDonationQuickpay(db, donation)).cancelled).toBe(true);
-});
-
 test("Update donation payment method by its Quickpay order ID", async () => {
   const db = await client;
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
-  });
-
-  const donation = await insertMembershipViaQuickpay(db, {
-    donor_id: donor.id,
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   expect((await findDonationQuickpay(db, donation)).method).toBe(

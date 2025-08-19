@@ -2,20 +2,19 @@ import { subMonths, subYears } from "date-fns";
 import type { PoolClient } from "pg";
 import {
   ChargeStatus,
-  dbBeginTransaction,
-  dbClient,
-  dbRollbackTransaction,
   DonationFrequency,
   DonationRecipient,
   type Donor,
+  dbBeginTransaction,
+  dbClient,
+  dbRollbackTransaction,
   type Gavebrev,
   GavebrevType,
-  insertDonationViaQuickpay,
-  insertDonor,
   insertGavebrev,
   insertGavebrevDonor,
   PaymentMethod,
   setGavebrevStopped,
+  registerDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import {
@@ -1278,18 +1277,17 @@ const donate = async (
 ) => {
   const random = (Math.random() + 1).toString(36).substring(7);
 
-  const donor = await insertDonor(db, {
+  const donation = await registerDonationViaQuickpay(db, {
     email: `${random}@example.com`,
-    tin,
-  });
-
-  const donation = await insertDonationViaQuickpay(db, {
-    donor_id: donor.id,
     amount,
-    recipient: DonationRecipient.GivEffektivtsAnbefaling,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
+    tin,
     tax_deductible,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
   });
 
   await insertChargeWithCreatedAt(db, {

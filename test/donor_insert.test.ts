@@ -1,8 +1,12 @@
 import {
+  DonationFrequency,
+  DonationRecipient,
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  insertDonor,
+  PaymentMethod,
+  registerDonationViaQuickpay,
+  registerMembershipViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllDonors } from "./repository";
@@ -20,20 +24,36 @@ afterEach(async () => {
 test("Insert donor same email different tin", async () => {
   const db = await client;
 
-  await insertDonor(db, {
+  await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
+    amount: 300,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
+    ],
   });
 
-  await insertDonor(db, {
+  await registerMembershipViaQuickpay(db, {
     email: "hello@example.com",
     tin: "111111-1111",
     name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
   });
 
-  await insertDonor(db, {
+  await registerMembershipViaQuickpay(db, {
     email: "hello@example.com",
     tin: "11111111",
     name: "John ApS",
+    address: "Street 2",
+    postcode: "9999",
+    city: "Oslo",
+    country: "Norway",
   });
 
   const allDonors = await findAllDonors(db);
@@ -50,23 +70,23 @@ test("Insert donor same email different tin", async () => {
       tin: null,
     },
     {
-      address: null,
+      address: "Street 1",
       birthday: null,
-      city: null,
-      country: null,
+      city: "Copenhagen",
+      country: "Denmark",
       email: "hello@example.com",
       name: "John",
-      postcode: null,
+      postcode: "1234",
       tin: "111111-1111",
     },
     {
-      address: null,
+      address: "Street 2",
       birthday: null,
-      city: null,
-      country: null,
+      city: "Oslo",
+      country: "Norway",
       email: "hello@example.com",
       name: "John ApS",
-      postcode: null,
+      postcode: "9999",
       tin: "11111111",
     },
   ]);
@@ -75,52 +95,26 @@ test("Insert donor same email different tin", async () => {
 test("Insert donor same email same tin enriches same record with new info", async () => {
   const db = await client;
 
-  await insertDonor(db, {
+  await registerDonationViaQuickpay(db, {
     email: "hello@example.com",
+    amount: 300,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
+    ],
   });
 
-  await insertDonor(db, {
-    email: "hello@example.com",
-    tin: "111111-1111",
-  });
-
-  expect(await findAllDonors(db)).toMatchObject([
-    {
-      address: null,
-      birthday: null,
-      city: null,
-      country: null,
-      email: "hello@example.com",
-      name: null,
-      postcode: null,
-      tin: null,
-    },
-    {
-      address: null,
-      birthday: null,
-      city: null,
-      country: null,
-      email: "hello@example.com",
-      name: null,
-      postcode: null,
-      tin: "111111-1111",
-    },
-  ]);
-
-  await insertDonor(db, {
-    email: "hello@example.com",
-    name: "Anon",
-    country: "Sweden",
-  });
-
-  await insertDonor(db, {
+  await registerMembershipViaQuickpay(db, {
     email: "hello@example.com",
     tin: "111111-1111",
     name: "John",
-    country: "Denmark",
     address: "Street 1",
     postcode: "1234",
     city: "Copenhagen",
+    country: "Denmark",
   });
 
   expect(await findAllDonors(db)).toMatchObject([
@@ -128,9 +122,9 @@ test("Insert donor same email same tin enriches same record with new info", asyn
       address: null,
       birthday: null,
       city: null,
-      country: "Sweden",
+      country: null,
       email: "hello@example.com",
-      name: "Anon",
+      name: null,
       postcode: null,
       tin: null,
     },
@@ -146,12 +140,14 @@ test("Insert donor same email same tin enriches same record with new info", asyn
     },
   ]);
 
-  await insertDonor(db, {
+  await registerMembershipViaQuickpay(db, {
     email: "hello@example.com",
     tin: "111111-1111",
     name: "John Smith",
-    country: "Denmark",
     address: "Street 2",
+    postcode: "9999",
+    city: "Oslo",
+    country: "Norway",
   });
 
   expect(await findAllDonors(db)).toMatchObject([
@@ -159,20 +155,20 @@ test("Insert donor same email same tin enriches same record with new info", asyn
       address: null,
       birthday: null,
       city: null,
-      country: "Sweden",
+      country: null,
       email: "hello@example.com",
-      name: "Anon",
+      name: null,
       postcode: null,
       tin: null,
     },
     {
       address: "Street 2",
       birthday: null,
-      city: "Copenhagen",
-      country: "Denmark",
+      city: "Oslo",
+      country: "Norway",
       email: "hello@example.com",
       name: "John Smith",
-      postcode: "1234",
+      postcode: "9999",
       tin: "111111-1111",
     },
   ]);

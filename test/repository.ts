@@ -1,5 +1,5 @@
-import { PoolClient } from "pg";
-import {
+import type { PoolClient } from "pg";
+import type {
   Charge,
   ChargeWithGatewayMetadata,
   DonationWithGatewayInfoQuickpay,
@@ -8,7 +8,7 @@ import {
   Gavebrev,
   GavebrevCheckin,
 } from "../src";
-import {
+import type {
   DonationWithGatewayInfoAny,
   Earmark,
   GatewayWebhook,
@@ -25,6 +25,13 @@ export async function insertChargeWithCreatedAt(
       [charge.created_at, charge.donation_id, charge.status],
     )
   ).rows[0];
+}
+
+export async function setDonationCancelledById(client: PoolClient, id: string) {
+  return await client.query(
+    "update donation set cancelled = true where id = $1",
+    [id],
+  );
 }
 
 export async function findCharge(

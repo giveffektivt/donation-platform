@@ -30,7 +30,7 @@ afterEach(async () => {
 test("One-time donation using bank transfer", async () => {
   const db = await client;
 
-  const [donor, donation] = await insertBankTransferData(db, {
+  const donation = await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -44,7 +44,6 @@ test("One-time donation using bank transfer", async () => {
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
-      id: donor.id,
       email: "hello@example.com",
       tin: null,
     },
@@ -56,7 +55,7 @@ test("One-time donation using bank transfer", async () => {
       id: donation.id,
       amount: 10,
       cancelled: false,
-      donor_id: donor.id,
+      donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Once,
       gateway: PaymentGateway.BankTransfer,
@@ -83,7 +82,7 @@ test("One-time donation using bank transfer", async () => {
 test("Monthly donation using bank transfer", async () => {
   const db = await client;
 
-  const [donor, donation] = await insertBankTransferData(db, {
+  const donation = await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -97,7 +96,6 @@ test("Monthly donation using bank transfer", async () => {
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
-      id: donor.id,
       email: "hello@example.com",
       tin: null,
     },
@@ -109,7 +107,7 @@ test("Monthly donation using bank transfer", async () => {
       id: donation.id,
       amount: 10,
       cancelled: false,
-      donor_id: donor.id,
+      donor_id: donors[0].id,
       emailed: EmailedStatus.No,
       frequency: DonationFrequency.Monthly,
       gateway: PaymentGateway.BankTransfer,

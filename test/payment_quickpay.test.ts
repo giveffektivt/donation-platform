@@ -7,16 +7,13 @@ import {
   dbClient,
   dbRollbackTransaction,
   EmailedStatus,
-  insertDonor,
-  insertMembershipViaQuickpay,
   insertQuickpayDataDonation,
   insertQuickpayDataMembership,
   PaymentGateway,
   PaymentMethod,
   recreateQuickpayRecurringDonation,
   setDonationQuickpayId,
-  insertDonationEarmark,
-  insertDonationViaQuickpay,
+  registerDonationViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
@@ -41,10 +38,10 @@ afterEach(async () => {
 test("One-time donation using Quickpay", async () => {
   const db = await client;
 
-  const [donor, donation] = await insertQuickpayDataDonation(db, {
-    amount: 10,
+  const [donation, charge] = await insertQuickpayDataDonation(db, {
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
+    amount: 10,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
     tin: undefined,
@@ -55,7 +52,6 @@ test("One-time donation using Quickpay", async () => {
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
-      id: donor.id,
       email: "hello@example.com",
     },
   ]);
@@ -76,6 +72,7 @@ test("One-time donation using Quickpay", async () => {
   ]);
 
   const earmarks = await findAllEarmarks(db);
+  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
@@ -87,6 +84,7 @@ test("One-time donation using Quickpay", async () => {
   const charges = await findAllCharges(db);
   expect(charges).toMatchObject([
     {
+      id: charge?.id,
       donation_id: donations[0].id,
       status: ChargeStatus.Waiting,
     },
@@ -96,7 +94,7 @@ test("One-time donation using Quickpay", async () => {
 test("Monthly donation using Quickpay", async () => {
   const db = await client;
 
-  const [donor, donation] = await insertQuickpayDataDonation(db, {
+  const [donation] = await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
     recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -110,7 +108,6 @@ test("Monthly donation using Quickpay", async () => {
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
-      id: donor.id,
       email: "hello@example.com",
       tin: "222222-2222",
     },
@@ -147,7 +144,7 @@ test("Monthly donation using Quickpay", async () => {
 test("Membership using Quickpay", async () => {
   const db = await client;
 
-  const [donor, donation] = await insertQuickpayDataMembership(db, {
+  const [donation] = await insertQuickpayDataMembership(db, {
     email: "hello@example.com",
     tin: "111111-1111",
     name: "John Smith",
@@ -160,7 +157,6 @@ test("Membership using Quickpay", async () => {
   const donors = await findAllDonors(db);
   expect(donors).toMatchObject([
     {
-      id: donor.id,
       email: "hello@example.com",
       tin: "111111-1111",
       name: "John Smith",
@@ -263,34 +259,18 @@ test("Recreate failed recurring donation", async () => {
 
   const now = setDate(new Date(), 1);
 
-  const donor = await insertDonor(db, {
-    email: "hello@example.com",
-    name: "John Smith",
-  });
-
   // Donation that was successful first time, but failed on a second charge
-  const donation = await insertDonationViaQuickpay(db, {
-    donor_id: donor.id,
+  const donation = await registerDonationViaQuickpay(db, {
+    email: "hello@example.com",
     amount: 300,
     frequency: DonationFrequency.Monthly,
-    gateway: PaymentGateway.Quickpay,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    tax_deductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
+    ],
   });
-
-  await insertDonationEarmark(
-    db,
-    donation.id,
-    DonationRecipient.GivEffektivtsAnbefaling,
-    80,
-  );
-
-  await insertDonationEarmark(
-    db,
-    donation.id,
-    DonationRecipient.KontantoverførslerTilVerdensFattigste,
-    20,
-  );
 
   const successfulCharge = await insertChargeWithCreatedAt(db, {
     created_at: utc(subYears(now, 3)),
@@ -304,21 +284,14 @@ test("Recreate failed recurring donation", async () => {
     status: ChargeStatus.Error,
   });
 
-  const recreated = await recreateQuickpayRecurringDonation(db, {
-    donor_id: donor.id,
-    donor_name: donor.name,
-    donor_email: donor.email,
-    donation_id: donation.id,
-    amount: donation.amount,
-    recipient: donation.recipient,
-    frequency: donation.frequency,
-    tax_deductible: donation.tax_deductible,
-    method: donation.method,
-    failed_at: failedCharge.created_at,
-  });
+  const recreated = await recreateQuickpayRecurringDonation(db, donation.id);
 
   const donors = await findAllDonors(db);
-  expect(donors).toEqual([donor]);
+  expect(donors).toMatchObject([
+    {
+      email: "hello@example.com",
+    },
+  ]);
 
   const donations = await findAllDonations(db);
   const expectedDonations = [
@@ -372,7 +345,7 @@ test("Recreate failed recurring donation", async () => {
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.KontantoverførslerTilVerdensFattigste,
+      recipient: DonationRecipient.VaccinerTilSpædbørn,
       percentage: 20,
     },
     {
@@ -382,7 +355,7 @@ test("Recreate failed recurring donation", async () => {
     },
     {
       donation_id: donations[1].id,
-      recipient: DonationRecipient.KontantoverførslerTilVerdensFattigste,
+      recipient: DonationRecipient.VaccinerTilSpædbørn,
       percentage: 20,
     },
   ]);
