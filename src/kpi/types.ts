@@ -4,6 +4,8 @@
 // This doesn't matter while this API is consumed by humans,
 // but if we ever need to have proper numeric types, let's change type on DB at that time.
 
+import type { DonationRecipient } from "src/donation";
+
 export type Kpi = {
   dkk_total: number;
   dkk_total_ops: number;
@@ -27,7 +29,7 @@ export type PendingDistribution = {
 
 export type TransferredDistribution = {
   id: string;
-  earmark: string;
+  earmark: DonationRecipient;
   recipient: string;
   unit: string;
   total_dkk: number;
