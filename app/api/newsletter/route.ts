@@ -1,17 +1,13 @@
-import {
-  logError,
-  type SubmitDataNewsletter,
-  SubscribeToNewsletter,
-  validationSchemaNewsletter,
-} from "src";
-import * as yup from "yup";
+import { logError, SubscribeToNewsletter } from "src";
+import { z } from "zod";
+
+const PayloadSchema = z.object({
+  email: z.email().max(500),
+});
 
 export async function POST(req: Request) {
   try {
-    const submitData: SubmitDataNewsletter = await yup
-      .object()
-      .shape(validationSchemaNewsletter)
-      .validate(await req.json());
+    const submitData = await PayloadSchema.parseAsync(await req.json());
 
     try {
       await SubscribeToNewsletter(submitData.email);

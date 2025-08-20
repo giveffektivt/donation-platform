@@ -32,7 +32,7 @@ test("Insert charge for a donation", async () => {
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -66,7 +66,7 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -107,8 +107,8 @@ test("Do not insert initial charge for a matching donation", async () => {
     amount: 100,
     frequency: DonationFrequency.Match,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
-    fundraiser_id: "00000000-0000-0000-0000-000000000000",
+    taxDeductible: false,
+    fundraiserId: "00000000-0000-0000-0000-000000000000",
     message: "Thanks!",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -133,7 +133,7 @@ test("Update charge status", async () => {
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },

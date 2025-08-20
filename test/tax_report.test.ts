@@ -1280,7 +1280,7 @@ const donate = async (
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
     tin,
-    tax_deductible,
+    taxDeductible: tax_deductible,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },

@@ -48,7 +48,7 @@ test("Insert charges for donations that need new charges", async () => {
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -60,7 +60,7 @@ test("Insert charges for donations that need new charges", async () => {
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "222222-2222",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -145,7 +145,7 @@ test("Donation that has no charges should not have new charges created", async (
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -163,7 +163,7 @@ test("Donation that is cancelled should not have new charges created", async () 
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -188,7 +188,7 @@ test("Bank transfer donation should not have new charges created", async () => {
     email: "hello@example.com",
     amount: 100,
     frequency: DonationFrequency.Once,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },

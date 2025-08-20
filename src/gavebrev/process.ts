@@ -5,18 +5,16 @@ import {
   dbRelease,
   findAllGavebrev,
   type Gavebrev,
+  type GavebrevStatus,
   GavebrevType,
-  parseGavebrevStatus,
   registerGavebrev,
-  type SubmitDataGavebrev,
-  type SubmitDataGavebrevStatus,
-  type SubmitDataGavebrevStop,
+  type NewGavebrev,
   setGavebrevStatus,
   setGavebrevStopped,
 } from "src";
 
 export async function createGavebrev(
-  submitData: SubmitDataGavebrev,
+  submitData: NewGavebrev,
 ): Promise<string> {
   const gavebrev = await dbExecuteInTransaction(
     async (db) => await insertGavebrevData(db, submitData),
@@ -25,24 +23,23 @@ export async function createGavebrev(
 }
 
 export async function updateGavebrevStatus(
-  submitData: SubmitDataGavebrevStatus,
+  id: string,
+  status: GavebrevStatus,
 ): Promise<boolean> {
   return await dbExecuteInTransaction(
-    async (db) => await doUpdateGavebrevStatus(db, submitData),
+    async (db) => await doUpdateGavebrevStatus(db, id, status),
   );
 }
 
-export async function stopGavebrev(
-  submitData: SubmitDataGavebrevStop,
-): Promise<boolean> {
+export async function stopGavebrev(id: string): Promise<boolean> {
   return await dbExecuteInTransaction(
-    async (db) => await doStopGavebrev(db, submitData),
+    async (db) => await doStopGavebrev(db, id),
   );
 }
 
 export async function insertGavebrevData(
   db: PoolClient,
-  submitData: SubmitDataGavebrev,
+  submitData: NewGavebrev,
 ): Promise<Gavebrev> {
   return await registerGavebrev(db, {
     name: submitData.name,
@@ -58,23 +55,17 @@ export async function insertGavebrevData(
 
 export async function doUpdateGavebrevStatus(
   db: PoolClient,
-  submitData: SubmitDataGavebrevStatus,
+  id: string,
+  status: GavebrevStatus,
 ): Promise<boolean> {
-  return (
-    1 ===
-    (await setGavebrevStatus(
-      db,
-      submitData.id,
-      parseGavebrevStatus(submitData.status),
-    ))
-  );
+  return 1 === (await setGavebrevStatus(db, id, status));
 }
 
 export async function doStopGavebrev(
   db: PoolClient,
-  submitData: SubmitDataGavebrevStop,
+  id: string,
 ): Promise<boolean> {
-  return 1 === (await setGavebrevStopped(db, submitData.id, new Date()));
+  return 1 === (await setGavebrevStopped(db, id, new Date()));
 }
 
 export async function listGavebrev(): Promise<Gavebrev[]> {

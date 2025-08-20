@@ -265,7 +265,7 @@ test("Recreate failed recurring donation", async () => {
     amount: 300,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },

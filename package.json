@@ -23,7 +23,7 @@
     "react-dom": "^19.0.0",
     "rollbar": "^2.26.4",
     "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
-    "yup": "^1.6.1"
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

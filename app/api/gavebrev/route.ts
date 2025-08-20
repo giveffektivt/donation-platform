@@ -1,17 +1,40 @@
 import {
   createGavebrev,
-  type SubmitDataGavebrev,
-  type SubmitDataGavebrevStatus,
-  updateGavebrevStatus,
-  validationSchemaGavebrev,
-  validationSchemaGavebrevStatus,
+  GavebrevStatus,
   listGavebrev,
-  type SubmitDataGavebrevStop,
-  validationSchemaGavebrevStop,
-  stopGavebrev,
   logError,
+  stopGavebrev,
+  updateGavebrevStatus,
 } from "src";
-import * as yup from "yup";
+import { z } from "zod";
+
+const PayloadCreateSchema = z
+  .object({
+    name: z.string().min(1).max(500),
+    tin: z.string().regex(/^\d{6}-\d{4}$/),
+    email: z.email().max(500),
+    startYear: z.coerce.number().min(new Date().getFullYear()),
+    percentage: z.coerce.number().min(1).max(100).optional(),
+    amount: z.coerce.number().min(1).optional(),
+    minimalIncome: z.coerce.number().min(0).optional(),
+  })
+  .refine((data) => !data.amount && !data.percentage, {
+    path: ["amount"],
+    error: "either percentage or amount must be provided",
+  })
+  .refine((data) => data.amount && data.percentage, {
+    path: ["amount"],
+    error: "choose either percentage or amount, not both",
+  });
+
+const PayloadStatusSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(GavebrevStatus),
+});
+
+const PayloadStopSchema = z.object({
+  id: z.string().min(1),
+});
 
 function authorize(req: Request): boolean {
   if (!process.env.GAVEBREV_API_KEY) {
@@ -45,27 +68,26 @@ export async function POST(req: Request) {
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    let submitData: SubmitDataGavebrev | null = null;
-    try {
-      submitData = await yup
-        .object()
-        .shape(validationSchemaGavebrev)
-        .validate(await req.json());
-    } catch (err) {
-      if (err instanceof yup.ValidationError) {
-        logError(
-          "POST api/gavebrev: Validation failed for request body: ",
-          err,
-        );
-        return Response.json(
-          { message: "Validation failed", errors: err.errors },
-          { status: 400 },
-        );
-      }
-      throw err;
+    const parsed = await PayloadCreateSchema.safeParseAsync(await req.json());
+    if (!parsed.success) {
+      logError(
+        "POST api/gavebrev: Validation failed for request body: ",
+        parsed.error,
+      );
+      return Response.json(
+        {
+          message: "Validation failed",
+          errors: parsed.error.issues.map((i) => ({
+            path: i.path.join("."),
+            message: i.message,
+          })),
+        },
+
+        { status: 400 },
+      );
     }
 
-    const agreementId = await createGavebrev(submitData);
+    const agreementId = await createGavebrev(parsed.data);
 
     return Response.json({ message: "OK", agreementId });
   } catch (err) {
@@ -81,29 +103,30 @@ export async function PATCH(req: Request) {
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    let submitData: SubmitDataGavebrevStatus | null = null;
-    try {
-      submitData = await yup
-        .object()
-        .shape(validationSchemaGavebrevStatus)
-        .validate(await req.json());
-    } catch (err) {
-      if (err instanceof yup.ValidationError) {
-        logError(
-          "PATCH api/gavebrev: Validation failed for request body: ",
-          err,
-        );
-        return Response.json(
-          { message: "Validation failed", errors: err.errors },
-          { status: 400 },
-        );
-      }
-      throw err;
+    const parsed = await PayloadStatusSchema.safeParseAsync(await req.json());
+    if (!parsed.success) {
+      logError(
+        "PATCH api/gavebrev: Validation failed for request body:",
+        parsed.error,
+      );
+      return Response.json(
+        {
+          message: "Validation failed",
+          errors: parsed.error.issues.map((i) => ({
+            path: i.path.join("."),
+            message: i.message,
+          })),
+        },
+        { status: 400 },
+      );
     }
 
-    const found = await updateGavebrevStatus(submitData);
+    const found = await updateGavebrevStatus(
+      parsed.data.id,
+      parsed.data.status,
+    );
     if (!found) {
-      logError(`PATCH api/gavebrev: agreement ${submitData.id} not found`);
+      logError(`PATCH api/gavebrev: agreement ${parsed.data.id} not found`);
       return Response.json({ message: "Not found" }, { status: 404 });
     }
     return Response.json({ message: "OK" });
@@ -120,29 +143,28 @@ export async function DELETE(req: Request) {
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    let submitData: SubmitDataGavebrevStop | null = null;
-    try {
-      submitData = await yup
-        .object()
-        .shape(validationSchemaGavebrevStop)
-        .validate(await req.json());
-    } catch (err) {
-      if (err instanceof yup.ValidationError) {
-        logError(
-          "DELETE api/gavebrev: Validation failed for request body: ",
-          err,
-        );
-        return Response.json(
-          { message: "Validation failed", errors: err.errors },
-          { status: 400 },
-        );
-      }
-      throw err;
+    const parsed = await PayloadStopSchema.safeParseAsync(await req.json());
+    if (!parsed.success) {
+      logError(
+        "DELETE api/gavebrev: Validation failed for request body: ",
+        parsed.error,
+      );
+      return Response.json(
+        {
+          message: "Validation failed",
+          errors: parsed.error.issues.map((i) => ({
+            path: i.path.join("."),
+            message: i.message,
+          })),
+        },
+
+        { status: 400 },
+      );
     }
 
-    const found = await stopGavebrev(submitData);
+    const found = await stopGavebrev(parsed.data.id);
     if (!found) {
-      logError(`DELETE api/gavebrev: agreement ${submitData.id} not found`);
+      logError(`DELETE api/gavebrev: agreement ${parsed.data.id} not found`);
       return Response.json({ message: "Not found" }, { status: 404 });
     }
     return Response.json({ message: "OK" });

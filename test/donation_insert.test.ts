@@ -69,7 +69,7 @@ test("Insert donation using Quickpay", async () => {
     amount: 123,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -115,7 +115,7 @@ test("Insert donation using bank transfer", async () => {
     email: "hello@example.com",
     amount: 123,
     frequency: DonationFrequency.Monthly,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -168,12 +168,12 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
     amount: 123,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
-    fundraiser_id: fundraiser.id,
+    fundraiserId: fundraiser.id,
     message: "Happy Birthday!",
   });
 
@@ -222,12 +222,12 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
     email: "hello@example.com",
     amount: 123,
     frequency: DonationFrequency.Monthly,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
-    fundraiser_id: fundraiser.id,
+    fundraiserId: fundraiser.id,
     message: "Happy Birthday!",
   });
 

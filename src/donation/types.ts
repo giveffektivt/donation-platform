@@ -81,7 +81,7 @@ export type DonationToEmail = {
   id: string;
   email: string;
   amount: number;
-  recipient: DonationRecipient;
+  recipient?: DonationRecipient;
   frequency: DonationFrequency;
   tax_deductible: boolean;
 };

@@ -29,7 +29,7 @@ test("Insert donor same email different tin", async () => {
     amount: 300,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
@@ -101,7 +101,7 @@ test("Insert donor same email same tin enriches same record with new info", asyn
     amount: 300,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },

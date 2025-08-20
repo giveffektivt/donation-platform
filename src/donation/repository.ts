@@ -57,8 +57,8 @@ export async function registerDonationViaQuickpay(
     amount: number;
     frequency: DonationFrequency;
     method: PaymentMethod;
-    tax_deductible: boolean;
-    fundraiser_id?: string;
+    taxDeductible: boolean;
+    fundraiserId?: string;
     message?: string;
     earmarks: { recipient: DonationRecipient; percentage: number }[];
     email: string;
@@ -84,8 +84,8 @@ export async function registerDonationViaQuickpay(
         data.frequency,
         PaymentGateway.Quickpay,
         data.method,
-        data.tax_deductible,
-        data.fundraiser_id,
+        data.taxDeductible,
+        data.fundraiserId,
         data.message,
         JSON.stringify(data.earmarks),
         data.email,
@@ -160,8 +160,8 @@ export async function registerDonationViaBankTransfer(
   data: {
     amount: number;
     frequency: DonationFrequency;
-    tax_deductible: boolean;
-    fundraiser_id?: string;
+    taxDeductible: boolean;
+    fundraiserId?: string;
     message?: string;
     earmarks: { recipient: DonationRecipient; percentage: number }[];
     email: string;
@@ -187,8 +187,8 @@ export async function registerDonationViaBankTransfer(
         data.frequency,
         PaymentGateway.BankTransfer,
         PaymentMethod.BankTransfer,
-        data.tax_deductible,
-        data.fundraiser_id,
+        data.taxDeductible,
+        data.fundraiserId,
         data.message,
         JSON.stringify(data.earmarks),
         data.email,

@@ -1,42 +1,21 @@
-export type SubmitDataDonation = {
+import type { DonationFrequency, DonationRecipient, PaymentMethod } from "src";
+
+export type NewDonation = {
   amount: number;
-  recipient: string;
-  frequency: string;
+  frequency: DonationFrequency;
   taxDeductible: boolean;
   tin?: string;
   email: string;
-  method: string;
-  subscribeToNewsletter: boolean;
+  method: PaymentMethod;
+  earmarks: {
+    recipient: DonationRecipient;
+    percentage: number;
+  }[];
   fundraiserId?: string;
   message?: string;
 };
 
-export type SubmitDataDonationRegister = {
-  distributionCauseAreas: {
-    id: number;
-    name?: string;
-    standardSplit: boolean;
-    percentageShare: string;
-    organizations: {
-      id: number;
-      name?: string;
-      widgetDisplayName?: string;
-      percentageShare: string;
-    }[];
-  }[];
-  donor: {
-    email: string;
-    name: string;
-    taxDeduction: boolean;
-    newsletter: boolean;
-    ssn?: string;
-  };
-  method: number;
-  recurring: boolean;
-  amount: string | number;
-};
-
-export type SubmitDataMembership = {
+export type NewMembership = {
   name: string;
   tin: string;
   email: string;
@@ -47,7 +26,7 @@ export type SubmitDataMembership = {
   birthday?: Date;
 };
 
-export type SubmitDataGavebrev = {
+export type NewGavebrev = {
   name: string;
   tin: string;
   email: string;
@@ -55,32 +34,4 @@ export type SubmitDataGavebrev = {
   amount?: number;
   percentage?: number;
   minimalIncome?: number;
-};
-
-export type SubmitDataNewFundraiser = {
-  title: string;
-  email: string;
-  has_activity_match: boolean;
-  activity_match_currency?: string;
-};
-
-export type SubmitDataNewsletter = {
-  email: string;
-};
-
-export type SubmitDataGavebrevStatus = {
-  id: string;
-  status: string;
-};
-
-export type SubmitDataGavebrevStop = {
-  id: string;
-};
-
-export type SubmitDataRenewPayment = {
-  id: string;
-};
-
-export type SubmitDataFundraiser = {
-  id: string;
 };

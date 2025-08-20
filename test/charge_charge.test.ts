@@ -48,7 +48,7 @@ test("Find created charges to charge", async () => {
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -60,7 +60,7 @@ test("Find created charges to charge", async () => {
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "222222-2222",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -161,7 +161,7 @@ test("Donation that has no charges should not be charged", async () => {
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -179,7 +179,7 @@ test("Donation that is cancelled should not be charged", async () => {
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
 
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -205,7 +205,7 @@ test("Bank transfer donation should not be charged", async () => {
     email: "hello@example.com",
     amount: 100,
     frequency: DonationFrequency.Once,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -229,7 +229,7 @@ test("Old charges in created status should *still* be charged again (until we se
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -267,7 +267,7 @@ test("Charges with error status should not be charged again", async () => {
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -291,7 +291,7 @@ test("Charges with created_at in the future should not be charged yet", async ()
     amount: 100,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },

@@ -1,12 +1,17 @@
-import {
-  logError,
-  type SubmitDataNewFundraiser,
-  validationSchemaNewFundraiser,
-  insertFundraiser,
-  dbRelease,
-  dbClient,
-} from "src";
-import * as yup from "yup";
+import { dbClient, dbRelease, insertFundraiser, logError } from "src";
+import { z } from "zod";
+
+const PayloadSchema = z
+  .object({
+    title: z.string().min(1).max(500),
+    email: z.email().max(500),
+    hasActivityMatch: z.boolean().default(false),
+    activityMatchCurrency: z.string().min(1).optional(),
+  })
+  .refine((data) => data.hasActivityMatch && !data.activityMatchCurrency, {
+    path: ["activityMatchCurrency"],
+    error: "activityMatchCurrency is required",
+  });
 
 export async function POST(req: Request) {
   let db = null;
@@ -23,32 +28,31 @@ export async function POST(req: Request) {
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    let submitData: SubmitDataNewFundraiser | null = null;
-    try {
-      submitData = await yup
-        .object()
-        .shape(validationSchemaNewFundraiser)
-        .validate(await req.json());
-    } catch (err) {
-      if (err instanceof yup.ValidationError) {
-        logError(
-          "POST api/fundraiser: Validation failed for request body: ",
-          err,
-        );
-        return Response.json(
-          { message: "Validation failed", errors: err.errors },
-          { status: 400 },
-        );
-      }
-      throw err;
+    const parsed = await PayloadSchema.safeParseAsync(await req.json());
+    if (!parsed.success) {
+      logError(
+        "POST api/fundraiser: Validation failed for request body: ",
+        parsed.error,
+      );
+      return Response.json(
+        {
+          message: "Validation failed",
+          errors: parsed.error.issues.map((i) => ({
+            path: i.path.join("."),
+            message: i.message,
+          })),
+        },
+
+        { status: 400 },
+      );
     }
 
     db = await dbClient();
     const fundraiser = await insertFundraiser(db, {
-      email: submitData.email,
-      title: submitData.title,
-      has_match: submitData.has_activity_match,
-      match_currency: submitData.activity_match_currency,
+      email: parsed.data.email,
+      title: parsed.data.title,
+      has_match: parsed.data.hasActivityMatch,
+      match_currency: parsed.data.activityMatchCurrency,
     });
 
     return Response.json({

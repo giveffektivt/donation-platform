@@ -54,7 +54,7 @@ test("Finds first successful donations to email", async () => {
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       {
@@ -139,7 +139,7 @@ test("Should not include recipient if donation is earmarked using %-split", asyn
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -175,7 +175,7 @@ test("Should not email to a credit card one-time donation that wasn't charged ye
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -193,7 +193,7 @@ test("Should not email to a credit card one-time donation with a failed charge",
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -258,7 +258,7 @@ test("Should not email to a MobilePay one-time donation that wasn't charged yet"
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -276,7 +276,7 @@ test("Should not email to a MobilePay one-time donation with a failed charge", a
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -299,7 +299,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       {
         recipient: DonationRecipient.VitaminModMangelsygdomme,
@@ -333,7 +333,7 @@ test("Should not email to a MobilePay recurring donation with a failed charge", 
     amount: 88,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -439,7 +439,7 @@ test("Finds failed recurring donations to email", async () => {
     amount: 88,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       {
@@ -447,7 +447,7 @@ test("Finds failed recurring donations to email", async () => {
         percentage: 100,
       },
     ],
-    fundraiser_id: "00000000-0000-0000-0000-000000000000",
+    fundraiserId: "00000000-0000-0000-0000-000000000000",
     message: "hello world",
   });
 
@@ -520,7 +520,7 @@ test("Finds failed recurring donations to email", async () => {
     amount: 88,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -552,7 +552,7 @@ test("Finds failed recurring donations to email", async () => {
     amount: 88,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.MobilePay,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -580,7 +580,7 @@ test("Finds failed recurring donations to email", async () => {
     amount: 88,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -599,7 +599,7 @@ test("Finds failed recurring donations to email", async () => {
     email: "hello@example.com",
     amount: 100,
     frequency: DonationFrequency.Monthly,
-    tax_deductible: true,
+    taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
@@ -679,7 +679,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -692,7 +692,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -728,7 +728,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     amount: 77,
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -760,7 +760,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     amount: 77,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.CreditCard,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
@@ -772,7 +772,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     email: "hello@example.com",
     amount: 100,
     frequency: DonationFrequency.Monthly,
-    tax_deductible: false,
+    taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },

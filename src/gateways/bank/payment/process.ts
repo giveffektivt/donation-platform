@@ -9,52 +9,32 @@ import {
   dbRelease,
   EmailedStatus,
   logError,
-  parseDonationFrequency,
-  parseDonationRecipient,
+  type NewDonation,
   registerDonationViaBankTransfer,
-  type SubmitDataDonation,
   sendPaymentEmail,
   setDonationEmailed,
 } from "src";
 
 export async function processBankTransferDonation(
-  submitData: SubmitDataDonation,
+  payload: NewDonation,
 ): Promise<[string, string]> {
   const donation = await dbExecuteInTransaction(
-    async (db) => await insertBankTransferData(db, submitData),
+    async (db) => await insertBankTransferData(db, payload),
   );
-  await sendEmails(
-    submitData.email,
-    parseDonationRecipient(submitData.recipient),
-    donation,
-  );
+  await sendEmails(payload.email, payload.earmarks, donation);
   return [donation.gateway_metadata.bank_msg, donation.donor_id];
 }
 
 export async function insertBankTransferData(
   db: PoolClient,
-  submitData: SubmitDataDonation,
+  payload: NewDonation,
 ): Promise<DonationWithGatewayInfoBankTransfer> {
-  return await registerDonationViaBankTransfer(db, {
-    email: submitData.email,
-    tin: submitData.tin,
-    amount: submitData.amount,
-    frequency: parseDonationFrequency(submitData.frequency),
-    tax_deductible: submitData.taxDeductible,
-    fundraiser_id: submitData.fundraiserId,
-    message: submitData.message,
-    earmarks: [
-      {
-        recipient: parseDonationRecipient(submitData.recipient),
-        percentage: 100,
-      },
-    ],
-  });
+  return await registerDonationViaBankTransfer(db, payload);
 }
 
 async function sendEmails(
   email: string,
-  recipient: DonationRecipient,
+  earmarks: { recipient: DonationRecipient; percentage: number }[],
   donation: DonationWithGatewayInfoBankTransfer,
 ) {
   console.log(`Sending bank transfer donation email: ${donation.id}`);
@@ -69,7 +49,7 @@ async function sendEmails(
     id: donation.id,
     email: email,
     amount: donation.amount,
-    recipient: recipient,
+    recipient: earmarks?.length === 1 ? earmarks[0].recipient : undefined,
     frequency: donation.frequency,
     tax_deductible: donation.tax_deductible,
   };
