@@ -28,7 +28,8 @@ const PayloadSchema = z
       (val) => (!val ? undefined : val),
       z
         .string()
-        .regex(/^(\d{6}-\d{4}|\d{8})$/)
+        .regex(/^(\d{6}-?\d{4}|\d{8})$/)
+        .transform((s) => s.replace(/^(\d{6})(\d{4})$/, "$1-$2"))
         .optional(),
     ),
     email: z.email().max(500),
