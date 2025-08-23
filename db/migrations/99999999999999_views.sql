@@ -2316,6 +2316,10 @@ grant
 select
     on crm_export to reader_contact;
 
+grant
+select
+    on crm_export to cron;
+
 --------------------------------------
 create function general_assembly_invitations (in meeting_time timestamptz) returns table (email text, first_names text, can_vote text, voting_codes text) language plpgsql as $$
 begin return query
