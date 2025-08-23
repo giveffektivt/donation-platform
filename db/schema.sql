@@ -333,15 +333,14 @@ CREATE FUNCTION giveffektivt.record_audit_log() RETURNS trigger
     AS $$
 begin
   if tg_op = 'UPDATE' and
-     (to_jsonb(new) - 'updated_at') is not distinct from (to_jsonb(old) - 'updated_at')
+    (to_jsonb(new) - 'updated_at') is not distinct from (to_jsonb(old) - 'updated_at')
   then
     return new;
   end if;
 
-  insert into audit_log(table_name, record_id, operation, data)
+  insert into audit_log(table_name, operation, data)
   values (
     tg_table_name,
-    coalesce(new.id, old.id),
     tg_op,
     case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end
   );
@@ -1296,7 +1295,6 @@ CREATE VIEW giveffektivt.annual_tax_report_pending_update AS
 CREATE TABLE giveffektivt.audit_log (
     id bigint NOT NULL,
     table_name text NOT NULL,
-    record_id text,
     operation text NOT NULL,
     changed_at timestamp with time zone DEFAULT now() NOT NULL,
     changed_by text DEFAULT CURRENT_USER NOT NULL,
@@ -3159,13 +3157,6 @@ CREATE INDEX audit_log_data_idx ON giveffektivt.audit_log USING gin (data);
 
 
 --
--- Name: audit_log_record_id_idx; Type: INDEX; Schema: giveffektivt; Owner: -
---
-
-CREATE INDEX audit_log_record_id_idx ON giveffektivt.audit_log USING btree (record_id);
-
-
---
 -- Name: audit_log_table_name_idx; Type: INDEX; Schema: giveffektivt; Owner: -
 --
 
@@ -3271,6 +3262,13 @@ CREATE TRIGGER trigger_audit_log_charge AFTER INSERT OR DELETE OR UPDATE ON give
 
 
 --
+-- Name: charge_transfer trigger_audit_log_charge_transfer; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_charge_transfer AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.charge_transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
 -- Name: donation trigger_audit_log_donation; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
@@ -3282,6 +3280,13 @@ CREATE TRIGGER trigger_audit_log_donation AFTER INSERT OR DELETE OR UPDATE ON gi
 --
 
 CREATE TRIGGER trigger_audit_log_donor AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.donor FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: earmark trigger_audit_log_earmark; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_earmark AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.earmark FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
 
 
 --
@@ -3310,6 +3315,13 @@ CREATE TRIGGER trigger_audit_log_gavebrev AFTER INSERT OR DELETE OR UPDATE ON gi
 --
 
 CREATE TRIGGER trigger_audit_log_gavebrev_checkin AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.gavebrev_checkin FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
+
+
+--
+-- Name: max_tax_deduction trigger_audit_log_max_tax_deduction; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER trigger_audit_log_max_tax_deduction AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.max_tax_deduction FOR EACH ROW EXECUTE FUNCTION giveffektivt.record_audit_log();
 
 
 --
@@ -3488,4 +3500,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250810124953'),
     ('20250810164551'),
     ('20250819212352'),
+    ('20250823163447'),
     ('99999999999999');

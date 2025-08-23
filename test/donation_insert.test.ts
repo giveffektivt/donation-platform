@@ -92,8 +92,6 @@ test("Insert donation using Quickpay", async () => {
   expect(await findAllDonations(db)).toMatchObject([expected]);
 
   const earmarks = await findAllEarmarks(db);
-  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
-
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
@@ -138,8 +136,6 @@ test("Insert donation using bank transfer", async () => {
   expect(await findAllDonations(db)).toMatchObject([expected]);
 
   const earmarks = await findAllEarmarks(db);
-  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
-
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
@@ -193,8 +189,6 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
   expect(await findAllDonations(db)).toMatchObject([expected]);
 
   const earmarks = await findAllEarmarks(db);
-  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
-
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
@@ -247,8 +241,6 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
   expect(await findAllDonations(db)).toMatchObject([expected]);
 
   const earmarks = await findAllEarmarks(db);
-  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
-
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,

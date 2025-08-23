@@ -33,12 +33,14 @@ test("One-time donation using bank transfer", async () => {
   const donation = await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+    ],
     frequency: DonationFrequency.Once,
     method: PaymentMethod.BankTransfer,
     tin: undefined,
     taxDeductible: false,
-    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
@@ -69,9 +71,14 @@ test("One-time donation using bank transfer", async () => {
   const earmarks = await findAllEarmarks(db);
   expect(earmarks).toMatchObject([
     {
-      donation_id: donation.id,
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 90,
+    },
+    {
+      donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 100,
+      percentage: 10,
     },
   ]);
 
@@ -85,12 +92,14 @@ test("Monthly donation using bank transfer", async () => {
   const donation = await insertBankTransferData(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+    ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.BankTransfer,
     tin: undefined,
     taxDeductible: false,
-    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
@@ -121,9 +130,14 @@ test("Monthly donation using bank transfer", async () => {
   const earmarks = await findAllEarmarks(db);
   expect(earmarks).toMatchObject([
     {
-      donation_id: donation.id,
+      donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 90,
+    },
+    {
+      donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 100,
+      percentage: 10,
     },
   ]);
 

@@ -55,7 +55,9 @@ export async function findAllCharges(
 }
 
 export async function findAllEarmarks(client: PoolClient): Promise<Earmark[]> {
-  return (await client.query(`select * from earmark`)).rows;
+  return (
+    await client.query(`select * from earmark order by donation_id, recipient`)
+  ).rows;
 }
 
 export async function findAllGatewayWebhooks(

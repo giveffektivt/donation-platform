@@ -40,13 +40,15 @@ test("One-time donation using Quickpay", async () => {
 
   const [donation, charge] = await insertQuickpayDataDonation(db, {
     email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+    ],
     amount: 10,
     frequency: DonationFrequency.Once,
     method: PaymentMethod.MobilePay,
     tin: undefined,
     taxDeductible: false,
-    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
@@ -72,12 +74,16 @@ test("One-time donation using Quickpay", async () => {
   ]);
 
   const earmarks = await findAllEarmarks(db);
-  earmarks.sort((a, b) => a.recipient.localeCompare(b.recipient));
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 90,
+    },
+    {
+      donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 100,
+      percentage: 10,
     },
   ]);
 
@@ -97,12 +103,14 @@ test("Monthly donation using Quickpay", async () => {
   const [donation] = await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+    ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tin: "222222-2222",
     taxDeductible: false,
-    subscribeToNewsletter: false,
   });
 
   const donors = await findAllDonors(db);
@@ -132,8 +140,13 @@ test("Monthly donation using Quickpay", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 90,
+    },
+    {
+      donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 100,
+      percentage: 10,
     },
   ]);
 
@@ -201,12 +214,14 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
   await insertQuickpayDataDonation(db, {
     amount: 10,
     email: "hello@example.com",
-    recipient: DonationRecipient.VitaminModMangelsygdomme,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+    ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
     tin: "111111-1111",
     taxDeductible: true,
-    subscribeToNewsletter: false,
   });
 
   const insertedDonations = await findAllDonations(db);
@@ -245,8 +260,13 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
+      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      percentage: 90,
+    },
+    {
+      donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 100,
+      percentage: 10,
     },
   ]);
 
@@ -335,7 +355,6 @@ test("Recreate failed recurring donation", async () => {
   const earmarks = await findAllEarmarks(db);
 
   donations.sort((a, b) => a.id.localeCompare(b.id));
-  earmarks.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
 
   expect(earmarks).toMatchObject([
     {
@@ -361,6 +380,7 @@ test("Recreate failed recurring donation", async () => {
   ]);
 
   const charges = await findAllCharges(db);
+  charges.sort((a, b) => a.status.localeCompare(b.status));
   const expectedCharges = [
     {
       id: successfulCharge.id,
