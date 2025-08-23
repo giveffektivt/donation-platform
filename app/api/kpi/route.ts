@@ -2,13 +2,13 @@ import type { NextRequest } from "next/server";
 import {
   dbClient,
   dbRelease,
+  getClearhausUpcomingSettlement,
   getKpi,
   getPendingDistribution,
-  getTransferredDistribution,
   getTimeDistribution,
-  logError,
   getTransferOverview,
-  getClearhausUpcomingSettlement,
+  getTransferredDistribution,
+  logError,
 } from "src";
 
 export async function GET(request: NextRequest) {
@@ -25,23 +25,31 @@ export async function GET(request: NextRequest) {
   try {
     db = await dbClient();
 
-    const result = {
-      kpi: await getKpi(db),
-      pending: await getPendingDistribution(db),
-      transferred: await getTransferredDistribution(db),
-      transfer_overview: await getTransferOverview(db),
-      collected: await getTimeDistribution(db, from, to, useDaily),
-      clearhaus: await getClearhausUpcomingSettlement(
-        db,
-        process.env.CLEARHAUS_MERCHANT_ID,
-      ),
-    };
+    const [kpi, pending, transferred, transfer_overview, collected, clearhaus] =
+      await Promise.all([
+        getKpi(db),
+        getPendingDistribution(db),
+        getTransferredDistribution(db),
+        getTransferOverview(db),
+        getTimeDistribution(db, from, to, useDaily),
+        getClearhausUpcomingSettlement(db, process.env.CLEARHAUS_MERCHANT_ID),
+      ]);
 
-    return Response.json(result, {
-      headers: {
-        "Cache-Control": "s-maxage=10",
+    return Response.json(
+      {
+        kpi,
+        pending,
+        transferred,
+        transfer_overview,
+        collected,
+        clearhaus,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "s-maxage=10",
+        },
+      },
+    );
   } catch (e) {
     logError("api/kpi: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
