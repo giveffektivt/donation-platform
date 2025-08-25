@@ -85,6 +85,7 @@ export async function quickpaySubscriptionUrl(
   successUrl: string,
 ): Promise<string> {
   const isMobilePay = donation.method === PaymentMethod.MobilePay;
+  console.log(donation.id, donation.gateway_metadata.quickpay_legacy);
 
   const response = await request(
     "PUT",
