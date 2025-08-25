@@ -2,9 +2,9 @@ import { addYears, differenceInDays, startOfYear } from "date-fns";
 import { EmailParams, MailerSend, Recipient } from "mailersend";
 import {
   type BankTransferInfo,
-  dbExecuteInTransaction,
   DonationRecipient,
   type DonationToEmail,
+  dbExecuteInTransaction,
   EmailedStatus,
   getBankAccount,
   getDonationsToEmail,
@@ -29,13 +29,13 @@ export async function sendNewEmails() {
     );
     for (const donation of donationsToEmail) {
       try {
-        await setDonationEmailed(db, donation, EmailedStatus.Attempted);
+        await setDonationEmailed(db, donation.id, EmailedStatus.Attempted);
         if (donation.recipient === DonationRecipient.GivEffektivtsMedlemskab) {
           await sendMembershipEmail(donation);
         } else {
           await sendPaymentEmail(donation);
         }
-        await setDonationEmailed(db, donation, EmailedStatus.Yes);
+        await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
       } catch (err) {
         logError(`Error sending email for ID "${donation.id}"`, err);
       }

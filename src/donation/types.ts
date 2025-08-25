@@ -33,6 +33,8 @@ export enum EmailedStatus {
   No = "no",
   Attempted = "attempted",
   Yes = "yes",
+  RenewNo = "renew-no",
+  RenewAttempted = "renew-attempted",
 }
 
 export type Donation = {

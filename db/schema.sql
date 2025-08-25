@@ -67,7 +67,9 @@ CREATE TYPE giveffektivt.donation_recipient AS ENUM (
 CREATE TYPE giveffektivt.emailed_status AS ENUM (
     'no',
     'attempted',
-    'yes'
+    'yes',
+    'renew-no',
+    'renew-attempted'
 );
 
 
@@ -420,10 +422,9 @@ begin
         p_postcode => v_donor.postcode,
         p_city => v_donor.city,
         p_country => v_donor.country,
-        p_birthday => v_donor.birthday
+        p_birthday => v_donor.birthday,
+        p_emailed => 'renew-no'
     ) into v_new_donation;
-
-    update donation set emailed = 'yes' where id = v_new_donation.id;
 
     return v_new_donation;
 end
@@ -431,10 +432,10 @@ $$;
 
 
 --
--- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, uuid, text, jsonb, text, text, text, text, text, text, text, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, uuid, text, jsonb, text, text, text, text, text, text, text, date, giveffektivt.emailed_status); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_fundraiser_id uuid, p_message text, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date) RETURNS giveffektivt.donation
+CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_fundraiser_id uuid, p_message text, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date, p_emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status) RETURNS giveffektivt.donation
     LANGUAGE plpgsql
     AS $$
 declare
@@ -513,7 +514,7 @@ begin
         birthday = coalesce(excluded.birthday, donor.birthday)
     returning * into v_donor;
 
-    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata, emailed)
     values (
         v_donor.id,
         p_amount,
@@ -523,7 +524,8 @@ begin
         p_tax_deductible,
         p_fundraiser_id,
         p_message,
-        v_gateway_metadata
+        v_gateway_metadata,
+        p_emailed
     )
     returning * into v_donation;
 
@@ -2070,6 +2072,30 @@ CREATE VIEW giveffektivt.pending_distribution AS
 
 
 --
+-- Name: renew_donations_to_email; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.renew_donations_to_email AS
+ WITH single_recipient AS (
+         SELECT earmark.donation_id,
+                CASE
+                    WHEN (count(*) = 1) THEN max(earmark.recipient)
+                    ELSE NULL::giveffektivt.donation_recipient
+                END AS recipient
+           FROM giveffektivt.earmark
+          GROUP BY earmark.donation_id
+        )
+ SELECT d.id,
+    p.email,
+    p.name,
+    sr.recipient
+   FROM ((giveffektivt.donor p
+     JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+     LEFT JOIN single_recipient sr ON ((sr.donation_id = d.id)))
+  WHERE (d.emailed = 'renew-no'::giveffektivt.emailed_status);
+
+
+--
 -- Name: scanpay_seq; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
@@ -3501,4 +3527,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250810164551'),
     ('20250819212352'),
     ('20250823163447'),
+    ('20250823202042'),
     ('99999999999999');

@@ -57,9 +57,9 @@ async function sendEmails(
   let db = null;
   try {
     db = await dbClient();
-    await setDonationEmailed(db, donationToEmail, EmailedStatus.Attempted);
+    await setDonationEmailed(db, donationToEmail.id, EmailedStatus.Attempted);
     await sendPaymentEmail(donationToEmail, bankTransferInfo);
-    await setDonationEmailed(db, donationToEmail, EmailedStatus.Yes);
+    await setDonationEmailed(db, donationToEmail.id, EmailedStatus.Yes);
   } catch (err) {
     logError(`Error sending payment email for ID "${donation.id}":`, err);
   } finally {

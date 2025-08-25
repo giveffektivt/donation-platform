@@ -41,7 +41,7 @@ test("Update donation to mark it as emailed", async () => {
 
   expect(donation.emailed).toBe(EmailedStatus.No);
 
-  await setDonationEmailed(db, donation, EmailedStatus.Yes);
+  await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
 
   expect(await findAllDonations(db)).toMatchObject([
     { emailed: EmailedStatus.Yes },

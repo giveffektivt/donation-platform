@@ -331,7 +331,7 @@ test("Recreate failed recurring donation", async () => {
     {
       id: recreated.id,
       donor_id: donation.donor_id,
-      emailed: EmailedStatus.Yes,
+      emailed: EmailedStatus.RenewNo,
       amount: donation.amount,
       frequency: donation.frequency,
       cancelled: false,

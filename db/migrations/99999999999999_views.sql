@@ -27,6 +27,7 @@ gwwc_money_moved,
 ignored_renewals,
 kpi,
 pending_distribution,
+renew_donations_to_email,
 time_distribution_daily,
 time_distribution_monthly,
 transfer_overview,
@@ -34,8 +35,7 @@ transfer_pending,
 transferred_distribution,
 value_lost_analysis cascade;
 
-drop function if exists register_donor,
-register_donation,
+drop function if exists register_donation,
 register_gavebrev,
 recreate_failed_recurring_donation,
 general_assembly_invitations cascade;
@@ -329,6 +329,41 @@ select
 
 grant
 update on donations_to_email to writer;
+
+--------------------------------------
+create view renew_donations_to_email as
+with
+    single_recipient as (
+        select
+            donation_id,
+            case
+                when count(*) = 1 then max(recipient)
+                else null
+            end as recipient
+        from
+            earmark
+        group by
+            donation_id
+    )
+select
+    d.id,
+    p.email,
+    p.name,
+    sr.recipient
+from
+    donor p
+    join donation d on d.donor_id = p.id
+    left join single_recipient sr on sr.donation_id = d.id
+where
+    d.emailed = 'renew-no';
+
+grant
+select
+    on renew_donations_to_email to reader_sensitive;
+
+grant
+select
+    on renew_donations_to_email to cron;
 
 --------------------------------------
 create view charges_to_charge as
@@ -2661,7 +2696,8 @@ create function register_donation (
     p_postcode text default null,
     p_city text default null,
     p_country text default null,
-    p_birthday date default null
+    p_birthday date default null,
+    p_emailed emailed_status default 'no'
 ) returns donation language plpgsql as $$
 declare
     v_donor donor%rowtype;
@@ -2739,7 +2775,7 @@ begin
         birthday = coalesce(excluded.birthday, donor.birthday)
     returning * into v_donor;
 
-    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata)
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata, emailed)
     values (
         v_donor.id,
         p_amount,
@@ -2749,7 +2785,8 @@ begin
         p_tax_deductible,
         p_fundraiser_id,
         p_message,
-        v_gateway_metadata
+        v_gateway_metadata,
+        p_emailed
     )
     returning * into v_donation;
 
@@ -2778,7 +2815,8 @@ execute on function register_donation (
     text,
     text,
     text,
-    date
+    date,
+    emailed_status
 ) to writer;
 
 --------------------------------------
@@ -2820,10 +2858,9 @@ begin
         p_postcode => v_donor.postcode,
         p_city => v_donor.city,
         p_country => v_donor.country,
-        p_birthday => v_donor.birthday
+        p_birthday => v_donor.birthday,
+        p_emailed => 'renew-no'
     ) into v_new_donation;
-
-    update donation set emailed = 'yes' where id = v_new_donation.id;
 
     return v_new_donation;
 end

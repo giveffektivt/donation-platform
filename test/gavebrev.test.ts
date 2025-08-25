@@ -135,6 +135,7 @@ test("Creating second Gavebrev for the same donor should reuse donor record", as
   });
 
   const donors = await findAllDonors(db);
+  donors.sort((a, b) => a.tin.localeCompare(b.tin));
   expect(donors).toMatchObject([
     {
       name: "John Smith",

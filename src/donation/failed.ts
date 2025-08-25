@@ -1,12 +1,14 @@
 import type { PoolClient } from "pg";
 import {
   dbExecuteInTransaction,
+  EmailedStatus,
   generateRenewPaymentUrl,
   getDonationToUpdateQuickpayPaymentInfoById,
   getFailedRecurringDonations,
   logError,
   recreateQuickpayFailedRecurringDonation,
   sendFailedRecurringDonationEmail,
+  setDonationEmailed,
 } from "src";
 
 export async function sendFailedRecurringDonationEmails(
@@ -19,14 +21,25 @@ export async function sendFailedRecurringDonationEmails(
     }
 
     try {
+      const payment_link = await recreateQuickpayFailedRecurringDonation(
+        db,
+        info.donation_id,
+      );
+      await setDonationEmailed(
+        db,
+        info.donation_id,
+        EmailedStatus.RenewAttempted,
+      );
+
       await sendFailedRecurringDonationEmail(
         info.donor_id,
         info.donor_email,
         info.recipient,
         info.amount,
         info.donor_name,
-        await recreateQuickpayFailedRecurringDonation(db, info.donation_id),
+        payment_link,
       );
+      await setDonationEmailed(db, info.donation_id, EmailedStatus.Yes);
       console.log(
         `Sent new payment link for a failed recurring donation: ${info.donation_id}`,
       );

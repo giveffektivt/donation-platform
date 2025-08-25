@@ -366,7 +366,7 @@ test("Should not email to a donation that was already emailed", async () => {
     status: ChargeStatus.Charged,
   });
 
-  await setDonationEmailed(db, donation, EmailedStatus.Yes);
+  await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
 
   // ...even if it was successfully charged again
   await insertCharge(db, {
@@ -395,7 +395,7 @@ test("Should not email to a donation that was already attempted to be emailed", 
     status: ChargeStatus.Charged,
   });
 
-  await setDonationEmailed(db, donation, EmailedStatus.Attempted);
+  await setDonationEmailed(db, donation.id, EmailedStatus.Attempted);
 
   // ...even if it was successfully charged again
   await insertCharge(db, {

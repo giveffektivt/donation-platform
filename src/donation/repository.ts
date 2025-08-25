@@ -21,12 +21,12 @@ export async function getDonationsToEmail(
 
 export async function setDonationEmailed(
   client: PoolClient,
-  donation: Partial<DonationToEmail>,
+  donation_id: string,
   status: EmailedStatus,
 ) {
   return await client.query("update donation set emailed=$1 where id=$2", [
     status,
-    donation.id,
+    donation_id,
   ]);
 }
 
