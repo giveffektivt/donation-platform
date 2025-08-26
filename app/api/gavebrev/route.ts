@@ -18,11 +18,11 @@ const PayloadCreateSchema = z
     amount: z.coerce.number().min(1).optional(),
     minimalIncome: z.coerce.number().min(0).optional(),
   })
-  .refine((data) => !data.amount && !data.percentage, {
+  .refine((data) => data.amount || data.percentage, {
     path: ["amount"],
     error: "either percentage or amount must be provided",
   })
-  .refine((data) => data.amount && data.percentage, {
+  .refine((data) => !data.amount || !data.percentage, {
     path: ["amount"],
     error: "choose either percentage or amount, not both",
   });
