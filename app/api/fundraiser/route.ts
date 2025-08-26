@@ -8,7 +8,7 @@ const PayloadSchema = z
     hasActivityMatch: z.boolean().default(false),
     activityMatchCurrency: z.string().min(1).optional(),
   })
-  .refine((data) => data.hasActivityMatch && !data.activityMatchCurrency, {
+  .refine((data) => !data.hasActivityMatch || !!data.activityMatchCurrency, {
     path: ["activityMatchCurrency"],
     error: "activityMatchCurrency is required",
   });
