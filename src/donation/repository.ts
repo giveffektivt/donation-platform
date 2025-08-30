@@ -231,10 +231,32 @@ export async function getFailedRecurringDonationByQuickpayOrder(
 ): Promise<FailedRecurringDonation> {
   return (
     await client.query(
-      `select p.id as donor_id, p.email as donor_email, d.recipient, d.amount, p.name as donor_name, d.gateway_metadata ->> 'quickpay_order' as quickpay_order
-       from donor p
-       join donation d on p.id = d.donor_id
-       where d.gateway_metadata ->> 'quickpay_order' = $1`,
+      `
+      with
+          single_recipient as (
+              select
+                  donation_id,
+                  case
+                      when count(*) = 1 then max(recipient)
+                      else null
+                  end as recipient
+              from
+                  earmark
+              group by
+                  donation_id
+          )
+      select
+          donor_id,
+          email as donor_email,
+          sr.recipient,
+          amount,
+          name as donor_name
+      from
+          donations_overview d
+          left join single_recipient sr on sr.donation_id = d.donation_id
+      where
+          donation_gateway_metadata ->> 'quickpay_order' = $1
+`,
       [quickpay_order],
     )
   ).rows[0];
