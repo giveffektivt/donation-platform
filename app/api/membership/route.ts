@@ -35,6 +35,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     logError("api/membership:", err);
-    return Response.json({ message: "Something went wrong" }, { status: 500 });
+    return Response.json({}, { status: 500 });
   }
 }

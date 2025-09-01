@@ -98,10 +98,6 @@ export async function POST(req: Request) {
 
     const submitData = await PayloadSchema.parseAsync(await req.json());
 
-    if (submitData.email === "error@error") {
-      throw new Error("Test of an error");
-    }
-
     const [response, donorId] = await processPayment(submitData);
 
     if (submitData.subscribeToNewsletter) {
@@ -126,7 +122,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     logError("donation/register:", err);
-    return Response.json({ message: "Something went wrong" }, { status: 500 });
+    return Response.json({}, { status: 500 });
   }
 }
 
