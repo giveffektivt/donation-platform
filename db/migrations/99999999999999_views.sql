@@ -39,6 +39,7 @@ transferred_distribution,
 value_lost_analysis cascade;
 
 drop function if exists register_donation,
+change_donation,
 register_gavebrev,
 recreate_failed_recurring_donation,
 general_assembly_invitations cascade;
@@ -2875,6 +2876,75 @@ execute on function register_donation (
 ) to writer;
 
 --------------------------------------
+create function change_donation (p_donation_id uuid, p_amount numeric default null, p_earmarks jsonb default null) returns donation language plpgsql as $$
+declare
+    v_donor donor%rowtype;
+    v_old_earmarks jsonb;
+    v_old_donation donation%rowtype;
+    v_new_donation donation%rowtype;
+begin
+    if p_amount is null and p_earmarks is null then
+        raise exception 'nothing to change, all arguments are null';
+    end if;
+
+    select * from donation where id = p_donation_id into v_old_donation;
+
+    if v_old_donation.id is null then
+        raise exception 'donation with ID % not found', p_donation_id;
+    end if;
+
+    if v_old_donation.frequency <> 'monthly' then
+        raise exception 'donation with ID % is not monthly', p_donation_id;
+    end if;
+
+    if v_old_donation.cancelled then
+        raise exception 'donation with ID % is cancelled', p_donation_id;
+    end if;
+
+    select * from donor where id = v_old_donation.donor_id into v_donor;
+
+    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    from earmark
+    where donation_id = p_donation_id
+    into v_old_earmarks;
+
+    update donation set cancelled = true where id = p_donation_id;
+
+    select * from register_donation(
+        p_amount => coalesce(p_amount, v_old_donation.amount),
+        p_frequency => v_old_donation.frequency,
+        p_gateway => v_old_donation.gateway,
+        p_method => v_old_donation.method,
+        p_tax_deductible => v_old_donation.tax_deductible,
+        p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_message => v_old_donation.message,
+        p_earmarks => coalesce(p_earmarks, v_old_earmarks),
+        p_email => v_donor.email,
+        p_tin => v_donor.tin,
+        p_name => v_donor.name,
+        p_address => v_donor.address,
+        p_postcode => v_donor.postcode,
+        p_city => v_donor.city,
+        p_country => v_donor.country,
+        p_birthday => v_donor.birthday,
+        p_emailed => v_old_donation.emailed
+    ) into v_new_donation;
+
+    update donation set gateway_metadata = v_old_donation.gateway_metadata where id = v_new_donation.id;
+
+    if v_old_donation.method != 'Bank transfer' then
+        insert into charge(donation_id, status, created_at)
+        select v_new_donation.id, 'created', (select max(created_at) + interval '1 month' from charge where donation_id = v_old_donation.id);
+    end if;
+
+    return v_new_donation;
+end
+$$;
+
+grant
+execute on function change_donation (uuid, numeric, jsonb) to writer;
+
+--------------------------------------
 create function recreate_failed_recurring_donation (p_donation_id uuid) returns donation language plpgsql as $$
 declare
     v_donor donor%rowtype;
@@ -2882,8 +2952,6 @@ declare
     v_old_donation donation%rowtype;
     v_new_donation donation%rowtype;
 begin
-    update donation set cancelled = true where id = p_donation_id;
-
     select * from donation where id = p_donation_id into v_old_donation;
 
     if v_old_donation.id is null then
@@ -2896,6 +2964,8 @@ begin
     from earmark
     where donation_id = p_donation_id
     into v_old_earmarks;
+
+    update donation set cancelled = true where id = p_donation_id;
 
     select * from register_donation(
         p_amount => v_old_donation.amount,
