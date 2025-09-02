@@ -659,23 +659,14 @@ CREATE TABLE giveffektivt.earmark (
 
 
 --
--- Name: donations_overview; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: donations_overview_internal; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.donations_overview AS
+CREATE VIEW giveffektivt.donations_overview_internal AS
  SELECT p.id AS donor_id,
-        CASE
-            WHEN pg_has_role(CURRENT_USER, 'reader_contact'::name, 'member'::text) THEN p.name
-            ELSE '***'::text
-        END AS name,
-        CASE
-            WHEN pg_has_role(CURRENT_USER, 'reader_contact'::name, 'member'::text) THEN p.email
-            ELSE '***'::text
-        END AS email,
-        CASE
-            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN p.tin
-            ELSE '***'::text
-        END AS tin,
+    p.name,
+    p.email,
+    p.tin,
     d.id AS donation_id,
     d.frequency,
     d.amount,
@@ -685,18 +676,12 @@ CREATE VIEW giveffektivt.donations_overview AS
     d.cancelled,
     d.method,
     d.gateway,
-        CASE
-            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN d.gateway_metadata
-            ELSE NULL::jsonb
-        END AS donation_gateway_metadata,
+    d.gateway_metadata AS donation_gateway_metadata,
     d.tax_deductible,
     c.id AS charge_id,
     c.short_id AS charge_short_id,
     c.status,
-        CASE
-            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN c.gateway_metadata
-            ELSE NULL::jsonb
-        END AS charge_gateway_metadata,
+    c.gateway_metadata AS charge_gateway_metadata,
     c.created_at AS charged_at,
     d.created_at AS donation_created_at
    FROM ((giveffektivt.donor p
@@ -706,10 +691,10 @@ CREATE VIEW giveffektivt.donations_overview AS
 
 
 --
--- Name: charged_donations; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: charged_donations_internal; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.charged_donations AS
+CREATE VIEW giveffektivt.charged_donations_internal AS
  SELECT donor_id,
     name,
     email,
@@ -729,7 +714,7 @@ CREATE VIEW giveffektivt.charged_donations AS
     charge_gateway_metadata,
     charged_at,
     donation_created_at
-   FROM giveffektivt.donations_overview d
+   FROM giveffektivt.donations_overview_internal d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
           WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
@@ -772,7 +757,7 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
     cd.charged_at,
     e.recipient AS earmark,
     t.id AS transfer_id
-   FROM (((giveffektivt.charged_donations cd
+   FROM (((giveffektivt.charged_donations_internal cd
      JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
      LEFT JOIN giveffektivt.charge_transfer ct ON ((ct.charge_id = cd.charge_id)))
      LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)))
@@ -780,10 +765,10 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
 
 
 --
--- Name: charged_memberships; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: charged_memberships_internal; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.charged_memberships AS
+CREATE VIEW giveffektivt.charged_memberships_internal AS
  SELECT donor_id,
     name,
     email,
@@ -803,7 +788,7 @@ CREATE VIEW giveffektivt.charged_memberships AS
     charge_gateway_metadata,
     charged_at,
     donation_created_at
-   FROM giveffektivt.donations_overview d
+   FROM giveffektivt.donations_overview_internal d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
           WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))));
@@ -841,11 +826,11 @@ CREATE VIEW giveffektivt.annual_email_report AS
            FROM data_per_transfer
           GROUP BY data_per_transfer.tin, data_per_transfer.email, data_per_transfer.tax_deductible, data_per_transfer.recipient
         ), members_confirmed AS (
-         SELECT DISTINCT ON (charged_memberships.tin) charged_memberships.tin,
-            charged_memberships.email
+         SELECT DISTINCT ON (charged_memberships_internal.tin) charged_memberships_internal.tin,
+            charged_memberships_internal.email
            FROM (const
-             CROSS JOIN giveffektivt.charged_memberships)
-          WHERE (charged_memberships.charged_at <@ tstzrange(const.year_from, const.year_to, '[)'::text))
+             CROSS JOIN giveffektivt.charged_memberships_internal)
+          WHERE (charged_memberships_internal.charged_at <@ tstzrange(const.year_from, const.year_to, '[)'::text))
         ), active_gavebrev AS (
          SELECT p.tin
            FROM ((const
@@ -928,13 +913,13 @@ CREATE VIEW giveffektivt.annual_tax_report_const AS
 --
 
 CREATE VIEW giveffektivt.annual_tax_report_current_payments AS
- SELECT charged_donations.tin,
-    round(sum(charged_donations.amount)) AS total,
-    min(EXTRACT(year FROM charged_donations.charged_at)) AS year
+ SELECT charged_donations_internal.tin,
+    round(sum(charged_donations_internal.amount)) AS total,
+    min(EXTRACT(year FROM charged_donations_internal.charged_at)) AS year
    FROM (giveffektivt.annual_tax_report_const
-     CROSS JOIN giveffektivt.charged_donations)
-  WHERE ((charged_donations.charged_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND charged_donations.tax_deductible)
-  GROUP BY charged_donations.tin;
+     CROSS JOIN giveffektivt.charged_donations_internal)
+  WHERE ((charged_donations_internal.charged_at <@ tstzrange(annual_tax_report_const.year_from, annual_tax_report_const.year_to, '[)'::text)) AND charged_donations_internal.tax_deductible)
+  GROUP BY charged_donations_internal.tin;
 
 
 --
@@ -960,7 +945,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
             i_1.year,
             c.amount
            FROM (gavebrev_tin_years_until_now i_1
-             JOIN giveffektivt.charged_donations c ON (((i_1.tin = c.tin) AND (i_1.year = EXTRACT(year FROM c.charged_at)))))
+             JOIN giveffektivt.charged_donations_internal c ON (((i_1.tin = c.tin) AND (i_1.year = EXTRACT(year FROM c.charged_at)))))
           WHERE c.tax_deductible
         )
  SELECT i.tin,
@@ -1209,7 +1194,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
         ), members AS (
          SELECT count(DISTINCT c.tin) AS count_members
            FROM (const const_1
-             CROSS JOIN giveffektivt.charged_memberships c)
+             CROSS JOIN giveffektivt.charged_memberships_internal c)
           WHERE (c.charged_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text))
         ), donated_a AS (
          SELECT COALESCE(sum(report.total), (0)::numeric) AS amount_donated_a
@@ -1222,7 +1207,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gaveskema AS
         ), donated_total AS (
          SELECT COALESCE(sum(c.amount), (0)::numeric) AS amount_donated_total
            FROM (const const_1
-             CROSS JOIN giveffektivt.charged_donations c)
+             CROSS JOIN giveffektivt.charged_donations_internal c)
           WHERE (c.charged_at <@ tstzrange(const_1.year_from, const_1.year_to, '[)'::text))
         )
  SELECT EXTRACT(year FROM const.year_from) AS year,
@@ -1320,6 +1305,108 @@ ALTER TABLE giveffektivt.audit_log ALTER COLUMN id ADD GENERATED BY DEFAULT AS I
 
 
 --
+-- Name: donations_overview; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donations_overview WITH (security_barrier='true') AS
+ SELECT donor_id,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_contact'::name, 'member'::text) THEN name
+            ELSE '***'::text
+        END AS name,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_contact'::name, 'member'::text) THEN email
+            ELSE '***'::text
+        END AS email,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN tin
+            ELSE '***'::text
+        END AS tin,
+    donation_id,
+    frequency,
+    amount,
+    earmarks,
+    cancelled,
+    method,
+    gateway,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN donation_gateway_metadata
+            ELSE NULL::jsonb
+        END AS donation_gateway_metadata,
+    tax_deductible,
+    charge_id,
+    charge_short_id,
+    status,
+        CASE
+            WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN charge_gateway_metadata
+            ELSE NULL::jsonb
+        END AS charge_gateway_metadata,
+    charged_at,
+    donation_created_at
+   FROM giveffektivt.donations_overview_internal;
+
+
+--
+-- Name: charged_donations; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_donations AS
+ SELECT donor_id,
+    name,
+    email,
+    tin,
+    donation_id,
+    frequency,
+    amount,
+    earmarks,
+    cancelled,
+    method,
+    gateway,
+    donation_gateway_metadata,
+    tax_deductible,
+    charge_id,
+    charge_short_id,
+    status,
+    charge_gateway_metadata,
+    charged_at,
+    donation_created_at
+   FROM giveffektivt.donations_overview d
+  WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
+           FROM giveffektivt.earmark e
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
+
+
+--
+-- Name: charged_memberships; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_memberships AS
+ SELECT donor_id,
+    name,
+    email,
+    tin,
+    donation_id,
+    frequency,
+    amount,
+    earmarks,
+    cancelled,
+    method,
+    gateway,
+    donation_gateway_metadata,
+    tax_deductible,
+    charge_id,
+    charge_short_id,
+    status,
+    charge_gateway_metadata,
+    charged_at,
+    donation_created_at
+   FROM giveffektivt.donations_overview d
+  WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
+           FROM giveffektivt.earmark e
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))));
+
+
+--
 -- Name: charged_or_created_donations; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1343,7 +1430,7 @@ CREATE VIEW giveffektivt.charged_or_created_donations AS
     charge_gateway_metadata,
     charged_at,
     donation_created_at
-   FROM giveffektivt.donations_overview d
+   FROM giveffektivt.donations_overview_internal d
   WHERE ((status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
           WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
@@ -1523,32 +1610,32 @@ CREATE VIEW giveffektivt.crm_export AS
           WHERE (p.tin IS NOT NULL)
           ORDER BY p.email, p.created_at
         ), members AS (
-         SELECT DISTINCT ON (charged_memberships.email) charged_memberships.email,
-            charged_memberships.name
-           FROM giveffektivt.charged_memberships
-          WHERE (charged_memberships.charged_at >= (now() - '1 year'::interval))
+         SELECT DISTINCT ON (charged_memberships_internal.email) charged_memberships_internal.email,
+            charged_memberships_internal.name
+           FROM giveffektivt.charged_memberships_internal
+          WHERE (charged_memberships_internal.charged_at >= (now() - '1 year'::interval))
         ), donations AS (
-         SELECT charged_donations.email,
-            sum(charged_donations.amount) AS total_donated,
+         SELECT charged_donations_internal.email,
+            sum(charged_donations_internal.amount) AS total_donated,
             count(1) AS donations_count
-           FROM giveffektivt.charged_donations
-          GROUP BY charged_donations.email
+           FROM giveffektivt.charged_donations_internal
+          GROUP BY charged_donations_internal.email
         ), latest_donations AS (
-         SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
-            charged_donations.amount AS last_donated_amount,
-            charged_donations.method AS last_donated_method,
-            charged_donations.frequency AS last_donated_frequency,
-            charged_donations.tax_deductible AS last_donation_tax_deductible,
-            charged_donations.cancelled AS last_donation_cancelled,
-            charged_donations.charged_at AS last_donated_at
-           FROM giveffektivt.charged_donations
-          ORDER BY charged_donations.email, charged_donations.charged_at DESC
+         SELECT DISTINCT ON (charged_donations_internal.email) charged_donations_internal.email,
+            charged_donations_internal.amount AS last_donated_amount,
+            charged_donations_internal.method AS last_donated_method,
+            charged_donations_internal.frequency AS last_donated_frequency,
+            charged_donations_internal.tax_deductible AS last_donation_tax_deductible,
+            charged_donations_internal.cancelled AS last_donation_cancelled,
+            charged_donations_internal.charged_at AS last_donated_at
+           FROM giveffektivt.charged_donations_internal
+          ORDER BY charged_donations_internal.email, charged_donations_internal.charged_at DESC
         ), first_donations AS (
          SELECT d.email,
             min(d.charged_at) FILTER (WHERE (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
             min(d.charged_at) FILTER (WHERE (e.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
             min(d.charged_at) FILTER (WHERE (d.frequency = 'monthly'::giveffektivt.donation_frequency)) AS first_monthly_donation_at
-           FROM (giveffektivt.donations_overview d
+           FROM (giveffektivt.donations_overview_internal d
              JOIN giveffektivt.earmark e ON ((d.donation_id = e.donation_id)))
           WHERE (d.status = 'charged'::giveffektivt.charge_status)
           GROUP BY d.email
@@ -1962,36 +2049,36 @@ CREATE VIEW giveffektivt.transfer_pending AS
 
 CREATE VIEW giveffektivt.kpi AS
  WITH dkk_total AS (
-         SELECT round(sum(charged_donations.amount)) AS dkk_total
-           FROM giveffektivt.charged_donations
+         SELECT round(sum(charged_donations_internal.amount)) AS dkk_total
+           FROM giveffektivt.charged_donations_internal
         ), dkk_total_ops AS (
          SELECT round(sum(cd.amount)) AS dkk_total_ops
-           FROM (giveffektivt.charged_donations cd
+           FROM (giveffektivt.charged_donations_internal cd
              JOIN giveffektivt.earmark e ON ((e.donation_id = cd.donation_id)))
           WHERE (e.recipient = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient)
         ), dkk_pending_transfer AS (
          SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer
            FROM giveffektivt.transfer_pending
         ), dkk_last_30_days AS (
-         SELECT round(sum(charged_donations.amount)) AS dkk_last_30_days
-           FROM giveffektivt.charged_donations
-          WHERE (charged_donations.charged_at >= (date_trunc('day'::text, now()) - '30 days'::interval))
+         SELECT round(sum(charged_donations_internal.amount)) AS dkk_last_30_days
+           FROM giveffektivt.charged_donations_internal
+          WHERE (charged_donations_internal.charged_at >= (date_trunc('day'::text, now()) - '30 days'::interval))
         ), dkk_recurring_next_year AS (
          SELECT ((12)::numeric * sum(c1.amount)) AS dkk_recurring_next_year
            FROM ( SELECT DISTINCT ON (charged_or_created_donations.donation_id) charged_or_created_donations.amount
                    FROM giveffektivt.charged_or_created_donations
                   WHERE ((charged_or_created_donations.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT charged_or_created_donations.cancelled) AND (charged_or_created_donations.charged_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))) c1
         ), members_confirmed AS (
-         SELECT (count(DISTINCT charged_memberships.tin))::numeric AS members_confirmed
-           FROM giveffektivt.charged_memberships
-          WHERE (charged_memberships.charged_at >= date_trunc('year'::text, now()))
+         SELECT (count(DISTINCT charged_memberships_internal.tin))::numeric AS members_confirmed
+           FROM giveffektivt.charged_memberships_internal
+          WHERE (charged_memberships_internal.charged_at >= date_trunc('year'::text, now()))
         ), members_pending_renewal AS (
          SELECT (count(*))::numeric AS members_pending_renewal
-           FROM ( SELECT DISTINCT ON (charged_memberships.tin) charged_memberships.tin,
-                    charged_memberships.charged_at
-                   FROM giveffektivt.charged_memberships
-                  WHERE (NOT charged_memberships.cancelled)
-                  ORDER BY charged_memberships.tin, charged_memberships.charged_at DESC) a
+           FROM ( SELECT DISTINCT ON (charged_memberships_internal.tin) charged_memberships_internal.tin,
+                    charged_memberships_internal.charged_at
+                   FROM giveffektivt.charged_memberships_internal
+                  WHERE (NOT charged_memberships_internal.cancelled)
+                  ORDER BY charged_memberships_internal.tin, charged_memberships_internal.charged_at DESC) a
           WHERE (a.charged_at < date_trunc('year'::text, now()))
         ), monthly_donors AS (
          SELECT (count(DISTINCT charged_or_created_donations.donation_id))::numeric AS monthly_donors
@@ -1999,13 +2086,13 @@ CREATE VIEW giveffektivt.kpi AS
           WHERE ((charged_or_created_donations.frequency = 'monthly'::giveffektivt.donation_frequency) AND (NOT charged_or_created_donations.cancelled) AND (charged_or_created_donations.charged_at >= (date_trunc('month'::text, now()) - '1 mon'::interval)))
         ), number_of_donors AS (
          SELECT sum(unnamed_subquery.donors) AS number_of_donors
-           FROM ( SELECT charged_donations.email,
+           FROM ( SELECT charged_donations_internal.email,
                         CASE
-                            WHEN (count(DISTINCT charged_donations.tin) = 0) THEN (1)::bigint
-                            ELSE count(DISTINCT charged_donations.tin)
+                            WHEN (count(DISTINCT charged_donations_internal.tin) = 0) THEN (1)::bigint
+                            ELSE count(DISTINCT charged_donations_internal.tin)
                         END AS donors
-                   FROM giveffektivt.charged_donations
-                  GROUP BY charged_donations.email) unnamed_subquery
+                   FROM giveffektivt.charged_donations_internal
+                  GROUP BY charged_donations_internal.email) unnamed_subquery
         ), number_of_gavebrev AS (
          SELECT (count(1))::numeric AS number_of_gavebrev
            FROM giveffektivt.gavebrev
@@ -2015,10 +2102,10 @@ CREATE VIEW giveffektivt.kpi AS
            FROM giveffektivt.max_tax_deduction
         ), oldest_stopped_donation_age AS (
          SELECT floor(EXTRACT(epoch FROM (now() - min(unnamed_subquery.max_charged_at)))) AS oldest_stopped_donation_age
-           FROM ( SELECT max(donations_overview.charged_at) AS max_charged_at
-                   FROM giveffektivt.donations_overview
-                  WHERE (donations_overview.status = 'charged'::giveffektivt.charge_status)
-                  GROUP BY donations_overview.email) unnamed_subquery
+           FROM ( SELECT max(donations_overview_internal.charged_at) AS max_charged_at
+                   FROM giveffektivt.donations_overview_internal
+                  WHERE (donations_overview_internal.status = 'charged'::giveffektivt.charge_status)
+                  GROUP BY donations_overview_internal.email) unnamed_subquery
         ), missing_gavebrev_income_proof AS (
          SELECT (count(1))::numeric AS missing_gavebrev_income_proof
            FROM giveffektivt.gavebrev_checkin
@@ -2144,13 +2231,13 @@ CREATE VIEW giveffektivt.time_distribution_daily AS
            FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
         ), monthly_donations_charged_exactly_once AS (
          SELECT unnamed_subquery.donation_id
-           FROM ( SELECT charged_donations.donation_id,
-                    bool_or(charged_donations.cancelled) AS cancelled,
-                    count(charged_donations.charge_id) AS number_of_donations,
-                    max(charged_donations.charged_at) AS last_donated_at
-                   FROM giveffektivt.charged_donations
-                  WHERE (charged_donations.frequency = 'monthly'::giveffektivt.donation_frequency)
-                  GROUP BY charged_donations.donation_id) unnamed_subquery
+           FROM ( SELECT charged_donations_internal.donation_id,
+                    bool_or(charged_donations_internal.cancelled) AS cancelled,
+                    count(charged_donations_internal.charge_id) AS number_of_donations,
+                    max(charged_donations_internal.charged_at) AS last_donated_at
+                   FROM giveffektivt.charged_donations_internal
+                  WHERE (charged_donations_internal.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  GROUP BY charged_donations_internal.donation_id) unnamed_subquery
           WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.cancelled OR (unnamed_subquery.last_donated_at < (now() - '40 days'::interval))))
         ), successful_charges AS (
          SELECT a_1.period,
@@ -2175,15 +2262,15 @@ CREATE VIEW giveffektivt.time_distribution_daily AS
                               WHERE (cd.donation_id = m.donation_id))) THEN 'once'::giveffektivt.donation_frequency
                             ELSE cd.frequency
                         END AS frequency
-                   FROM giveffektivt.charged_donations cd) a_1
+                   FROM giveffektivt.charged_donations_internal cd) a_1
              JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (a_1.amount > (b_1.start)::numeric) AND (a_1.amount <= (b_1.stop)::numeric))))
         ), first_time_by_email AS (
-         SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
-            charged_donations.amount,
-            date_trunc('day'::text, charged_donations.charged_at) AS period,
-            charged_donations.charged_at
-           FROM giveffektivt.charged_donations
-          ORDER BY charged_donations.email, charged_donations.charged_at
+         SELECT DISTINCT ON (charged_donations_internal.email) charged_donations_internal.email,
+            charged_donations_internal.amount,
+            date_trunc('day'::text, charged_donations_internal.charged_at) AS period,
+            charged_donations_internal.charged_at
+           FROM giveffektivt.charged_donations_internal
+          ORDER BY charged_donations_internal.email, charged_donations_internal.charged_at
         ), first_time_donations AS (
          SELECT first_time_by_email.period,
             sum(first_time_by_email.amount) AS amount,
@@ -2491,13 +2578,13 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
            FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
         ), monthly_donations_charged_exactly_once AS (
          SELECT unnamed_subquery.donation_id
-           FROM ( SELECT charged_donations.donation_id,
-                    bool_or(charged_donations.cancelled) AS cancelled,
-                    count(charged_donations.charge_id) AS number_of_donations,
-                    max(charged_donations.charged_at) AS last_donated_at
-                   FROM giveffektivt.charged_donations
-                  WHERE (charged_donations.frequency = 'monthly'::giveffektivt.donation_frequency)
-                  GROUP BY charged_donations.donation_id) unnamed_subquery
+           FROM ( SELECT charged_donations_internal.donation_id,
+                    bool_or(charged_donations_internal.cancelled) AS cancelled,
+                    count(charged_donations_internal.charge_id) AS number_of_donations,
+                    max(charged_donations_internal.charged_at) AS last_donated_at
+                   FROM giveffektivt.charged_donations_internal
+                  WHERE (charged_donations_internal.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  GROUP BY charged_donations_internal.donation_id) unnamed_subquery
           WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.cancelled OR (unnamed_subquery.last_donated_at < (now() - '40 days'::interval))))
         ), successful_charges AS (
          SELECT a_1.period,
@@ -2522,15 +2609,15 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
                               WHERE (cd.donation_id = m.donation_id))) THEN 'once'::giveffektivt.donation_frequency
                             ELSE cd.frequency
                         END AS frequency
-                   FROM giveffektivt.charged_donations cd) a_1
+                   FROM giveffektivt.charged_donations_internal cd) a_1
              JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (a_1.amount > (b_1.start)::numeric) AND (a_1.amount <= (b_1.stop)::numeric))))
         ), first_time_by_email AS (
-         SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
-            charged_donations.amount,
-            date_trunc('month'::text, charged_donations.charged_at) AS period,
-            charged_donations.charged_at
-           FROM giveffektivt.charged_donations
-          ORDER BY charged_donations.email, charged_donations.charged_at
+         SELECT DISTINCT ON (charged_donations_internal.email) charged_donations_internal.email,
+            charged_donations_internal.amount,
+            date_trunc('month'::text, charged_donations_internal.charged_at) AS period,
+            charged_donations_internal.charged_at
+           FROM giveffektivt.charged_donations_internal
+          ORDER BY charged_donations_internal.email, charged_donations_internal.charged_at
         ), first_time_donations AS (
          SELECT first_time_by_email.period,
             sum(first_time_by_email.amount) AS amount,
@@ -2893,13 +2980,13 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
            FROM ( VALUES ('once'::giveffektivt.donation_frequency,0,1000,'small'::text), ('once'::giveffektivt.donation_frequency,1000,6000,'medium'::text), ('once'::giveffektivt.donation_frequency,6000,24000,'large'::text), ('once'::giveffektivt.donation_frequency,24000,'999999999999'::bigint,'major'::text), ('monthly'::giveffektivt.donation_frequency,0,200,'small'::text), ('monthly'::giveffektivt.donation_frequency,200,500,'medium'::text), ('monthly'::giveffektivt.donation_frequency,500,2000,'large'::text), ('monthly'::giveffektivt.donation_frequency,2000,'999999999999'::bigint,'major'::text)) bucket_table(frequency, start, stop, bucket)
         ), monthly_donations_charged_exactly_once AS (
          SELECT unnamed_subquery.donation_id
-           FROM ( SELECT charged_donations.donation_id,
-                    bool_or(charged_donations.cancelled) AS cancelled,
-                    count(charged_donations.charge_id) AS number_of_donations,
-                    max(charged_donations.charged_at) AS last_donated_at
-                   FROM giveffektivt.charged_donations
-                  WHERE (charged_donations.frequency = 'monthly'::giveffektivt.donation_frequency)
-                  GROUP BY charged_donations.donation_id) unnamed_subquery
+           FROM ( SELECT charged_donations_internal.donation_id,
+                    bool_or(charged_donations_internal.cancelled) AS cancelled,
+                    count(charged_donations_internal.charge_id) AS number_of_donations,
+                    max(charged_donations_internal.charged_at) AS last_donated_at
+                   FROM giveffektivt.charged_donations_internal
+                  WHERE (charged_donations_internal.frequency = 'monthly'::giveffektivt.donation_frequency)
+                  GROUP BY charged_donations_internal.donation_id) unnamed_subquery
           WHERE ((unnamed_subquery.number_of_donations = 1) AND (unnamed_subquery.cancelled OR (unnamed_subquery.last_donated_at < (now() - '40 days'::interval))))
         ), successful_charges AS (
          SELECT a.period,
@@ -2924,18 +3011,18 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
                               WHERE (cd.donation_id = m.donation_id))) THEN 'once'::giveffektivt.donation_frequency
                             ELSE cd.frequency
                         END AS frequency
-                   FROM giveffektivt.charged_donations cd) a
+                   FROM giveffektivt.charged_donations_internal cd) a
              JOIN buckets b ON (((a.frequency = b.frequency) AND (a.amount > (b.start)::numeric) AND (a.amount <= (b.stop)::numeric))))
         ), first_time_donations AS (
          SELECT unnamed_subquery.period,
             sum(unnamed_subquery.amount) AS amount,
             count(1) AS payments
-           FROM ( SELECT DISTINCT ON (charged_donations.email) charged_donations.email,
-                    charged_donations.amount,
-                    date_trunc('month'::text, charged_donations.charged_at) AS period,
-                    charged_donations.charged_at
-                   FROM giveffektivt.charged_donations
-                  ORDER BY charged_donations.email, charged_donations.charged_at) unnamed_subquery
+           FROM ( SELECT DISTINCT ON (charged_donations_internal.email) charged_donations_internal.email,
+                    charged_donations_internal.amount,
+                    date_trunc('month'::text, charged_donations_internal.charged_at) AS period,
+                    charged_donations_internal.charged_at
+                   FROM giveffektivt.charged_donations_internal
+                  ORDER BY charged_donations_internal.email, charged_donations_internal.charged_at) unnamed_subquery
           GROUP BY unnamed_subquery.period
         ), stopped_monthly_donations AS (
          SELECT a.email,

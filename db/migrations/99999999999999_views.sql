@@ -12,12 +12,15 @@ annual_tax_report_gavebrev_since,
 annual_tax_report_gaveskema,
 annual_tax_report_pending_update,
 charged_donations,
+charged_donations_internal,
 charged_donations_by_transfer,
 charged_memberships,
+charged_memberships_internal,
 charged_or_created_donations,
 charges_to_charge,
 crm_export,
 donations_overview,
+donations_overview_internal,
 donations_to_create_charges,
 donations_to_email,
 donor_impact_report,
@@ -41,21 +44,12 @@ recreate_failed_recurring_donation,
 general_assembly_invitations cascade;
 
 --------------------------------------
-create view donations_overview as
+create view donations_overview_internal as
 select
     p.id as donor_id,
-    case
-        when pg_has_role(current_user, 'reader_contact', 'member') then p.name
-        else '***'
-    end as name,
-    case
-        when pg_has_role(current_user, 'reader_contact', 'member') then p.email
-        else '***'
-    end as email,
-    case
-        when pg_has_role(current_user, 'reader_sensitive', 'member') then p.tin
-        else '***'
-    end as tin,
+    p.name,
+    p.email,
+    p.tin,
     d.id as donation_id,
     d.frequency,
     d.amount,
@@ -78,18 +72,12 @@ select
     d.cancelled,
     d.method,
     d.gateway,
-    case
-        when pg_has_role(current_user, 'reader_sensitive', 'member') then d.gateway_metadata
-        else null
-    end as donation_gateway_metadata,
+    d.gateway_metadata as donation_gateway_metadata,
     d.tax_deductible,
     c.id as charge_id,
     c.short_id as charge_short_id,
     c.status,
-    case
-        when pg_has_role(current_user, 'reader_sensitive', 'member') then c.gateway_metadata
-        else null
-    end as charge_gateway_metadata,
+    c.gateway_metadata as charge_gateway_metadata,
     c.created_at as charged_at,
     d.created_at as donation_created_at
 from
@@ -99,11 +87,69 @@ from
 order by
     c.created_at desc nulls last;
 
+create view donations_overview
+with
+    (security_barrier = true) as
+select
+    donor_id,
+    case
+        when pg_has_role(current_user, 'reader_contact', 'member') then name
+        else '***'
+    end as name,
+    case
+        when pg_has_role(current_user, 'reader_contact', 'member') then email
+        else '***'
+    end as email,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then tin
+        else '***'
+    end as tin,
+    donation_id,
+    frequency,
+    amount,
+    earmarks,
+    cancelled,
+    method,
+    gateway,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then donation_gateway_metadata
+        else null
+    end as donation_gateway_metadata,
+    tax_deductible,
+    charge_id,
+    charge_short_id,
+    status,
+    case
+        when pg_has_role(current_user, 'reader_sensitive', 'member') then charge_gateway_metadata
+        else null
+    end as charge_gateway_metadata,
+    charged_at,
+    donation_created_at
+from
+    donations_overview_internal;
+
 grant
 select
     on donations_overview to reader;
 
 --------------------------------------
+create view charged_donations_internal as
+select
+    *
+from
+    donations_overview_internal d
+where
+    d.status = 'charged'
+    and not exists (
+        select
+            1
+        from
+            earmark e
+        where
+            e.donation_id = d.donation_id
+            and e.recipient = 'Giv Effektivts medlemskab'
+    );
+
 create view charged_donations as
 select
     *
@@ -130,7 +176,7 @@ create view charged_or_created_donations as
 select
     *
 from
-    donations_overview d
+    donations_overview_internal d
 where
     d.status in ('charged', 'created')
     and not exists (
@@ -143,11 +189,24 @@ where
             and e.recipient = 'Giv Effektivts medlemskab'
     );
 
-grant
-select
-    on charged_or_created_donations to reader;
-
 --------------------------------------
+create view charged_memberships_internal as
+select
+    *
+from
+    donations_overview_internal d
+where
+    d.status = 'charged'
+    and exists (
+        select
+            1
+        from
+            earmark e
+        where
+            e.donation_id = d.donation_id
+            and e.recipient = 'Giv Effektivts medlemskab'
+    );
+
 create view charged_memberships as
 select
     *
@@ -188,16 +247,12 @@ select
     e.recipient as earmark,
     t.id as transfer_id
 from
-    charged_donations cd
+    charged_donations_internal cd
     join earmark e on cd.donation_id = e.donation_id
     left join charge_transfer ct on ct.charge_id = cd.charge_id
     left join transfer t on ct.transfer_id = t.id
 order by
     cd.charged_at desc;
-
-grant
-select
-    on charged_donations_by_transfer to reader;
 
 --------------------------------------
 create view donations_to_create_charges as
@@ -489,7 +544,7 @@ select
     ) as year
 from
     annual_tax_report_const
-    cross join charged_donations
+    cross join charged_donations_internal
 where
     charged_at <@ tstzrange (year_from, year_to, '[)')
     and tax_deductible
@@ -615,7 +670,7 @@ with
             amount
         from
             gavebrev_tin_years_until_now i
-            inner join charged_donations c on i.tin = c.tin
+            inner join charged_donations_internal c on i.tin = c.tin
             and i.year = extract(
                 year
                 from
@@ -824,7 +879,7 @@ with
             count(distinct tin) as count_members
         from
             const
-            cross join charged_memberships c
+            cross join charged_memberships_internal c
         where
             charged_at <@ tstzrange (year_from, year_to, '[)')
     ),
@@ -849,7 +904,7 @@ with
             coalesce(sum(amount), 0) as amount_donated_total
         from
             const
-            cross join charged_donations c
+            cross join charged_donations_internal c
         where
             charged_at <@ tstzrange (year_from, year_to, '[)')
     )
@@ -961,7 +1016,7 @@ with
             email
         from
             const
-            cross join charged_memberships
+            cross join charged_memberships_internal
         where
             charged_at <@ tstzrange (year_from, year_to, '[)')
     ),
@@ -1276,7 +1331,7 @@ with
                     count(charge_id) as number_of_donations,
                     max(charged_at) as last_donated_at
                 from
-                    charged_donations
+                    charged_donations_internal
                 where
                     frequency = 'monthly'
                 group by
@@ -1315,7 +1370,7 @@ with
                         else frequency
                     end as frequency
                 from
-                    charged_donations cd
+                    charged_donations_internal cd
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -1328,7 +1383,7 @@ with
             date_trunc('month', charged_at) as period,
             charged_at
         from
-            charged_donations
+            charged_donations_internal
         order by
             email,
             charged_at
@@ -1566,7 +1621,7 @@ with
                     count(charge_id) as number_of_donations,
                     max(charged_at) as last_donated_at
                 from
-                    charged_donations
+                    charged_donations_internal
                 where
                     frequency = 'monthly'
                 group by
@@ -1605,7 +1660,7 @@ with
                         else frequency
                     end as frequency
                 from
-                    charged_donations cd
+                    charged_donations_internal cd
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -1618,7 +1673,7 @@ with
             date_trunc('day', charged_at) as period,
             charged_at
         from
-            charged_donations
+            charged_donations_internal
         order by
             email,
             charged_at
@@ -1851,13 +1906,13 @@ with
         select
             round(sum(amount))::numeric as dkk_total
         from
-            charged_donations
+            charged_donations_internal
     ),
     dkk_total_ops as (
         select
             round(sum(amount))::numeric as dkk_total_ops
         from
-            charged_donations cd
+            charged_donations_internal cd
             join earmark e on e.donation_id = cd.donation_id
         where
             e.recipient = 'Giv Effektivts arbejde og vækst'
@@ -1872,7 +1927,7 @@ with
         select
             round(sum(amount))::numeric as dkk_last_30_days
         from
-            charged_donations
+            charged_donations_internal
         where
             charged_at >= date_trunc('day', now()) - interval '30 days'
     ),
@@ -1895,7 +1950,7 @@ with
         select
             count(distinct tin)::numeric as members_confirmed
         from
-            charged_memberships
+            charged_memberships_internal
         where
             charged_at >= date_trunc('year', now())
     ),
@@ -1908,7 +1963,7 @@ with
                     on (tin) tin,
                     charged_at
                 from
-                    charged_memberships
+                    charged_memberships_internal
                 where
                     not cancelled
                 order by
@@ -1940,7 +1995,7 @@ with
                         else count(distinct tin)
                     end as donors
                 from
-                    charged_donations
+                    charged_donations_internal
                 group by
                     email
             )
@@ -1980,7 +2035,7 @@ with
                 select
                     max(charged_at) as max_charged_at
                 from
-                    donations_overview
+                    donations_overview_internal
                 where
                     status = 'charged'
                 group by
@@ -2161,7 +2216,7 @@ with
             on (email) email,
             name
         from
-            charged_memberships
+            charged_memberships_internal
         where
             charged_at >= now() - interval '1 year'
     ),
@@ -2171,7 +2226,7 @@ with
             sum(amount) as total_donated,
             count(1) as donations_count
         from
-            charged_donations
+            charged_donations_internal
         group by
             email
     ),
@@ -2185,7 +2240,7 @@ with
             cancelled as last_donation_cancelled,
             charged_at as last_donated_at
         from
-            charged_donations
+            charged_donations_internal
         order by
             email,
             charged_at desc
@@ -2206,7 +2261,7 @@ with
                     frequency = 'monthly'
             ) as first_monthly_donation_at
         from
-            donations_overview d
+            donations_overview_internal d
             join earmark e on d.donation_id = e.donation_id
         where
             status = 'charged'
@@ -2518,7 +2573,7 @@ with
                     count(charge_id) as number_of_donations,
                     max(charged_at) as last_donated_at
                 from
-                    charged_donations
+                    charged_donations_internal
                 where
                     frequency = 'monthly'
                 group by
@@ -2557,7 +2612,7 @@ with
                         else frequency
                     end as frequency
                 from
-                    charged_donations cd
+                    charged_donations_internal cd
             ) a
             join buckets b on a.frequency = b.frequency
             and a.amount > b.start
@@ -2576,7 +2631,7 @@ with
                     date_trunc('month', charged_at) as period,
                     charged_at
                 from
-                    charged_donations
+                    charged_donations_internal
                 order by
                     email,
                     charged_at
