@@ -52,6 +52,8 @@ export const mapFromNorwegianPaymentMethods = (method: number) => {
       return PaymentMethod.MobilePay;
     case 2:
       return PaymentMethod.BankTransfer;
+    case 97:
+      return PaymentMethod.BankTransfer;
     default:
       throw new Error(`donation/register: Unknown payment method ${method}`);
   }
