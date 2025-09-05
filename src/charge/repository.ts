@@ -1,5 +1,5 @@
-import { PoolClient } from "pg";
-import {
+import type { PoolClient } from "pg";
+import type {
   Charge,
   ChargeToCharge,
   ChargeToChargeScanpay,
