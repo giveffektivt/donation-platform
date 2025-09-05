@@ -309,3 +309,132 @@ export async function getFundraiser(
     )
   ).rows[0];
 }
+
+export async function getFundraisers(client: PoolClient) {
+  return (
+    await client.query(
+      `
+with
+    ff as (
+        select
+            f.*,
+            row_number() over (
+                order by
+                    f.created_at
+            ) as seq
+        from
+            fundraiser f
+    )
+select
+    jsonb_agg(
+        jsonb_build_object(
+            'id',
+            ff.seq,
+            'registered',
+            to_char(ff.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+            'lastUpdated',
+            to_char(ff.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+            'donor',
+            jsonb_build_object('id', p.id, 'name', p.name),
+            'statistics',
+            jsonb_build_object('totalSum', s.total_sum, 'donationCount', s.donation_count, 'averageDonation', s.avg_donation)
+        )
+        order by
+            ff.created_at
+    ) as result
+from
+    ff
+    join donor p on p.id = '9621594a-b8f0-4d56-afac-24f1eb36222f'
+    left join lateral (
+        select
+            coalesce(sum(d.amount), 0)::numeric as total_sum,
+            coalesce(count(*), 0)::int as donation_count,
+            coalesce(round(sum(d.amount)::numeric / nullif(count(*), 0), 2), 0)::numeric as avg_donation
+        from
+            donation d
+            join charge c on c.donation_id = d.id
+            and c.status = 'charged'
+        where
+            d.fundraiser_id = ff.id
+    ) s on true;
+      `,
+    )
+  ).rows[0].result;
+}
+
+export async function getFundraiserNew(client: PoolClient, id: string) {
+  return (
+    await client.query(
+      `
+with
+    ff as (
+        select
+            f.*,
+            row_number() over (
+                order by
+                    f.created_at
+            ) as seq
+        from
+            fundraiser f
+    ),
+    target as (
+        select
+            id
+        from
+            ff
+        where
+            seq = $1
+    )
+select
+    jsonb_build_object(
+        'totalSum',
+        coalesce(t.total_sum, 0),
+        'donationCount',
+        coalesce(t.donation_count, 0),
+        'transactions',
+        coalesce(tx.transactions, '[]'::jsonb)
+    ) as result
+from
+    target
+    left join lateral (
+        select
+            coalesce(sum(d.amount), 0)::numeric as total_sum,
+            coalesce(count(*), 0)::int as donation_count
+        from
+            donation d
+            join charge c on c.donation_id = d.id
+            and c.status = 'charged'
+        where
+            d.fundraiser_id = target.id
+    ) t on true
+    left join lateral (
+        select
+            jsonb_agg(
+                jsonb_build_object(
+                    'id',
+                    d.id,
+                    'name',
+                    dn.name,
+                    'message',
+                    d.message,
+                    'amount',
+                    d.amount,
+                    'date',
+                    to_char(d.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                )
+                order by
+                    d.created_at desc
+            ) as transactions
+        from
+            donation d
+            join charge c on c.donation_id = d.id
+            and c.status = 'charged'
+            left join donor dn on dn.id = d.donor_id
+        where
+            d.fundraiser_id = target.id
+    ) tx on true;
+      `,
+      [id],
+    )
+  ).rows[0].result;
+}
