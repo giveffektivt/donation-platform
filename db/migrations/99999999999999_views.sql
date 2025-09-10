@@ -1484,7 +1484,8 @@ with
             bucket,
             /* sql-formatter-disable */
             sum(amount * (case when amount > 0 then 1 else 0 end) * (case when frequency = 'monthly' then 18 else 1 end)) as value_added,
-            sum(amount * (case when amount < 0 then 1 else 0 end) * 18) as value_lost
+            sum(amount * (case when amount < 0 then 1 else 0 end) * 18) as value_lost,
+            sum((case when amount < 0 then 1 else 0 end)) as monthly_donors_lost
             /* sql-formatter-enable */
         from
             changed_donations
@@ -1571,6 +1572,7 @@ select
     coalesce(sum(case when b.frequency = 'once' then b.value_added else 0 end), 0) as value_added_once,
     coalesce(sum(case when b.frequency = 'monthly' then b.value_added else 0 end), 0) as value_added_monthly,
     coalesce(sum(b.value_lost), 0) as value_lost,
+    coalesce(sum(b.monthly_donors_lost), 0) as monthly_donors_lost,
     coalesce(max(c.amount), 0)::numeric as amount_new,
     coalesce(max(c.payments), 0)::numeric as payments_new
     /* sql-formatter-enable */

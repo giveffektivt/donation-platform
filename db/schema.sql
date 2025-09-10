@@ -2752,7 +2752,12 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
                 CASE
                     WHEN (changed_donations.amount < (0)::numeric) THEN 1
                     ELSE 0
-                END)::numeric) * (18)::numeric)) AS value_lost
+                END)::numeric) * (18)::numeric)) AS value_lost,
+            sum(
+                CASE
+                    WHEN (changed_donations.amount < (0)::numeric) THEN 1
+                    ELSE 0
+                END) AS monthly_donors_lost
            FROM changed_donations
           GROUP BY changed_donations.period, changed_donations.frequency, changed_donations.bucket
         ), payments AS (
@@ -2974,6 +2979,7 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
             ELSE (0)::numeric
         END), (0)::numeric) AS value_added_monthly,
     COALESCE(sum(b.value_lost), (0)::numeric) AS value_lost,
+    COALESCE(sum(b.monthly_donors_lost), (0)::numeric) AS monthly_donors_lost,
     COALESCE(max(c.amount), (0)::numeric) AS amount_new,
     (COALESCE(max(c.payments), (0)::bigint))::numeric AS payments_new
    FROM (((payments a
