@@ -1186,6 +1186,7 @@ with
             name is not null
     )
 select
+    lc.id as donor_id,
     coalesce(lc.name, en.name) as name,
     lc.email,
     lc.amount,
@@ -2216,12 +2217,20 @@ with
     ),
     members as (
         select distinct
-            on (email) email,
+            on (donor_id) donor_id,
+            email,
             name
         from
             charged_memberships_internal
         where
             charged_at >= now() - interval '1 year'
+    ),
+    member_emails as (
+        select distinct
+            on (email) email,
+            name
+        from
+            members
     ),
     donations as (
         select
@@ -2308,16 +2317,25 @@ with
     ),
     expired_memberships as (
         select distinct
-            on (email) email,
-            donation_id as expired_membership_id,
-            expired_at as expired_membership_at
+            on (ir.email) ir.email,
+            ir.donation_id as expired_membership_id,
+            ir.expired_at as expired_membership_at
         from
-            ignored_renewals
+            ignored_renewals ir
         where
-            is_membership
+            ir.is_membership
+            and not exists (
+                select
+                    1
+                from
+                    members m
+                where
+                    m.donor_id = ir.donor_id
+            )
         order by
-            email,
-            expired_at desc
+            ir.email,
+            ir.expired_at desc,
+            ir.donation_id desc
     ),
     expired_donations as (
         select distinct
@@ -2385,7 +2403,7 @@ with
             left join names n on n.email = e.email
             left join ages a on a.email = e.email
             left join donations d on d.email = e.email
-            left join members m on m.email = e.email
+            left join member_emails m on m.email = e.email
             left join latest_donations l on l.email = e.email
             left join first_donations f on f.email = e.email
             left join has_gavebrev g on g.email = e.email

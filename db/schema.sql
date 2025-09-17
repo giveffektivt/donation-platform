@@ -1614,7 +1614,8 @@ CREATE VIEW giveffektivt.ignored_renewals AS
            FROM giveffektivt.donor p
           WHERE (p.name IS NOT NULL)
         )
- SELECT COALESCE(lc.name, en.name) AS name,
+ SELECT lc.id AS donor_id,
+    COALESCE(lc.name, en.name) AS name,
     lc.email,
     lc.amount,
     lc.is_membership,
@@ -1682,10 +1683,15 @@ CREATE VIEW giveffektivt.crm_export AS
           WHERE (p.tin IS NOT NULL)
           ORDER BY p.email, p.created_at
         ), members AS (
-         SELECT DISTINCT ON (charged_memberships_internal.email) charged_memberships_internal.email,
+         SELECT DISTINCT ON (charged_memberships_internal.donor_id) charged_memberships_internal.donor_id,
+            charged_memberships_internal.email,
             charged_memberships_internal.name
            FROM giveffektivt.charged_memberships_internal
           WHERE (charged_memberships_internal.charged_at >= (now() - '1 year'::interval))
+        ), member_emails AS (
+         SELECT DISTINCT ON (members.email) members.email,
+            members.name
+           FROM members
         ), donations AS (
          SELECT charged_donations_internal.email,
             sum(charged_donations_internal.amount) AS total_donated,
@@ -1783,12 +1789,14 @@ CREATE VIEW giveffektivt.crm_export AS
            FROM giveffektivt.donor_impact_report
           GROUP BY donor_impact_report.email
         ), expired_memberships AS (
-         SELECT DISTINCT ON (ignored_renewals.email) ignored_renewals.email,
-            ignored_renewals.donation_id AS expired_membership_id,
-            ignored_renewals.expired_at AS expired_membership_at
-           FROM giveffektivt.ignored_renewals
-          WHERE ignored_renewals.is_membership
-          ORDER BY ignored_renewals.email, ignored_renewals.expired_at DESC
+         SELECT DISTINCT ON (ir.email) ir.email,
+            ir.donation_id AS expired_membership_id,
+            ir.expired_at AS expired_membership_at
+           FROM giveffektivt.ignored_renewals ir
+          WHERE (ir.is_membership AND (NOT (EXISTS ( SELECT 1
+                   FROM members m
+                  WHERE (m.donor_id = ir.donor_id)))))
+          ORDER BY ir.email, ir.expired_at DESC, ir.donation_id DESC
         ), expired_donations AS (
          SELECT DISTINCT ON (ignored_renewals.email) ignored_renewals.email,
             ignored_renewals.donation_id AS expired_donation_id,
@@ -1844,7 +1852,7 @@ CREATE VIEW giveffektivt.crm_export AS
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
-             LEFT JOIN members m ON ((m.email = e.email)))
+             LEFT JOIN member_emails m ON ((m.email = e.email)))
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
              LEFT JOIN first_donations f ON ((f.email = e.email)))
              LEFT JOIN has_gavebrev g ON ((g.email = e.email)))
