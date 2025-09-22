@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const result = {
       ignored_renewals: (await getIgnoredRenewals(db)).map((r) => ({
         ...r,
-        renewal_link: `${process.env.RENEW_PAYMENT_INFO_URL}?id=${r.donation_id}`,
+        renewal_link: `${process.env.RENEW_PAYMENT_INFO_URL}?id=${r.donation_id}&utm_source=direct&utm_campaign=fornyelse`,
       })),
       value_lost_analysis: await getValueLostAnalysis(db),
     };

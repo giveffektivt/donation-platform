@@ -156,5 +156,5 @@ async function generateRedirectUrl(
 async function generateRenewUrl(
   donation: DonationWithGatewayInfoQuickpay,
 ): Promise<string> {
-  return `${process.env.RENEW_PAYMENT_INFO_URL}?id=${donation.id}`;
+  return `${process.env.RENEW_PAYMENT_INFO_URL}?id=${donation.id}&utm_source=backend&utm_campaign=fornyelse`;
 }
