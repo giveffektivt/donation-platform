@@ -1698,6 +1698,15 @@ CREATE VIEW giveffektivt.crm_export AS
             count(1) AS donations_count
            FROM giveffektivt.charged_donations_internal
           GROUP BY charged_donations_internal.email
+        ), tax_deductible_donations AS (
+         SELECT charged_donations_internal.email,
+            sum(charged_donations_internal.amount) AS total_donated_this_year,
+            GREATEST((0)::numeric, (( SELECT max_tax_deduction.value
+                   FROM giveffektivt.max_tax_deduction
+                  WHERE (max_tax_deduction.year = EXTRACT(year FROM now()))) - sum(charged_donations_internal.amount))) AS deductible_potential_this_year
+           FROM giveffektivt.charged_donations_internal
+          WHERE (charged_donations_internal.charged_at >= date_trunc('year'::text, now()))
+          GROUP BY charged_donations_internal.email
         ), latest_donations AS (
          SELECT DISTINCT ON (charged_donations_internal.email) charged_donations_internal.email,
             charged_donations_internal.amount AS last_donated_amount,
@@ -1826,6 +1835,8 @@ CREATE VIEW giveffektivt.crm_export AS
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
+            t.total_donated_this_year,
+            t.deductible_potential_this_year,
             f.first_membership_at,
             f.first_donation_at,
             f.first_monthly_donation_at,
@@ -1848,10 +1859,11 @@ CREATE VIEW giveffektivt.crm_export AS
             r.expired_donation_at,
             r.expired_membership_id,
             r.expired_membership_at
-           FROM ((((((((((emails e
+           FROM (((((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
+             LEFT JOIN tax_deductible_donations t ON ((t.email = e.email)))
              LEFT JOIN member_emails m ON ((m.email = e.email)))
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
              LEFT JOIN first_donations f ON ((f.email = e.email)))
@@ -1873,6 +1885,8 @@ CREATE VIEW giveffektivt.crm_export AS
     last_donation_tax_deductible,
     last_donation_cancelled,
     last_donated_at,
+    total_donated_this_year,
+    deductible_potential_this_year,
     first_membership_at,
     first_donation_at,
     first_monthly_donation_at,

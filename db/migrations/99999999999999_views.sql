@@ -2242,6 +2242,34 @@ with
         group by
             email
     ),
+    tax_deductible_donations as (
+        select
+            email,
+            sum(amount) as total_donated_this_year,
+            greatest(
+                0,
+                (
+                    select
+                        value
+                    from
+                        max_tax_deduction
+                    where
+                        year = (
+                            extract(
+                                year
+                                from
+                                    now()
+                            )
+                        )
+                ) - sum(amount)
+            ) as deductible_potential_this_year
+        from
+            charged_donations_internal
+        where
+            charged_at >= date_trunc('year', now())
+        group by
+            email
+    ),
     latest_donations as (
         select distinct
             on (email) email,
@@ -2376,6 +2404,8 @@ with
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
             l.last_donated_at,
+            t.total_donated_this_year,
+            t.deductible_potential_this_year,
             f.first_membership_at,
             f.first_donation_at,
             f.first_monthly_donation_at,
@@ -2403,6 +2433,7 @@ with
             left join names n on n.email = e.email
             left join ages a on a.email = e.email
             left join donations d on d.email = e.email
+            left join tax_deductible_donations t on t.email = e.email
             left join member_emails m on m.email = e.email
             left join latest_donations l on l.email = e.email
             left join first_donations f on f.email = e.email
