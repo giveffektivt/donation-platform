@@ -14,6 +14,7 @@ annual_tax_report_pending_update,
 charged_donations,
 charged_donations_internal,
 charged_donations_by_transfer,
+charged_donations_by_transfer_internal,
 charged_memberships,
 charged_memberships_internal,
 charged_or_created_donations,
@@ -230,7 +231,7 @@ select
     on charged_memberships to reader;
 
 --------------------------------------
-create view charged_donations_by_transfer as
+create view charged_donations_by_transfer_internal as
 select
     cd.donor_id,
     cd.name,
@@ -251,9 +252,40 @@ from
     charged_donations_internal cd
     join earmark e on cd.donation_id = e.donation_id
     left join charge_transfer ct on ct.charge_id = cd.charge_id
+    and ct.earmark = e.recipient
     left join transfer t on ct.transfer_id = t.id
 order by
     cd.charged_at desc;
+
+create view charged_donations_by_transfer as
+select
+    cd.donor_id,
+    cd.name,
+    cd.email,
+    cd.tin,
+    cd.donation_id,
+    round(cd.amount * e.percentage / 100, 1) as amount,
+    cd.frequency,
+    cd.cancelled,
+    cd.method,
+    cd.gateway,
+    cd.tax_deductible,
+    cd.charge_id,
+    cd.charged_at,
+    e.recipient as earmark,
+    t.id as transfer_id
+from
+    charged_donations cd
+    join earmark e on cd.donation_id = e.donation_id
+    left join charge_transfer ct on ct.charge_id = cd.charge_id
+    and ct.earmark = e.recipient
+    left join transfer t on ct.transfer_id = t.id
+order by
+    cd.charged_at desc;
+
+grant
+select
+    on charged_donations_by_transfer to reader;
 
 --------------------------------------
 create view donations_to_create_charges as
@@ -984,7 +1016,7 @@ with
             min(cdt.charged_at) as first_donated
         from
             const
-            cross join charged_donations_by_transfer cdt
+            cross join charged_donations_by_transfer_internal cdt
             left join transfer t on cdt.transfer_id = t.id
         where
             cdt.charged_at <@ tstzrange (year_from, year_to, '[)')
@@ -1245,7 +1277,7 @@ select
         else to_char(t.created_at, 'yyyy-mm-dd')
     end as transferred_at
 from
-    charged_donations_by_transfer cdt
+    charged_donations_by_transfer_internal cdt
     join transfer t on cdt.transfer_id = t.id
     or (
         cdt.transfer_id is null
@@ -1272,7 +1304,7 @@ select
     round(sum(amount))::numeric as dkk_total,
     count(*)::numeric as payments_total
 from
-    charged_donations_by_transfer cdt
+    charged_donations_by_transfer_internal cdt
     join transfer t on cdt.transfer_id = t.id
 group by
     t.recipient
@@ -1290,7 +1322,7 @@ select
     round(sum(amount))::numeric as dkk_total,
     count(*)::numeric as payments_total
 from
-    charged_donations_by_transfer cdt
+    charged_donations_by_transfer_internal cdt
 where
     earmark not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
     and transfer_id is null
@@ -1892,7 +1924,7 @@ select
     amount,
     earmark
 from
-    charged_donations_by_transfer cdt
+    charged_donations_by_transfer_internal cdt
 where
     earmark not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
     and transfer_id is null
@@ -2108,7 +2140,7 @@ with
             round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
             round(sum(amount) / max(t.exchange_rate) / max(t.life_cost_external), 2) as lives
         from
-            charged_donations_by_transfer cdt
+            charged_donations_by_transfer_internal cdt
             left join transfer t on cdt.transfer_id = t.id
         group by
             email,
@@ -2584,7 +2616,7 @@ select
     'GHD' as cause,
     sum(amount) as amount
 from
-    charged_donations_by_transfer cdt
+    charged_donations_by_transfer_internal cdt
     left join transfer t on cdt.transfer_id = t.id
 group by
     to_char(charged_at, 'YYYY-MM'),

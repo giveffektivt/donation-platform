@@ -810,10 +810,10 @@ CREATE TABLE giveffektivt.transfer (
 
 
 --
--- Name: charged_donations_by_transfer; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: charged_donations_by_transfer_internal; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.charged_donations_by_transfer AS
+CREATE VIEW giveffektivt.charged_donations_by_transfer_internal AS
  SELECT cd.donor_id,
     cd.name,
     cd.email,
@@ -831,7 +831,7 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
     t.id AS transfer_id
    FROM (((giveffektivt.charged_donations_internal cd
      JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
-     LEFT JOIN giveffektivt.charge_transfer ct ON ((ct.charge_id = cd.charge_id)))
+     LEFT JOIN giveffektivt.charge_transfer ct ON (((ct.charge_id = cd.charge_id) AND (ct.earmark = e.recipient))))
      LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)))
   ORDER BY cd.charged_at DESC;
 
@@ -883,7 +883,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
             sum(cdt.amount) AS amount,
             min(cdt.charged_at) AS first_donated
            FROM ((const
-             CROSS JOIN giveffektivt.charged_donations_by_transfer cdt)
+             CROSS JOIN giveffektivt.charged_donations_by_transfer_internal cdt)
              LEFT JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
           WHERE (cdt.charged_at <@ tstzrange(const.year_from, const.year_to, '[)'::text))
           GROUP BY cdt.tin, cdt.email, cdt.tax_deductible, t.id
@@ -1449,6 +1449,33 @@ CREATE VIEW giveffektivt.charged_donations AS
 
 
 --
+-- Name: charged_donations_by_transfer; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charged_donations_by_transfer AS
+ SELECT cd.donor_id,
+    cd.name,
+    cd.email,
+    cd.tin,
+    cd.donation_id,
+    round(((cd.amount * e.percentage) / (100)::numeric), 1) AS amount,
+    cd.frequency,
+    cd.cancelled,
+    cd.method,
+    cd.gateway,
+    cd.tax_deductible,
+    cd.charge_id,
+    cd.charged_at,
+    e.recipient AS earmark,
+    t.id AS transfer_id
+   FROM (((giveffektivt.charged_donations cd
+     JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
+     LEFT JOIN giveffektivt.charge_transfer ct ON (((ct.charge_id = cd.charge_id) AND (ct.earmark = e.recipient))))
+     LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)))
+  ORDER BY cd.charged_at DESC;
+
+
+--
 -- Name: charged_memberships; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1550,7 +1577,7 @@ CREATE VIEW giveffektivt.donor_impact_report AS
             sum(cdt.amount) AS amount,
             round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
             round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 2) AS lives
-           FROM (giveffektivt.charged_donations_by_transfer cdt
+           FROM (giveffektivt.charged_donations_by_transfer_internal cdt
              LEFT JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
           GROUP BY cdt.email, t.id
         )
@@ -2118,7 +2145,7 @@ CREATE VIEW giveffektivt.gwwc_money_moved AS
         END) AS recipient,
     'GHD'::text AS cause,
     sum(cdt.amount) AS amount
-   FROM (giveffektivt.charged_donations_by_transfer cdt
+   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
      LEFT JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
   GROUP BY (to_char(cdt.charged_at, 'YYYY-MM'::text)), t.recipient
   ORDER BY (to_char(cdt.charged_at, 'YYYY-MM'::text));
@@ -2132,7 +2159,7 @@ CREATE VIEW giveffektivt.transfer_pending AS
  SELECT charged_at,
     amount,
     earmark
-   FROM giveffektivt.charged_donations_by_transfer cdt
+   FROM giveffektivt.charged_donations_by_transfer_internal cdt
   WHERE ((earmark <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (transfer_id IS NULL))
   ORDER BY charged_at;
 
@@ -2246,7 +2273,7 @@ CREATE VIEW giveffektivt.pending_distribution AS
  SELECT earmark,
     round(sum(amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
-   FROM giveffektivt.charged_donations_by_transfer cdt
+   FROM giveffektivt.charged_donations_by_transfer_internal cdt
   WHERE ((earmark <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (transfer_id IS NULL))
   GROUP BY earmark
   ORDER BY (round(sum(amount))) DESC;
@@ -3047,7 +3074,7 @@ CREATE VIEW giveffektivt.transfer_overview AS
             WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
             ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
         END AS transferred_at
-   FROM (giveffektivt.charged_donations_by_transfer cdt
+   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
      JOIN giveffektivt.transfer t ON (((cdt.transfer_id = t.id) OR ((cdt.transfer_id IS NULL) AND (cdt.earmark = t.earmark) AND (t.created_at > now())))))
   GROUP BY t.id, t.earmark, t.recipient, t.created_at
   ORDER BY t.created_at, (sum(cdt.amount)) DESC;
@@ -3061,7 +3088,7 @@ CREATE VIEW giveffektivt.transferred_distribution AS
  SELECT t.recipient,
     round(sum(cdt.amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
-   FROM (giveffektivt.charged_donations_by_transfer cdt
+   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
      JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
   GROUP BY t.recipient
   ORDER BY (round(sum(cdt.amount))) DESC;
