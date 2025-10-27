@@ -31,6 +31,8 @@ export type GavebrevCheckin = {
   income_preliminary?: number;
   income_verified?: number;
   limit_normal_donation?: number | null;
+  custom_minimal_income?: number;
+  custom_maximum_income?: number;
   created_at: Date;
   updated_at: Date;
 };

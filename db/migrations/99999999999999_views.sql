@@ -607,11 +607,15 @@ create view annual_tax_report_gavebrev_checkins as
 select
     tin,
     y as year,
-    coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0) as income,
+    least(
+        coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0),
+        c.custom_maximum_income
+    ) as income,
     case
         when c.year is null then 0
         else c.limit_normal_donation
-    end as limit_normal_donation
+    end as limit_normal_donation,
+    c.custom_minimal_income
 from
     annual_tax_report_const
     cross join annual_tax_report_gavebrev_since g
@@ -635,12 +639,12 @@ select
     round(
         sum(
             case
-                when g.type = 'percentage' then greatest(0, c.income - coalesce(g.minimal_income, 0)) * g.amount / 100
+                when g.type = 'percentage' then greatest(0, c.income - coalesce(c.custom_minimal_income, g.minimal_income, 0)) * g.amount / 100
                 when g.type = 'amount' then greatest(
                     0,
                     cast(
                         c.income > 0
-                        and c.income >= coalesce(g.minimal_income, 0) as integer
+                        and c.income >= coalesce(c.custom_minimal_income, g.minimal_income, 0) as integer
                     ) * g.amount
                 )
             end

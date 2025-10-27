@@ -1056,7 +1056,9 @@ CREATE TABLE giveffektivt.gavebrev_checkin (
     income_verified numeric,
     limit_normal_donation numeric,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    custom_minimal_income numeric,
+    custom_maximum_income numeric
 );
 
 
@@ -1067,11 +1069,12 @@ CREATE TABLE giveffektivt.gavebrev_checkin (
 CREATE VIEW giveffektivt.annual_tax_report_gavebrev_checkins AS
  SELECT g.tin,
     y.y AS year,
-    COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric) AS income,
+    LEAST(COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric), c.custom_maximum_income) AS income,
         CASE
             WHEN (c.year IS NULL) THEN (0)::numeric
             ELSE c.limit_normal_donation
-        END AS limit_normal_donation
+        END AS limit_normal_donation,
+    c.custom_minimal_income
    FROM (((giveffektivt.annual_tax_report_const
      CROSS JOIN giveffektivt.annual_tax_report_gavebrev_since g)
      CROSS JOIN LATERAL generate_series(g.gavebrev_start, (EXTRACT(year FROM annual_tax_report_const.year_to) - (1)::numeric)) y(y))
@@ -1089,8 +1092,8 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
     c.limit_normal_donation,
     round(sum(
         CASE
-            WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
-            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= COALESCE(g.minimal_income, (0)::numeric))))::integer)::numeric * g.amount))
+            WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
+            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric))))::integer)::numeric * g.amount))
             ELSE NULL::numeric
         END)) AS expected_total
    FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
@@ -3742,4 +3745,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250819212352'),
     ('20250823163447'),
     ('20250823202042'),
+    ('20251027105347'),
     ('99999999999999');

@@ -84,8 +84,8 @@ export async function insertGavebrevCheckin(
 ): Promise<GavebrevCheckin> {
   return (
     await client.query(
-      `insert into gavebrev_checkin(donor_id, year, income_inferred, income_preliminary, income_verified, limit_normal_donation)
-       values ($1, $2, $3, $4, $5, $6)
+      `insert into gavebrev_checkin(donor_id, year, income_inferred, income_preliminary, income_verified, limit_normal_donation, custom_minimal_income, custom_maximum_income)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
        returning *`,
       [
         gavebrevCheckin.donor_id,
@@ -94,6 +94,8 @@ export async function insertGavebrevCheckin(
         gavebrevCheckin.income_preliminary,
         gavebrevCheckin.income_verified,
         gavebrevCheckin.limit_normal_donation,
+        gavebrevCheckin.custom_minimal_income,
+        gavebrevCheckin.custom_maximum_income,
       ],
     )
   ).rows[0];
