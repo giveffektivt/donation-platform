@@ -335,7 +335,7 @@ select
             'lastUpdated',
             to_char(ff.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
             'donor',
-            jsonb_build_object('id', p.id, 'name', p.name),
+            jsonb_build_object('id', ff.id, 'name', ff.title),
             'statistics',
             jsonb_build_object('totalSum', s.total_sum, 'donationCount', s.donation_count, 'averageDonation', s.avg_donation)
         )
@@ -344,7 +344,6 @@ select
     ) as result
 from
     ff
-    join donor p on p.id = '9621594a-b8f0-4d56-afac-24f1eb36222f'
     left join lateral (
         select
             coalesce(sum(d.amount), 0)::numeric as total_sum,
