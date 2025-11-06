@@ -170,6 +170,8 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
     fundraiserId: fundraiser.id,
+    publicMessageAuthor: false,
+    messageAuthor: "Jane",
     message: "Happy Birthday!",
   });
 
@@ -222,6 +224,8 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
     fundraiserId: fundraiser.id,
+    publicMessageAuthor: true,
+    messageAuthor: "Jane",
     message: "Happy Birthday!",
   });
 

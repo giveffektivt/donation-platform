@@ -12,6 +12,8 @@ export type NewDonation = {
     percentage: number;
   }[];
   fundraiserId?: string;
+  publicMessageAuthor?: boolean;
+  messageAuthor?: string;
   message?: string;
 };
 

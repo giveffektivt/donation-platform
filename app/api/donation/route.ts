@@ -40,6 +40,11 @@ const PayloadSchema = z
       (val) => (!val ? undefined : val),
       z.string().optional(),
     ),
+    publicMessageAuthor: z.boolean().optional().default(false),
+    messageAuthor: z.preprocess(
+      (val) => (!val ? undefined : val),
+      z.string().max(100).optional(),
+    ),
     message: z.preprocess(
       (val) => (!val ? undefined : val),
       z.string().max(500).optional(),

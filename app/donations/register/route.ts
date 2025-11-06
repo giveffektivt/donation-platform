@@ -1,5 +1,7 @@
 import {
   DonationFrequency,
+  dbExecuteInTransaction,
+  getFundraiserIdBySeq,
   logError,
   mapFromNorwegianOrgId,
   mapFromNorwegianPaymentMethods,
@@ -52,6 +54,27 @@ const PayloadSchema = z
           .optional(),
       ),
     }),
+    fundraiser: z
+      .object({
+        id: z
+          .number()
+          .transform(
+            async (seq) =>
+              await dbExecuteInTransaction(
+                async (db) => await getFundraiserIdBySeq(db, seq),
+              ),
+          ),
+        message: z.preprocess(
+          (val) => (!val ? undefined : val),
+          z.string().max(500).optional(),
+        ),
+        messageSenderName: z.preprocess(
+          (val) => (!val ? undefined : val),
+          z.string().max(100).optional(),
+        ),
+        showName: z.boolean().optional().default(false),
+      })
+      .optional(),
     method: z.number().transform(mapFromNorwegianPaymentMethods),
     recurring: z.coerce.boolean(),
     amount: z.coerce.number().min(1).transform(Math.round),
@@ -79,6 +102,10 @@ const PayloadSchema = z
     method: data.method,
     earmarks: data.distributionCauseAreas,
     subscribeToNewsletter: data.donor.newsletter,
+    fundraiserId: data.fundraiser?.id,
+    publicMessageAuthor: data.fundraiser?.showName,
+    messageAuthor: data.fundraiser?.messageSenderName,
+    message: data.fundraiser?.message,
   }));
 
 export async function POST(req: Request) {

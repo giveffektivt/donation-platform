@@ -109,6 +109,8 @@ test("Do not insert initial charge for a matching donation", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     fundraiserId: "00000000-0000-0000-0000-000000000000",
+    publicMessageAuthor: true,
+    messageAuthor: "Jane",
     message: "Thanks!",
     earmarks: [
       { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },

@@ -448,6 +448,8 @@ test("Finds failed recurring donations to email", async () => {
       },
     ],
     fundraiserId: "00000000-0000-0000-0000-000000000000",
+    publicMessageAuthor: true,
+    messageAuthor: "John Doe",
     message: "hello world",
   });
 

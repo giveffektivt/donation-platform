@@ -607,10 +607,7 @@ create view annual_tax_report_gavebrev_checkins as
 select
     tin,
     y as year,
-    least(
-        coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0),
-        c.custom_maximum_income
-    ) as income,
+    least(coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0), c.custom_maximum_income) as income,
     case
         when c.year is null then 0
         else c.limit_normal_donation
@@ -2829,12 +2826,14 @@ create function register_donation (
     p_gateway payment_gateway,
     p_method payment_method,
     p_tax_deductible boolean,
-    p_fundraiser_id uuid,
-    p_message text,
     p_earmarks jsonb,
     p_email text,
     p_tin text default null,
     p_name text default null,
+    p_fundraiser_id uuid default null,
+    p_public_message_author boolean default null,
+    p_message_author text default null,
+    p_message text default null,
     p_address text default null,
     p_postcode text default null,
     p_city text default null,
@@ -2918,7 +2917,7 @@ begin
         birthday = coalesce(excluded.birthday, donor.birthday)
     returning * into v_donor;
 
-    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata, emailed)
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, public_message_author, message_author, message, gateway_metadata, emailed)
     values (
         v_donor.id,
         p_amount,
@@ -2927,6 +2926,8 @@ begin
         p_method,
         p_tax_deductible,
         p_fundraiser_id,
+        coalesce(p_public_message_author, false),
+        p_message_author,
         p_message,
         v_gateway_metadata,
         p_emailed
@@ -2943,23 +2944,25 @@ $$;
 
 grant
 execute on function register_donation (
-    numeric,
-    donation_frequency,
-    payment_gateway,
-    payment_method,
-    boolean,
-    uuid,
-    text,
-    jsonb,
-    text,
-    text,
-    text,
-    text,
-    text,
-    text,
-    text,
-    date,
-    emailed_status
+    p_amount numeric,
+    p_frequency donation_frequency,
+    p_gateway payment_gateway,
+    p_method payment_method,
+    p_tax_deductible boolean,
+    p_earmarks jsonb,
+    p_email text,
+    p_tin text,
+    p_name text,
+    p_fundraiser_id uuid,
+    p_public_message_author boolean,
+    p_message_author text,
+    p_message text,
+    p_address text,
+    p_postcode text,
+    p_city text,
+    p_country text,
+    p_birthday date,
+    p_emailed emailed_status
 ) to writer;
 
 --------------------------------------
@@ -3004,6 +3007,8 @@ begin
         p_method => v_old_donation.method,
         p_tax_deductible => v_old_donation.tax_deductible,
         p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_public_message_author => v_old_donation.public_message_author,
+        p_message_author => v_old_donation.message_author,
         p_message => v_old_donation.message,
         p_earmarks => coalesce(p_earmarks, v_old_earmarks),
         p_email => v_donor.email,
@@ -3061,6 +3066,8 @@ begin
         p_method => 'Credit card'::payment_method,
         p_tax_deductible => v_old_donation.tax_deductible,
         p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_public_message_author => v_old_donation.public_message_author,
+        p_message_author => v_old_donation.message_author,
         p_message => v_old_donation.message,
         p_earmarks => v_old_earmarks,
         p_email => v_donor.email,

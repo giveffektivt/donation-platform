@@ -59,6 +59,8 @@ export async function registerDonationViaQuickpay(
     method: PaymentMethod;
     taxDeductible: boolean;
     fundraiserId?: string;
+    publicMessageAuthor?: boolean;
+    messageAuthor?: string;
     message?: string;
     earmarks: { recipient: DonationRecipient; percentage: number }[];
     email: string;
@@ -74,10 +76,12 @@ export async function registerDonationViaQuickpay(
         p_method => $4,
         p_tax_deductible => $5,
         p_fundraiser_id => $6,
-        p_message => $7,
-        p_earmarks => $8,
-        p_email => $9,
-        p_tin => $10
+        p_public_message_author => $7,
+        p_message_author => $8,
+        p_message => $9,
+        p_earmarks => $10,
+        p_email => $11,
+        p_tin => $12
       )`,
       [
         data.amount,
@@ -86,6 +90,8 @@ export async function registerDonationViaQuickpay(
         data.method,
         data.taxDeductible,
         data.fundraiserId,
+        data.publicMessageAuthor,
+        data.messageAuthor,
         data.message,
         JSON.stringify(data.earmarks),
         data.email,
@@ -116,17 +122,15 @@ export async function registerMembershipViaQuickpay(
         p_gateway => $3,
         p_method => $4,
         p_tax_deductible => $5,
-        p_fundraiser_id => $6,
-        p_message => $7,
-        p_earmarks => $8,
-        p_email => $9,
-        p_tin => $10,
-        p_name => $11,
-        p_address => $12,
-        p_postcode => $13,
-        p_city => $14,
-        p_country => $15,
-        p_birthday => $16
+        p_earmarks => $6,
+        p_email => $7,
+        p_tin => $8,
+        p_name => $9,
+        p_address => $10,
+        p_postcode => $11,
+        p_city => $12,
+        p_country => $13,
+        p_birthday => $14
       )`,
       [
         50,
@@ -134,8 +138,6 @@ export async function registerMembershipViaQuickpay(
         PaymentGateway.Quickpay,
         PaymentMethod.CreditCard,
         false,
-        null,
-        null,
         JSON.stringify([
           {
             recipient: DonationRecipient.GivEffektivtsMedlemskab,
@@ -162,6 +164,8 @@ export async function registerDonationViaBankTransfer(
     frequency: DonationFrequency;
     taxDeductible: boolean;
     fundraiserId?: string;
+    publicMessageAuthor?: boolean;
+    messageAuthor?: string;
     message?: string;
     earmarks: { recipient: DonationRecipient; percentage: number }[];
     email: string;
@@ -177,10 +181,12 @@ export async function registerDonationViaBankTransfer(
         p_method => $4,
         p_tax_deductible => $5,
         p_fundraiser_id => $6,
-        p_message => $7,
-        p_earmarks => $8,
-        p_email => $9,
-        p_tin => $10
+        p_public_message_author => $7,
+        p_message_author => $8,
+        p_message => $9,
+        p_earmarks => $10,
+        p_email => $11,
+        p_tin => $12
       )`,
       [
         data.amount,
@@ -189,6 +195,8 @@ export async function registerDonationViaBankTransfer(
         PaymentMethod.BankTransfer,
         data.taxDeductible,
         data.fundraiserId,
+        data.publicMessageAuthor,
+        data.messageAuthor,
         data.message,
         JSON.stringify(data.earmarks),
         data.email,
@@ -320,7 +328,7 @@ with
             f.*,
             row_number() over (
                 order by
-                    f.created_at
+                    f.created_at, id
             ) as seq
         from
             fundraiser f
@@ -371,7 +379,7 @@ with
             f.*,
             row_number() over (
                 order by
-                    f.created_at
+                    f.created_at, id
             ) as seq
         from
             fundraiser f
@@ -413,7 +421,7 @@ from
                     'id',
                     d.id,
                     'name',
-                    dn.name,
+                    case when d.public_message_author then d.message_author else null end,
                     'message',
                     d.message,
                     'amount',
@@ -428,7 +436,6 @@ from
             donation d
             join charge c on c.donation_id = d.id
             and c.status = 'charged'
-            left join donor dn on dn.id = d.donor_id
         where
             d.fundraiser_id = target.id
     ) tx on true;
@@ -436,4 +443,21 @@ from
       [id],
     )
   ).rows[0].result;
+}
+
+export async function getFundraiserIdBySeq(
+  client: PoolClient,
+  seq: number,
+): Promise<string> {
+  return (
+    await client.query(
+      ` select id
+        from fundraiser
+        order by created_at, id
+        offset $1 - 1
+        limit 1;
+      `,
+      [seq],
+    )
+  ).rows[0]?.id;
 }

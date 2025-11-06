@@ -155,7 +155,9 @@ CREATE TABLE giveffektivt.donation (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     fundraiser_id uuid,
-    message text
+    message text,
+    public_message_author boolean DEFAULT false NOT NULL,
+    message_author text
 );
 
 
@@ -206,6 +208,8 @@ begin
         p_method => v_old_donation.method,
         p_tax_deductible => v_old_donation.tax_deductible,
         p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_public_message_author => v_old_donation.public_message_author,
+        p_message_author => v_old_donation.message_author,
         p_message => v_old_donation.message,
         p_earmarks => coalesce(p_earmarks, v_old_earmarks),
         p_email => v_donor.email,
@@ -485,6 +489,8 @@ begin
         p_method => 'Credit card'::payment_method,
         p_tax_deductible => v_old_donation.tax_deductible,
         p_fundraiser_id => v_old_donation.fundraiser_id,
+        p_public_message_author => v_old_donation.public_message_author,
+        p_message_author => v_old_donation.message_author,
         p_message => v_old_donation.message,
         p_earmarks => v_old_earmarks,
         p_email => v_donor.email,
@@ -504,10 +510,10 @@ $$;
 
 
 --
--- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, uuid, text, jsonb, text, text, text, text, text, text, text, date, giveffektivt.emailed_status); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, jsonb, text, text, text, uuid, boolean, text, text, text, text, text, text, date, giveffektivt.emailed_status); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_fundraiser_id uuid, p_message text, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date, p_emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status) RETURNS giveffektivt.donation
+CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_fundraiser_id uuid DEFAULT NULL::uuid, p_public_message_author boolean DEFAULT NULL::boolean, p_message_author text DEFAULT NULL::text, p_message text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date, p_emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status) RETURNS giveffektivt.donation
     LANGUAGE plpgsql
     AS $$
 declare
@@ -586,7 +592,7 @@ begin
         birthday = coalesce(excluded.birthday, donor.birthday)
     returning * into v_donor;
 
-    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, message, gateway_metadata, emailed)
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, public_message_author, message_author, message, gateway_metadata, emailed)
     values (
         v_donor.id,
         p_amount,
@@ -595,6 +601,8 @@ begin
         p_method,
         p_tax_deductible,
         p_fundraiser_id,
+        coalesce(p_public_message_author, false),
+        p_message_author,
         p_message,
         v_gateway_metadata,
         p_emailed
@@ -3746,4 +3754,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250823163447'),
     ('20250823202042'),
     ('20251027105347'),
+    ('20251106222252'),
     ('99999999999999');
