@@ -461,3 +461,22 @@ export async function getFundraiserIdBySeq(
     )
   ).rows[0]?.id;
 }
+
+export async function getFundraiserSeqById(
+  client: PoolClient,
+  id: string,
+): Promise<number | null> {
+  const res = await client.query(
+    `
+    with ordered as (
+      select id, row_number() over (order by created_at, id) as seq
+      from fundraiser
+    )
+    select seq
+    from ordered
+    where id = $1;
+    `,
+    [id],
+  );
+  return res.rows[0]?.seq ?? null;
+}
