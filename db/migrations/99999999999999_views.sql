@@ -2265,6 +2265,13 @@ with
         from
             members
     ),
+    member_emails_including_past as (
+        select distinct
+            on (email) email,
+            name
+        from
+            charged_memberships_internal
+    ),
     donations as (
         select
             email,
@@ -2443,6 +2450,7 @@ with
             f.first_donation_at,
             f.first_monthly_donation_at,
             m.email is not null as is_member,
+            p.email is not null as is_past_member,
             g.email is not null as has_gavebrev,
             i.vitamin_a_amount,
             i.vitamin_a_units,
@@ -2468,6 +2476,7 @@ with
             left join donations d on d.email = e.email
             left join tax_deductible_donations t on t.email = e.email
             left join member_emails m on m.email = e.email
+            left join member_emails_including_past p on p.email = e.email
             left join latest_donations l on l.email = e.email
             left join first_donations f on f.email = e.email
             left join has_gavebrev g on g.email = e.email
@@ -2484,6 +2493,7 @@ where
     and (
         total_donated > 0
         or is_member
+        or is_past_member
         or has_gavebrev
     );
 

@@ -1730,6 +1730,10 @@ CREATE VIEW giveffektivt.crm_export AS
          SELECT DISTINCT ON (members.email) members.email,
             members.name
            FROM members
+        ), member_emails_including_past AS (
+         SELECT DISTINCT ON (charged_memberships_internal.email) charged_memberships_internal.email,
+            charged_memberships_internal.name
+           FROM giveffektivt.charged_memberships_internal
         ), donations AS (
          SELECT charged_donations_internal.email,
             sum(charged_donations_internal.amount) AS total_donated,
@@ -1879,6 +1883,7 @@ CREATE VIEW giveffektivt.crm_export AS
             f.first_donation_at,
             f.first_monthly_donation_at,
             (m.email IS NOT NULL) AS is_member,
+            (p.email IS NOT NULL) AS is_past_member,
             (g.email IS NOT NULL) AS has_gavebrev,
             i.vitamin_a_amount,
             i.vitamin_a_units,
@@ -1897,12 +1902,13 @@ CREATE VIEW giveffektivt.crm_export AS
             r.expired_donation_at,
             r.expired_membership_id,
             r.expired_membership_at
-           FROM (((((((((((emails e
+           FROM ((((((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
              LEFT JOIN tax_deductible_donations t ON ((t.email = e.email)))
              LEFT JOIN member_emails m ON ((m.email = e.email)))
+             LEFT JOIN member_emails_including_past p ON ((p.email = e.email)))
              LEFT JOIN latest_donations l ON ((l.email = e.email)))
              LEFT JOIN first_donations f ON ((f.email = e.email)))
              LEFT JOIN has_gavebrev g ON ((g.email = e.email)))
@@ -1929,6 +1935,7 @@ CREATE VIEW giveffektivt.crm_export AS
     first_donation_at,
     first_monthly_donation_at,
     is_member,
+    is_past_member,
     has_gavebrev,
     vitamin_a_amount,
     vitamin_a_units,
@@ -1948,7 +1955,7 @@ CREATE VIEW giveffektivt.crm_export AS
     expired_membership_id,
     expired_membership_at
    FROM data
-  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR has_gavebrev));
+  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR is_past_member OR has_gavebrev));
 
 
 --
