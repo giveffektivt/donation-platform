@@ -2916,7 +2916,7 @@ begin
     end if;
 
     insert into donor(email, tin, name, address, postcode, city, country, birthday)
-    values (p_email, p_tin, p_name, p_address, p_postcode, p_city, p_country, p_birthday)
+    values (lower(trim(p_email)), p_tin, p_name, p_address, p_postcode, p_city, p_country, p_birthday)
     on conflict (email, coalesce(tin,'')) do update
     set
         name     = coalesce(excluded.name, donor.name),
@@ -3114,7 +3114,7 @@ declare
     v_gavebrev gavebrev%rowtype;
 begin
     insert into donor(email, tin, name)
-    values (p_email, p_tin, p_name)
+    values (lower(trim(p_email)), p_tin, p_name)
     on conflict (email, coalesce(tin,'')) do update
     set name = coalesce(excluded.name, donor.name)
     returning * into v_donor;

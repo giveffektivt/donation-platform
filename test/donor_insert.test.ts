@@ -178,3 +178,32 @@ test("Insert donor same email same tin enriches same record with new info", asyn
     },
   ]);
 });
+
+test("Insert donor lowercases and trims email", async () => {
+  const db = await client;
+
+  await registerDonationViaQuickpay(db, {
+    email: "  Hello@example.com   ",
+    amount: 300,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    taxDeductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
+    ],
+  });
+
+  expect(await findAllDonors(db)).toMatchObject([
+    {
+      address: null,
+      birthday: null,
+      city: null,
+      country: null,
+      email: "hello@example.com",
+      name: null,
+      postcode: null,
+      tin: null,
+    },
+  ]);
+});
