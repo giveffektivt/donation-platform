@@ -69,6 +69,7 @@ export async function scanpayChargeSubscription(
       err?.message?.includes("clearhaus rule violation") ||
       err?.message?.includes("card expired") ||
       err?.message?.includes("card restricted") ||
+      err?.message?.includes("card not found") ||
       err?.message?.includes("card lost or stolen")
     ) {
       isCardExpired = true;

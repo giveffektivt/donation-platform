@@ -73,6 +73,7 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
         "clearhaus rule violation",
         "card expired",
         "card lost or stolen",
+        "card not found",
         "user action required",
         "rejected user_action_required",
       ].includes((msg ?? "").toLocaleLowerCase());
