@@ -480,3 +480,59 @@ export async function getFundraiserSeqById(
   );
   return res.rows[0]?.seq ?? null;
 }
+
+export async function getFundraiserSumsBySeq(
+  client: PoolClient,
+  seqs: number[],
+) {
+  return (
+    await client.query(
+      `
+with
+    ff as (
+        select
+            f.id,
+            row_number() over (
+                order by
+                    f.created_at, f.id
+            ) as seq
+        from
+            fundraiser f
+    ),
+    target_fundraisers as (
+        select
+            id,
+            seq
+        from
+            ff
+        where
+            seq = any($1)
+    )
+select
+    jsonb_agg(
+        jsonb_build_object(
+            'fundraiserId',
+            tf.seq,
+            'sum',
+            coalesce(t.total_sum, 0)
+        )
+        order by
+            tf.seq
+    ) as result
+from
+    target_fundraisers tf
+    left join lateral (
+        select
+            coalesce(sum(d.amount), 0)::numeric as total_sum
+        from
+            donation d
+            join charge c on c.donation_id = d.id
+            and c.status = 'charged'
+        where
+            d.fundraiser_id = tf.id
+    ) t on true;
+      `,
+      [seqs],
+    )
+  ).rows[0].result;
+}
