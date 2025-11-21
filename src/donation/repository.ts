@@ -322,36 +322,25 @@ export async function getFundraisers(client: PoolClient) {
   return (
     await client.query(
       `
-with
-    ff as (
-        select
-            f.*,
-            row_number() over (
-                order by
-                    f.created_at, id
-            ) as seq
-        from
-            fundraiser f
-    )
 select
     jsonb_agg(
         jsonb_build_object(
             'id',
-            ff.seq,
+            f.id,
             'registered',
-            to_char(ff.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+            to_char(f.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
             'lastUpdated',
-            to_char(ff.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
+            to_char(f.updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
             'donor',
-            jsonb_build_object('id', ff.id, 'name', ff.title),
+            jsonb_build_object('id', f.id, 'name', f.title),
             'statistics',
             jsonb_build_object('totalSum', s.total_sum, 'donationCount', s.donation_count, 'averageDonation', s.avg_donation)
         )
         order by
-            ff.created_at
+            f.created_at
     ) as result
 from
-    ff
+    fundraiser f
     left join lateral (
         select
             coalesce(sum(d.amount), 0)::numeric as total_sum,
@@ -362,7 +351,7 @@ from
             join charge c on c.donation_id = d.id
             and c.status = 'charged'
         where
-            d.fundraiser_id = ff.id
+            d.fundraiser_id = f.id
     ) s on true;
       `,
     )
@@ -373,25 +362,6 @@ export async function getFundraiserNew(client: PoolClient, id: string) {
   return (
     await client.query(
       `
-with
-    ff as (
-        select
-            f.*,
-            row_number() over (
-                order by
-                    f.created_at, id
-            ) as seq
-        from
-            fundraiser f
-    ),
-    target as (
-        select
-            id
-        from
-            ff
-        where
-            seq = $1
-    )
 select
     jsonb_build_object(
         'totalSum',
@@ -402,8 +372,7 @@ select
         coalesce(tx.transactions, '[]'::jsonb)
     ) as result
 from
-    target
-    left join lateral (
+    (
         select
             coalesce(sum(d.amount), 0)::numeric as total_sum,
             coalesce(count(*), 0)::int as donation_count
@@ -412,22 +381,25 @@ from
             join charge c on c.donation_id = d.id
             and c.status = 'charged'
         where
-            d.fundraiser_id = target.id
-    ) t on true
-    left join lateral (
+            d.fundraiser_id = $1
+    ) t
+    cross join (
         select
             jsonb_agg(
                 jsonb_build_object(
                     'id',
                     d.id,
                     'name',
-                    case when d.public_message_author then d.message_author else null end,
+                    case
+                        when d.public_message_author then d.message_author
+                        else null
+                    end,
                     'message',
                     d.message,
                     'amount',
                     d.amount,
                     'date',
-                    to_char(d.created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+                    to_char(d.created_at AT time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
                 )
                 order by
                     d.created_at desc
@@ -437,8 +409,8 @@ from
             join charge c on c.donation_id = d.id
             and c.status = 'charged'
         where
-            d.fundraiser_id = target.id
-    ) tx on true;
+            d.fundraiser_id = $1
+    ) tx;
       `,
       [id],
     )
@@ -483,44 +455,15 @@ export async function getFundraiserSeqById(
 
 export async function getFundraiserSumsBySeq(
   client: PoolClient,
-  seqs: number[],
+  ids: string[],
 ) {
   return (
     await client.query(
       `
-with
-    ff as (
-        select
-            f.id,
-            row_number() over (
-                order by
-                    f.created_at, f.id
-            ) as seq
-        from
-            fundraiser f
-    ),
-    target_fundraisers as (
-        select
-            id,
-            seq
-        from
-            ff
-        where
-            seq = any($1)
-    )
 select
-    jsonb_agg(
-        jsonb_build_object(
-            'fundraiserId',
-            tf.seq,
-            'sum',
-            coalesce(t.total_sum, 0)
-        )
-        order by
-            tf.seq
-    ) as result
+    jsonb_agg(jsonb_build_object('fundraiserId', f.id, 'sum', coalesce(t.total_sum, 0))) as result
 from
-    target_fundraisers tf
+    fundraiser f
     left join lateral (
         select
             coalesce(sum(d.amount), 0)::numeric as total_sum
@@ -529,10 +472,12 @@ from
             join charge c on c.donation_id = d.id
             and c.status = 'charged'
         where
-            d.fundraiser_id = tf.id
-    ) t on true;
+            d.fundraiser_id = f.id
+    ) t on true
+where
+    f.id = any($1);
       `,
-      [seqs],
+      [ids],
     )
   ).rows[0].result;
 }

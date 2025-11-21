@@ -4,9 +4,7 @@ import { dbClient, dbRelease, getFundraiserSumsBySeq, logError } from "src";
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
-  const ids = (params.get("ids") ?? "")
-    .split(",")
-    .map((x) => Number.parseInt(x, 10));
+  const ids = (params.get("ids") ?? "").split(",");
 
   let db = null;
 
