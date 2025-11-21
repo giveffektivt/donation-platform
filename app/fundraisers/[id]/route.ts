@@ -6,6 +6,18 @@ export async function GET(
 ) {
   const id = (await params).id;
 
+  if (!id.toString().includes("-")) {
+    // silently ignore old non-uuid fundraisers
+    return Response.json({
+      status: 200,
+      content: {
+        totalSum: 0,
+        transactions: [],
+        donationCount: 0,
+      },
+    });
+  }
+
   let db = null;
 
   try {
