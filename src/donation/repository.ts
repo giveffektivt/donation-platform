@@ -417,46 +417,7 @@ from
   ).rows[0].result;
 }
 
-export async function getFundraiserIdBySeq(
-  client: PoolClient,
-  seq: number,
-): Promise<string> {
-  return (
-    await client.query(
-      ` select id
-        from fundraiser
-        order by created_at, id
-        offset $1 - 1
-        limit 1;
-      `,
-      [seq],
-    )
-  ).rows[0]?.id;
-}
-
-export async function getFundraiserSeqById(
-  client: PoolClient,
-  id: string,
-): Promise<number | null> {
-  const res = await client.query(
-    `
-    with ordered as (
-      select id, row_number() over (order by created_at, id) as seq
-      from fundraiser
-    )
-    select seq
-    from ordered
-    where id = $1;
-    `,
-    [id],
-  );
-  return res.rows[0]?.seq ?? null;
-}
-
-export async function getFundraiserSumsBySeq(
-  client: PoolClient,
-  ids: string[],
-) {
+export async function getFundraiserSums(client: PoolClient, ids: string[]) {
   return (
     await client.query(
       `
