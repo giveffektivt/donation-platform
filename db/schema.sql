@@ -687,7 +687,8 @@ CREATE TABLE giveffektivt.charge (
     status giveffektivt.charge_status NOT NULL,
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    retry numeric DEFAULT 0 NOT NULL
 );
 
 
@@ -758,9 +759,11 @@ CREATE VIEW giveffektivt.donations_overview_internal AS
     d.gateway,
     d.gateway_metadata AS donation_gateway_metadata,
     d.tax_deductible,
+    d.fundraiser_id,
     c.id AS charge_id,
     c.short_id AS charge_short_id,
     c.status,
+    c.retry,
     c.gateway_metadata AS charge_gateway_metadata,
     c.created_at AS charged_at,
     d.created_at AS donation_created_at
@@ -788,9 +791,11 @@ CREATE VIEW giveffektivt.charged_donations_internal AS
     gateway,
     donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
     charge_gateway_metadata,
     charged_at,
     donation_created_at
@@ -862,9 +867,11 @@ CREATE VIEW giveffektivt.charged_memberships_internal AS
     gateway,
     donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
     charge_gateway_metadata,
     charged_at,
     donation_created_at
@@ -1417,9 +1424,11 @@ CREATE VIEW giveffektivt.donations_overview WITH (security_barrier='true') AS
             ELSE NULL::jsonb
         END AS donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
         CASE
             WHEN pg_has_role(CURRENT_USER, 'reader_sensitive'::name, 'member'::text) THEN charge_gateway_metadata
             ELSE NULL::jsonb
@@ -1447,9 +1456,11 @@ CREATE VIEW giveffektivt.charged_donations AS
     gateway,
     donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
     charge_gateway_metadata,
     charged_at,
     donation_created_at
@@ -1504,9 +1515,11 @@ CREATE VIEW giveffektivt.charged_memberships AS
     gateway,
     donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
     charge_gateway_metadata,
     charged_at,
     donation_created_at
@@ -1534,9 +1547,11 @@ CREATE VIEW giveffektivt.charged_or_created_donations AS
     gateway,
     donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
     charge_gateway_metadata,
     charged_at,
     donation_created_at
@@ -1980,6 +1995,30 @@ CREATE VIEW giveffektivt.donations_to_create_charges AS
           WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])))
           ORDER BY d.id, c.created_at DESC) s
   WHERE (next_charge <= now());
+
+
+--
+-- Name: donations_to_create_retry_charges; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donations_to_create_retry_charges AS
+ WITH latest_charges AS (
+         SELECT DISTINCT ON (charge.donation_id) charge.id,
+            charge.donation_id,
+            charge.short_id,
+            charge.status,
+            charge.gateway_metadata,
+            charge.created_at,
+            charge.updated_at,
+            charge.retry
+           FROM giveffektivt.charge
+          ORDER BY charge.donation_id, charge.created_at DESC, charge.id DESC
+        )
+ SELECT lc.donation_id,
+    (lc.retry + (1)::numeric) AS retry
+   FROM (latest_charges lc
+     JOIN giveffektivt.donation d ON ((lc.donation_id = d.id)))
+  WHERE ((NOT d.cancelled) AND (d.frequency <> 'once'::giveffektivt.donation_frequency) AND (lc.status = 'error'::giveffektivt.charge_status) AND (lc.retry < (2)::numeric) AND (lc.updated_at <= (now() - '1 day'::interval)));
 
 
 --
@@ -3762,4 +3801,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20250823202042'),
     ('20251027105347'),
     ('20251106222252'),
+    ('20251112140137'),
     ('99999999999999');

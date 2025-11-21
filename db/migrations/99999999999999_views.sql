@@ -23,6 +23,7 @@ crm_export,
 donations_overview,
 donations_overview_internal,
 donations_to_create_charges,
+donations_to_create_retry_charges,
 donations_to_email,
 donor_impact_report,
 failed_recurring_donations,
@@ -76,9 +77,11 @@ select
     d.gateway,
     d.gateway_metadata as donation_gateway_metadata,
     d.tax_deductible,
+    d.fundraiser_id,
     c.id as charge_id,
     c.short_id as charge_short_id,
     c.status,
+    c.retry,
     c.gateway_metadata as charge_gateway_metadata,
     c.created_at as charged_at,
     d.created_at as donation_created_at
@@ -118,9 +121,11 @@ select
         else null
     end as donation_gateway_metadata,
     tax_deductible,
+    fundraiser_id,
     charge_id,
     charge_short_id,
     status,
+    retry,
     case
         when pg_has_role(current_user, 'reader_sensitive', 'member') then charge_gateway_metadata
         else null
@@ -326,6 +331,43 @@ select
         'create-charges',
         '0 * * * *',
         'insert into charge(donation_id, created_at, status) select donation_id, next_charge, ''created'' from donations_to_create_charges'
+    );
+
+--------------------------------------
+create view donations_to_create_retry_charges as
+with
+    latest_charges as (
+        select distinct
+            on (donation_id) *
+        from
+            charge
+        order by
+            donation_id,
+            created_at desc,
+            id desc
+    )
+select
+    lc.donation_id,
+    lc.retry + 1 as retry
+from
+    latest_charges lc
+    inner join donation d on lc.donation_id = d.id
+where
+    not d.cancelled
+    and d.frequency != 'once'
+    and lc.status = 'error'
+    and lc.retry < 2
+    and lc.updated_at <= now() - interval '1 day';
+
+grant
+select
+    on donations_to_create_retry_charges to reader_sensitive;
+
+select
+    cron.schedule (
+        'create-retry-charges',
+        '0 * * * *',
+        'insert into charge(donation_id, created_at, status, retry) select donation_id, now(), ''created'', retry from donations_to_create_retry_charges'
     );
 
 --------------------------------------

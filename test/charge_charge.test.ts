@@ -1,4 +1,4 @@
-import { addDays, setDate, subMonths, subYears } from "date-fns";
+import { addDays, setDate, subDays, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
   DonationFrequency,
@@ -305,4 +305,40 @@ test("Charges with created_at in the future should not be charged yet", async ()
   });
 
   expect(await getChargesToCharge(db)).toMatchObject([]);
+});
+
+test("Retry charge should be charged even if original charge failed", async () => {
+  const db = await client;
+
+  const donation = await registerDonationViaQuickpay(db, {
+    email: "hello@example.com",
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    taxDeductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subDays(new Date(), 2)),
+    donation_id: donation.id,
+    status: ChargeStatus.Error,
+  });
+
+  const retry = await insertChargeWithCreatedAt(db, {
+    created_at: utc(subDays(new Date(), 1)),
+    donation_id: donation.id,
+    status: ChargeStatus.Created,
+  });
+
+  expect(await getChargesToCharge(db)).toMatchObject([
+    {
+      id: retry.id,
+      amount: 100,
+      email: "hello@example.com",
+    },
+  ]);
 });
