@@ -16,7 +16,6 @@ import {
   registerDonationViaQuickpay,
   registerMembershipViaQuickpay,
   setDonationQuickpayId,
-  getFundraiserSeqById,
 } from "src";
 
 export async function processQuickpayDonation(
@@ -144,9 +143,7 @@ async function generateRedirectUrl(
   isMembership: boolean,
 ): Promise<string> {
   const successUrl = donation.fundraiser_id
-    ? `${process.env.HOMEPAGE_URL}/api/fundraiser/redirect?fundraiserId=${await dbExecuteInTransaction(
-        async (db) => await getFundraiserSeqById(db, donation.fundraiser_id),
-      )}&secret=${process.env.REVALIDATE_TOKEN}`
+    ? `${process.env.HOMEPAGE_URL}/api/fundraiser/redirect?fundraiserId=${donation.fundraiser_id}&secret=${process.env.REVALIDATE_TOKEN}`
     : isMembership
       ? process.env.SUCCESS_URL_MEMBERSHIP_ONLY
       : process.env.SUCCESS_URL;

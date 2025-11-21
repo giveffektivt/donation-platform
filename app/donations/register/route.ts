@@ -1,7 +1,5 @@
 import {
   DonationFrequency,
-  dbExecuteInTransaction,
-  getFundraiserIdBySeq,
   logError,
   mapFromNorwegianOrgId,
   mapFromNorwegianPaymentMethods,
@@ -56,14 +54,7 @@ const PayloadSchema = z
     }),
     fundraiser: z
       .object({
-        id: z
-          .number()
-          .transform(
-            async (seq) =>
-              await dbExecuteInTransaction(
-                async (db) => await getFundraiserIdBySeq(db, seq),
-              ),
-          ),
+        id: z.uuid(),
         message: z.preprocess(
           (val) => (!val ? undefined : val),
           z.string().max(500).optional(),

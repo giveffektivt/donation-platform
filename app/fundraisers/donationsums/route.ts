@@ -1,12 +1,10 @@
 import type { NextRequest } from "next/server";
-import { dbClient, dbRelease, getFundraiserSumsBySeq, logError } from "src";
+import { dbClient, dbRelease, getFundraiserSums, logError } from "src";
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
-  const ids = (params.get("ids") ?? "")
-    .split(",")
-    .map((x) => Number.parseInt(x, 10));
+  const ids = (params.get("ids") ?? "").split(",");
 
   let db = null;
 
@@ -14,7 +12,7 @@ export async function GET(request: NextRequest) {
     db = await dbClient();
     return Response.json({
       status: 200,
-      content: await getFundraiserSumsBySeq(db, ids),
+      content: await getFundraiserSums(db, ids),
     });
   } catch (err) {
     logError("fundraisers/donationsums:", err);
