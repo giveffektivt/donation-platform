@@ -127,3 +127,10 @@ export type Fundraiser = {
   created_at: Date;
   updated_at: Date;
 };
+
+export type Donor = {
+  id: string;
+  name: string;
+  tin: string | null;
+  created_at: Date;
+};

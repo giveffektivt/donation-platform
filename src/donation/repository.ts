@@ -5,6 +5,7 @@ import {
   type DonationToEmail,
   type DonationWithGatewayInfoBankTransfer,
   type DonationWithGatewayInfoQuickpay,
+  type Donor,
   type EmailedStatus,
   type FailedRecurringDonation,
   type Fundraiser,
@@ -441,4 +442,244 @@ where
       [ids],
     )
   ).rows[0].result;
+}
+
+export async function getDonorByEmail(
+  client: PoolClient,
+  email: string,
+): Promise<Donor> {
+  return (
+    await client.query(
+      `
+      select name, created_at
+      from donor
+      where email = $1
+      order by created_at
+      limit 1`,
+      [email],
+    )
+  ).rows[0];
+}
+
+export async function getDonorIdsByEmail(
+  client: PoolClient,
+  email: string,
+): Promise<Donor[]> {
+  return (
+    await client.query(
+      `
+      select id
+      from donor
+      where email = $1
+      order by created_at`,
+      [email],
+    )
+  ).rows;
+}
+
+export async function getDonorsDetailedByEmail(
+  client: PoolClient,
+  email: string,
+) {
+  return (
+    await client.query(
+      `
+      with donor_donations as (
+        select
+          donor_id,
+          name,
+          tin,
+          donation_created_at as created_at,
+          donation_id,
+          amount,
+          tax_deductible,
+          charged_at,
+          extract(year from charged_at) as donation_year
+        from charged_donations
+        where email = $1
+      ),
+      donor_stats as (
+        select
+          donor_id,
+          name,
+          tin,
+          min(created_at) as created_at,
+          coalesce(sum(amount), 0) as sum_donations,
+          count(donation_id) as num_donations
+        from donor_donations
+        group by donor_id, name, tin
+      ),
+      combined_tax_data as (
+        select
+          donor_cpr,
+          year,
+          ll8a_or_gavebrev,
+          total,
+          now() as created_at
+        from annual_tax_report
+        union all
+        select
+          donor_cpr,
+          year,
+          ll8a_or_gavebrev,
+          total,
+          created_at
+        from skat
+      ),
+      latest_skat as (
+        select distinct on (donor_cpr, year, ll8a_or_gavebrev)
+          donor_cpr,
+          year,
+          ll8a_or_gavebrev,
+          total
+        from combined_tax_data
+        order by donor_cpr, year, ll8a_or_gavebrev, created_at desc
+      ),
+      skat_by_year as (
+        select
+          donor_cpr,
+          year,
+          max(case when ll8a_or_gavebrev = 'L' then total else 0 end) as l_total,
+          max(case when ll8a_or_gavebrev = 'A' then total else 0 end) as a_total
+        from latest_skat
+        group by donor_cpr, year
+      ),
+      tax_deductions as (
+        select
+          dd.donor_id,
+          dd.donation_year as year,
+          sum(dd.amount) as sum_donations,
+          coalesce(
+            sb.l_total + least(sb.a_total, coalesce((select value from max_tax_deduction where year = dd.donation_year limit 1), 0)),
+            0
+          ) as deduction
+        from donor_donations dd
+        left join skat_by_year sb on
+          replace(dd.tin, '-', '') = sb.donor_cpr and
+          dd.donation_year = sb.year
+        where dd.donation_year is not null
+        group by dd.donor_id, dd.donation_year, sb.l_total, sb.a_total
+        order by dd.donation_year desc
+      )
+      select
+        ds.donor_id,
+        ds.name,
+        ds.tin,
+        ds.created_at,
+        ds.sum_donations,
+        ds.num_donations,
+        coalesce(
+          jsonb_agg(
+            jsonb_build_object(
+              'year', td.year,
+              'sumDonations', td.sum_donations,
+              'deduction', td.deduction,
+              'benefit', round((td.deduction * 0.26)::numeric, 2)
+            )
+            order by td.year desc
+          ) filter (where td.year is not null),
+          '[]'::jsonb
+        ) as tax_deductions
+      from donor_stats ds
+      left join tax_deductions td on ds.donor_id = td.donor_id
+      group by ds.donor_id, ds.name, ds.tin, ds.created_at, ds.sum_donations, ds.num_donations
+      order by ds.created_at
+      `,
+      [email],
+    )
+  ).rows;
+}
+
+export async function getAggregatedDonationsByEmail(
+  client: PoolClient,
+  email: string,
+) {
+  return (
+    await client.query(
+      `
+      select earmark, sum(amount) as total, extract(year from charged_at) as year
+      from charged_donations_by_transfer
+      where email = $1
+      group by earmark, extract(year from charged_at)
+      `,
+      [email],
+    )
+  ).rows;
+}
+
+export async function getDonationsByEmail(client: PoolClient, email: string) {
+  return (
+    await client.query(
+      `
+      select *
+      from charged_donations_by_transfer
+      where email = $1
+      `,
+      [email],
+    )
+  ).rows;
+}
+
+export async function getRecurringDonationsByEmail(
+  client: PoolClient,
+  email: string,
+) {
+  return (
+    await client.query(
+      `
+      select
+        d.*,
+        coalesce(extract(day from c.created_at)::int, 0) as monthly_charge_day
+      from donation d
+      join donor p on p.id = d.donor_id
+      left join lateral (
+        select ch.created_at
+        from charge ch
+        where ch.donation_id = d.id
+        order by ch.created_at desc
+        limit 1
+      ) c on true
+      where p.email = $1 and d.frequency <> 'once';
+      `,
+      [email],
+    )
+  ).rows;
+}
+
+export async function getDonationDistributions(
+  client: PoolClient,
+  email: string,
+  ids: string[],
+) {
+  return (
+    await client.query(
+      `
+      select
+          d.id,
+          d.donor_id,
+          coalesce(
+              (
+                  select
+                      jsonb_agg(
+                          jsonb_build_object('recipient', e.recipient, 'percentage', e.percentage)
+                          order by
+                              e.percentage desc
+                      )
+                  from
+                      earmark e
+                  where
+                      e.donation_id = d.id
+              ),
+              '[]'::jsonb
+          ) as earmarks
+      from
+          donation d
+          join donor p on p.id = d.donor_id
+      where
+          p.email = $1
+          and d.id = any ($2);
+      `,
+      [email, ids],
+    )
+  ).rows;
 }

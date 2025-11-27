@@ -42,6 +42,11 @@ export const norwegianOrgs = [
       "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 10x mere i donationer til vores anbefalede velgørenhedsformål.",
     infoUrl: "https://giveffektivt.dk",
   },
+  // {
+  //   name: DonationRecipient.GivEffektivtsMedlemskab,
+  //   description: "Medlemskab!",
+  //   infoUrl: "https://giveffektivt.dk",
+  // },
 ];
 
 export const mapFromNorwegianPaymentMethods = (method: number) => {
@@ -70,20 +75,46 @@ export const mapFromNorwegianOrgId = (id: number): DonationRecipient => {
   return norwegianOrgs[id - 1].name as DonationRecipient;
 };
 
+export const mapToNorwegianOrgId = (recipient: string): number => {
+  if (recipient === "Giv Effektivts anbefaling") {
+    return 1;
+  }
+  if (recipient === "Stor og velkendt effekt") {
+    return 1;
+  }
+  // TODO temp
+  if (recipient === "Giv Effektivts medlemskab") {
+    return 99;
+  }
+  for (let i = 0; i < norwegianOrgs.length; i++) {
+    if (norwegianOrgs[i].name === recipient) {
+      return i + 1;
+    }
+  }
+  throw new Error(`Unknown organization ${recipient}`);
+};
+
+export const enumerateIds = (data: object[]) =>
+  data.map((item, idx) => ({
+    id: idx + 1,
+    ...item,
+  }));
+
 export const buildOrganizations = (
   orgs: { name: string; description: string; infoUrl: string }[],
 ) =>
-  orgs.map((org, idx) => ({
-    id: idx + 1,
-    name: org.name,
-    widgetDisplayName: org.name,
-    widgetContext: null,
-    abbreviation: org.name,
-    shortDescription: org.description,
-    longDescription: org.name,
-    standardShare: idx === 0 ? 100 : 0,
-    informationUrl: org.infoUrl,
-    isActive: true,
-    ordering: idx + 1,
-    causeAreaId: 1,
-  }));
+  enumerateIds(
+    orgs.map((org, idx) => ({
+      name: org.name,
+      widgetDisplayName: org.name,
+      widgetContext: null,
+      abbreviation: org.name,
+      shortDescription: org.description,
+      longDescription: org.name,
+      standardShare: idx === 0 ? 100 : 0,
+      informationUrl: org.infoUrl,
+      isActive: true,
+      ordering: idx + 1,
+      causeAreaId: 1,
+    })),
+  );
