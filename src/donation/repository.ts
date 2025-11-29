@@ -10,6 +10,7 @@ import {
   type Fundraiser,
   PaymentGateway,
   PaymentMethod,
+  Donor,
 } from "src";
 
 export async function getDonationsToEmail(
@@ -441,4 +442,21 @@ where
       [ids],
     )
   ).rows[0].result;
+}
+
+export async function getDonorByEmail(
+  client: PoolClient,
+  email: string,
+): Promise<Donor> {
+  return (
+    await client.query(
+      `
+      select name, created_at
+      from donor
+      where email = $1
+      order by created_at
+      limit 1`,
+      [email],
+    )
+  ).rows[0];
 }
