@@ -30,6 +30,7 @@ declare global {
       BREVO_API_URL: string;
       BREVO_API_KEY: string;
       CLEARHAUS_MERCHANT_ID: string;
+      AUTH0_EMAIL_CLAIM: string;
     }
   }
 }
