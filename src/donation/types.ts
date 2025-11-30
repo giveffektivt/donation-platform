@@ -130,5 +130,6 @@ export type Fundraiser = {
 
 export type Donor = {
   name: string;
+  tin: string | null;
   created_at: Date;
 };

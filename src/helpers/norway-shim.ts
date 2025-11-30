@@ -70,20 +70,27 @@ export const mapFromNorwegianOrgId = (id: number): DonationRecipient => {
   return norwegianOrgs[id - 1].name as DonationRecipient;
 };
 
+export const enumerateIds = (data: object[]) =>
+  data.map((item, idx) => ({
+    id: idx + 1,
+    ...item,
+  }));
+
 export const buildOrganizations = (
   orgs: { name: string; description: string; infoUrl: string }[],
 ) =>
-  orgs.map((org, idx) => ({
-    id: idx + 1,
-    name: org.name,
-    widgetDisplayName: org.name,
-    widgetContext: null,
-    abbreviation: org.name,
-    shortDescription: org.description,
-    longDescription: org.name,
-    standardShare: idx === 0 ? 100 : 0,
-    informationUrl: org.infoUrl,
-    isActive: true,
-    ordering: idx + 1,
-    causeAreaId: 1,
-  }));
+  enumerateIds(
+    orgs.map((org, idx) => ({
+      name: org.name,
+      widgetDisplayName: org.name,
+      widgetContext: null,
+      abbreviation: org.name,
+      shortDescription: org.description,
+      longDescription: org.name,
+      standardShare: idx === 0 ? 100 : 0,
+      informationUrl: org.infoUrl,
+      isActive: true,
+      ordering: idx + 1,
+      causeAreaId: 1,
+    })),
+  );
