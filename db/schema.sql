@@ -1592,6 +1592,90 @@ CREATE TABLE giveffektivt.clearhaus_settlement (
 
 
 --
+-- Name: fundraiser; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.fundraiser (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email text NOT NULL,
+    title text NOT NULL,
+    key uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    has_match boolean DEFAULT false NOT NULL,
+    match_currency text
+);
+
+
+--
+-- Name: survey; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.survey (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email text NOT NULL,
+    donor_id uuid,
+    how_discovered text,
+    who_recommended text,
+    search_terms text,
+    how_discovered_through_ea text,
+    social_media text,
+    media_article_podcast_radio text,
+    why_donate text,
+    alternative_use_of_money text,
+    improvement_suggestions text,
+    may_contact boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: donor_acquisition; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.donor_acquisition AS
+ WITH donation_ep AS (
+         SELECT DISTINCT ON (d.email) d.email,
+            dn.created_at,
+            (('Indsamling ('::text || f.title) || ')'::text) AS acquisition
+           FROM ((giveffektivt.donation dn
+             JOIN giveffektivt.donor d ON ((d.id = dn.donor_id)))
+             JOIN giveffektivt.fundraiser f ON ((f.id = dn.fundraiser_id)))
+          WHERE (dn.fundraiser_id IS NOT NULL)
+          ORDER BY d.email, dn.created_at
+        ), survey_ep AS (
+         SELECT DISTINCT ON (s.email) s.email,
+            s.created_at,
+            (s.how_discovered || COALESCE(((' ('::text || NULLIF(array_to_string(array_remove(ARRAY[s.who_recommended, s.search_terms, s.how_discovered_through_ea, s.social_media], NULL::text), ', '::text), ''::text)) || ')'::text), ''::text)) AS acquisition
+           FROM giveffektivt.survey s
+          ORDER BY s.email, s.created_at
+        ), all_ep AS (
+         SELECT donation_ep.email,
+            donation_ep.created_at,
+            donation_ep.acquisition
+           FROM donation_ep
+        UNION ALL
+         SELECT survey_ep.email,
+            survey_ep.created_at,
+            survey_ep.acquisition
+           FROM survey_ep
+        ), ranked AS (
+         SELECT all_ep.email,
+            all_ep.acquisition,
+            all_ep.created_at,
+            row_number() OVER (PARTITION BY all_ep.email ORDER BY all_ep.created_at) AS rn
+           FROM all_ep
+        )
+ SELECT email,
+    acquisition,
+    created_at
+   FROM ranked
+  WHERE (rn = 1)
+  ORDER BY email;
+
+
+--
 -- Name: donor_impact_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1916,8 +2000,9 @@ CREATE VIEW giveffektivt.crm_export AS
             r.expired_donation_id,
             r.expired_donation_at,
             r.expired_membership_id,
-            r.expired_membership_at
-           FROM ((((((((((((emails e
+            r.expired_membership_at,
+            q.acquisition
+           FROM (((((((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
@@ -1930,6 +2015,7 @@ CREATE VIEW giveffektivt.crm_export AS
              LEFT JOIN impact i ON ((i.email = e.email)))
              LEFT JOIN renewals r ON ((r.email = e.email)))
              LEFT JOIN cvrs c ON ((c.email = e.email)))
+             LEFT JOIN giveffektivt.donor_acquisition q ON ((q.email = e.email)))
         )
  SELECT email,
     registered_at,
@@ -1968,7 +2054,8 @@ CREATE VIEW giveffektivt.crm_export AS
     expired_donation_id,
     expired_donation_at,
     expired_membership_id,
-    expired_membership_at
+    expired_membership_at,
+    acquisition
    FROM data
   WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR is_past_member OR has_gavebrev));
 
@@ -2118,22 +2205,6 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
           ORDER BY d.id, c.created_at DESC) s
   WHERE (status = 'error'::giveffektivt.charge_status)
   ORDER BY failed_at DESC;
-
-
---
--- Name: fundraiser; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.fundraiser (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    email text NOT NULL,
-    title text NOT NULL,
-    key uuid DEFAULT gen_random_uuid() NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    has_match boolean DEFAULT false NOT NULL,
-    match_currency text
-);
 
 
 --
@@ -3432,6 +3503,22 @@ ALTER TABLE ONLY giveffektivt.schema_migrations
 
 
 --
+-- Name: survey survey_email_created_at_key; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.survey
+    ADD CONSTRAINT survey_email_created_at_key UNIQUE (email, created_at);
+
+
+--
+-- Name: survey survey_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.survey
+    ADD CONSTRAINT survey_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: transfer transfer_id_earmark_uniq; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -3542,6 +3629,13 @@ CREATE TRIGGER skat_gaveskema_update_timestamp BEFORE UPDATE ON giveffektivt.ska
 --
 
 CREATE TRIGGER skat_update_timestamp BEFORE UPDATE ON giveffektivt.skat FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: survey survey_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER survey_update_timestamp BEFORE UPDATE ON giveffektivt.survey FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
@@ -3802,4 +3896,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20251027105347'),
     ('20251106222252'),
     ('20251112140137'),
+    ('20251208225104'),
     ('99999999999999');

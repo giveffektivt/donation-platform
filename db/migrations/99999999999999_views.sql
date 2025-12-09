@@ -25,6 +25,7 @@ donations_overview_internal,
 donations_to_create_charges,
 donations_to_create_retry_charges,
 donations_to_email,
+donor_acquisition,
 donor_impact_report,
 failed_recurring_donations,
 gavebrev_checkins_to_create,
@@ -2172,6 +2173,85 @@ select
     on kpi to everyone;
 
 --------------------------------------
+create view donor_acquisition as
+with
+    donation_ep as (
+        select distinct
+            on (d.email) d.email,
+            dn.created_at,
+            'Indsamling (' || f.title || ')' as acquisition
+        from
+            donation dn
+            join donor d on d.id = dn.donor_id
+            join fundraiser f on f.id = dn.fundraiser_id
+        where
+            dn.fundraiser_id is not null
+        order by
+            d.email,
+            dn.created_at
+    ),
+    survey_ep as (
+        select distinct
+            on (s.email) s.email,
+            s.created_at,
+            s.how_discovered || coalesce(
+                ' (' || nullif(
+                    array_to_string(array_remove(array[s.who_recommended, s.search_terms, s.how_discovered_through_ea, s.social_media], null), ', '),
+                    ''
+                ) || ')',
+                ''
+            ) as acquisition
+        from
+            survey s
+        order by
+            s.email,
+            s.created_at
+    ),
+    all_ep as (
+        select
+            email,
+            created_at,
+            acquisition
+        from
+            donation_ep
+        union all
+        select
+            email,
+            created_at,
+            acquisition
+        from
+            survey_ep
+    ),
+    ranked as (
+        select
+            email,
+            acquisition,
+            created_at,
+            row_number() over (
+                partition by
+                    email
+                order by
+                    created_at
+            ) as rn
+        from
+            all_ep
+    )
+select
+    email,
+    acquisition,
+    created_at
+from
+    ranked
+where
+    rn = 1
+order by
+    email;
+
+grant
+select
+    on donor_acquisition to reader_contact;
+
+--------------------------------------
 create view donor_impact_report as
 with
     data as (
@@ -2510,7 +2590,8 @@ with
             r.expired_donation_id,
             r.expired_donation_at,
             r.expired_membership_id,
-            r.expired_membership_at
+            r.expired_membership_at,
+            q.acquisition
         from
             emails e
             left join names n on n.email = e.email
@@ -2525,6 +2606,7 @@ with
             left join impact i on i.email = e.email
             left join renewals r on r.email = e.email
             left join cvrs c on c.email = e.email
+            left join donor_acquisition q on q.email = e.email
     )
 select
     *
