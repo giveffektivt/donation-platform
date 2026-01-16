@@ -10,7 +10,7 @@ export async function GET() {
     return Response.json({
       status: 200,
       content: {
-        totalDonationsToRecommendedOrgs: kpi.dkk_total - kpi.dkk_total_ops,
+        totalDonationsToRecommendedOrgs: kpi.dkk_total,
         numberOfDonors: kpi.number_of_donors,
         lastUpdated: new Date().toISOString(),
       },
