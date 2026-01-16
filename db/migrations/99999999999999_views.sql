@@ -1994,12 +1994,13 @@ with
     ),
     dkk_total_ops as (
         select
-            round(sum(amount))::numeric as dkk_total_ops
+            round(amount)::numeric as dkk_total_ops
         from
-            charged_donations_internal cd
-            join earmark e on e.donation_id = cd.donation_id
-        where
-            e.recipient = 'Giv Effektivts arbejde og vækst'
+            ops_budget
+        order by
+            created_at desc
+        limit
+            1
     ),
     dkk_pending_transfer as (
         select

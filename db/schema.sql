@@ -2099,7 +2099,7 @@ CREATE VIEW giveffektivt.donations_to_create_retry_charges AS
             charge.updated_at,
             charge.retry
            FROM giveffektivt.charge
-          ORDER BY charge.donation_id, charge.created_at DESC, charge.id DESC
+          ORDER BY charge.donation_id, charge.created_at DESC, charge.updated_at DESC, charge.id DESC
         )
  SELECT lc.donation_id,
     (lc.retry + (1)::numeric) AS retry
@@ -2280,6 +2280,18 @@ CREATE VIEW giveffektivt.gwwc_money_moved AS
 
 
 --
+-- Name: ops_budget; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.ops_budget (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    amount numeric NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: transfer_pending; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -2301,10 +2313,10 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT round(sum(charged_donations_internal.amount)) AS dkk_total
            FROM giveffektivt.charged_donations_internal
         ), dkk_total_ops AS (
-         SELECT round(sum(cd.amount)) AS dkk_total_ops
-           FROM (giveffektivt.charged_donations_internal cd
-             JOIN giveffektivt.earmark e ON ((e.donation_id = cd.donation_id)))
-          WHERE (e.recipient = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient)
+         SELECT round(ops_budget.amount) AS dkk_total_ops
+           FROM giveffektivt.ops_budget
+          ORDER BY ops_budget.created_at DESC
+         LIMIT 1
         ), dkk_pending_transfer AS (
          SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer
            FROM giveffektivt.transfer_pending
@@ -2909,7 +2921,7 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
                     COALESCE(a_2.frequency, b_2.frequency) AS frequency,
                     (sum(COALESCE(a_2.amount, (0)::numeric)) + sum(COALESCE(b_2.amount, (0)::numeric))) AS amount
                    FROM (started_donations a_2
-                     FULL JOIN stopped_monthly_donations b_2 ON (((a_2.email = b_2.email) AND (a_2.frequency = b_2.frequency) AND (date_trunc('month'::text, a_2.start_period) = date_trunc('month'::text, b_2.stop_period)))))
+                     FULL JOIN stopped_monthly_donations b_2 ON (((a_2.email = b_2.email) AND (a_2.frequency = b_2.frequency) AND ((date_trunc('month'::text, a_2.start_period) = date_trunc('month'::text, b_2.stop_period)) OR (date_trunc('month'::text, a_2.start_period) = date_trunc('month'::text, (b_2.stop_period - '1 mon'::interval)))))))
                   GROUP BY COALESCE(a_2.email, b_2.email), COALESCE(a_2.frequency, b_2.frequency), COALESCE(a_2.start_period, b_2.stop_period)) a_1
              JOIN buckets b_1 ON (((a_1.frequency = b_1.frequency) AND (abs(a_1.amount) > (b_1.start)::numeric) AND (abs(a_1.amount) <= (b_1.stop)::numeric))))
         ), value_added_lost AS (
@@ -3319,7 +3331,7 @@ CREATE VIEW giveffektivt.value_lost_analysis AS
                     COALESCE(a_1.email, b_1.email) AS email,
                     (min(a_1.frequency) IS NOT NULL) AS has_active_donation
                    FROM (started_donations a_1
-                     FULL JOIN stopped_monthly_donations b_1 ON (((a_1.email = b_1.email) AND (a_1.frequency = b_1.frequency) AND (date_trunc('month'::text, a_1.start_period) = date_trunc('month'::text, b_1.stop_period)))))
+                     FULL JOIN stopped_monthly_donations b_1 ON (((a_1.email = b_1.email) AND (a_1.frequency = b_1.frequency) AND ((date_trunc('month'::text, a_1.start_period) = date_trunc('month'::text, b_1.stop_period)) OR (date_trunc('month'::text, a_1.start_period) = date_trunc('month'::text, (b_1.stop_period - '1 mon'::interval)))))))
                   GROUP BY COALESCE(a_1.email, b_1.email), COALESCE(a_1.frequency, b_1.frequency), COALESCE(a_1.start_period, b_1.stop_period)) a
              JOIN buckets b ON (((a.frequency = b.frequency) AND (abs(a.amount) > (b.start)::numeric) AND (abs(a.amount) <= (b.stop)::numeric))))
         )
@@ -3487,6 +3499,14 @@ ALTER TABLE ONLY giveffektivt.max_tax_deduction
 
 
 --
+-- Name: ops_budget ops_budget_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.ops_budget
+    ADD CONSTRAINT ops_budget_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: scanpay_seq scanpay_seq_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -3615,6 +3635,13 @@ CREATE TRIGGER gavebrev_update_timestamp BEFORE UPDATE ON giveffektivt.gavebrev 
 --
 
 CREATE TRIGGER max_tax_deduction_update_timestamp BEFORE UPDATE ON giveffektivt.max_tax_deduction FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: ops_budget ops_budget_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER ops_budget_update_timestamp BEFORE UPDATE ON giveffektivt.ops_budget FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
 
 
 --
@@ -3809,6 +3836,14 @@ ALTER TABLE ONLY giveffektivt.earmark
 
 
 --
+-- Name: survey survey_donor_id_fkey; Type: FK CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.survey
+    ADD CONSTRAINT survey_donor_id_fkey FOREIGN KEY (donor_id) REFERENCES giveffektivt.donor(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -3897,4 +3932,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20251106222252'),
     ('20251112140137'),
     ('20251208225104'),
+    ('20260116100833'),
     ('99999999999999');
