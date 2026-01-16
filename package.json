@@ -2,7 +2,7 @@
   "name": "donation-platform",
   "private": true,
   "engines": {
-    "node": ">= 20"
+    "node": ">= 24"
   },
   "scripts": {
     "dev": "next dev",
@@ -13,31 +13,31 @@
     "create-index": "yarn cti -b -w -q \\\" ./components ./src"
   },
   "dependencies": {
-    "@date-fns/utc": "^2.1.0",
+    "@date-fns/utc": "^2.1.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
-    "kysely": "^0.28.5",
-    "mailersend": "^2.3.0",
-    "next": "^15.2.3",
-    "pg": "^8.14.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "rollbar": "^2.26.4",
+    "kysely": "^0.28.9",
+    "mailersend": "^2.6.0",
+    "next": "^16.1.2",
+    "pg": "^8.17.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "rollbar": "^2.26.5",
     "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
-    "zod": "^4.0.17"
+    "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/node": "^22.13.11",
-    "@types/pg": "^8.11.11",
-    "@types/react": "^19.0.12",
+    "@types/cors": "^2.8.19",
+    "@types/node": "^25.0.9",
+    "@types/pg": "^8.16.0",
+    "@types/react": "^19.2.8",
     "create-ts-index": "^1.14.0",
-    "eslint": "^9.23.0",
-    "eslint-config-next": "^15.2.3",
-    "prettier": "^3.5.3",
-    "typescript": "^5.8.2",
-    "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^3.0.9",
+    "eslint": "^9.39.2",
+    "eslint-config-next": "^16.1.2",
+    "prettier": "^3.8.0",
+    "typescript": "^5.9.3",
+    "vite-tsconfig-paths": "^6.0.4",
+    "vitest": "^4.0.17",
     "yarn-upgrade-all": "^0.7.5"
   }
 }
