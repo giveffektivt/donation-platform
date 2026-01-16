@@ -2300,7 +2300,7 @@ CREATE VIEW giveffektivt.transfer_pending AS
     amount,
     earmark
    FROM giveffektivt.charged_donations_by_transfer_internal cdt
-  WHERE ((earmark <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (transfer_id IS NULL))
+  WHERE ((earmark <> 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
   ORDER BY charged_at;
 
 
@@ -2414,7 +2414,7 @@ CREATE VIEW giveffektivt.pending_distribution AS
     round(sum(amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
    FROM giveffektivt.charged_donations_by_transfer_internal cdt
-  WHERE ((earmark <> ALL (ARRAY['Giv Effektivts medlemskab'::giveffektivt.donation_recipient, 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient])) AND (transfer_id IS NULL))
+  WHERE ((earmark <> 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
   GROUP BY earmark
   ORDER BY (round(sum(amount))) DESC;
 

@@ -1369,7 +1369,7 @@ select
 from
     charged_donations_by_transfer_internal cdt
 where
-    earmark not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
+    earmark != 'Giv Effektivts arbejde og vækst'
     and transfer_id is null
 group by
     earmark
@@ -1974,7 +1974,7 @@ select
 from
     charged_donations_by_transfer_internal cdt
 where
-    earmark not in ('Giv Effektivts medlemskab', 'Giv Effektivts arbejde og vækst')
+    earmark != 'Giv Effektivts arbejde og vækst'
     and transfer_id is null
 order by
     charged_at;
