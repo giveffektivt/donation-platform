@@ -345,6 +345,7 @@ with
         order by
             donation_id,
             created_at desc,
+            updated_at desc,
             id desc
     )
 select
@@ -1544,7 +1545,10 @@ with
                     started_donations a
                     full outer join stopped_monthly_donations b on a.email = b.email
                     and a.frequency = b.frequency
-                    and date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
+                    and (
+                        date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
+                        or date_trunc('month', a.start_period) = date_trunc('month', b.stop_period - interval '1 month')
+                    )
                 group by
                     coalesce(a.email, b.email),
                     coalesce(a.frequency, b.frequency),
@@ -2928,7 +2932,10 @@ with
                     started_donations a
                     full outer join stopped_monthly_donations b on a.email = b.email
                     and a.frequency = b.frequency
-                    and date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
+                    and (
+                        date_trunc('month', a.start_period) = date_trunc('month', b.stop_period)
+                        or date_trunc('month', a.start_period) = date_trunc('month', b.stop_period - interval '1 month')
+                    )
                 group by
                     coalesce(a.email, b.email),
                     coalesce(a.frequency, b.frequency),
