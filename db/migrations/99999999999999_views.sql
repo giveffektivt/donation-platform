@@ -2149,6 +2149,30 @@ with
                 15
             )
     ),
+    missing_gavebrev_preliminary_income as (
+        select
+            count(1)::numeric as missing_gavebrev_preliminary_income
+        from
+            gavebrev_checkin
+        where
+            income_preliminary is null
+            and year = extract(
+                year
+                from
+                    current_date
+            )::int - case
+                when current_date >= make_date(
+                    extract(
+                        year
+                        from
+                            current_date
+                    )::int,
+                    12,
+                    1
+                ) then 0
+                else 1
+            end
+    ),
     pending_skat_update as (
         select
             count(1)::numeric as pending_skat_update
@@ -2171,6 +2195,7 @@ from
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof,
+    missing_gavebrev_preliminary_income,
     pending_skat_update;
 
 grant

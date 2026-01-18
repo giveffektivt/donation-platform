@@ -2371,6 +2371,14 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT (count(1))::numeric AS missing_gavebrev_income_proof
            FROM giveffektivt.gavebrev_checkin
           WHERE ((gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (gavebrev_checkin.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)))
+        ), missing_gavebrev_preliminary_income AS (
+         SELECT (count(1))::numeric AS missing_gavebrev_preliminary_income
+           FROM giveffektivt.gavebrev_checkin
+          WHERE ((gavebrev_checkin.income_preliminary IS NULL) AND (gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer -
+                CASE
+                    WHEN (CURRENT_DATE >= make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 12, 1)) THEN 0
+                    ELSE 1
+                END))::numeric))
         ), pending_skat_update AS (
          SELECT (count(1))::numeric AS pending_skat_update
            FROM giveffektivt.annual_tax_report_pending_update
@@ -2388,6 +2396,7 @@ CREATE VIEW giveffektivt.kpi AS
     is_max_tax_deduction_known.is_max_tax_deduction_known,
     oldest_stopped_donation_age.oldest_stopped_donation_age,
     missing_gavebrev_income_proof.missing_gavebrev_income_proof,
+    missing_gavebrev_preliminary_income.missing_gavebrev_preliminary_income,
     pending_skat_update.pending_skat_update
    FROM dkk_total,
     dkk_total_ops,
@@ -2402,6 +2411,7 @@ CREATE VIEW giveffektivt.kpi AS
     is_max_tax_deduction_known,
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof,
+    missing_gavebrev_preliminary_income,
     pending_skat_update;
 
 
