@@ -365,7 +365,7 @@ test("Gavebrev donations get reported as 'L' and 'A' and it's possible to limit 
   ]);
 });
 
-test("Gavebrev: donating too much in the previous year does NOT give extra tax deductions in the next year", async () => {
+test("Gavebrev: donating too much in the previous year is considered aconto payment for the next year", async () => {
   const db = await client;
 
   await gavebrev(db, {
@@ -387,23 +387,107 @@ test("Gavebrev: donating too much in the previous year does NOT give extra tax d
   await donate(db, { tin: "111111-1111", amount: 12_000, years_ago: 1 }); // donates 2k too much last year
   await donate(db, { tin: "222222-2222", amount: 12_000, years_ago: 1 }); // donates 2k too much last year
 
-  await donate(db, { tin: "111111-1111", amount: 11_000 }); // donates 1k too much again this year
-  await donate(db, { tin: "222222-2222", amount: 11_000 }); // donates 1k too much again this year
+  await donate(db, { tin: "111111-1111", amount: 8_000 }); // donates 2k too little, as 2k is already paid aconto
+  await donate(db, { tin: "222222-2222", amount: 8_000 }); // donates 2k too little, as 2k is already paid aconto
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
     {
       tin: "111111-1111",
       ll8a_or_gavebrev: "L",
-      total: 8_000,
-      aconto_debt: 1_000,
-    }, // report 10k minus 2k aconto, aconto does NOT accumulate
+      total: 10_000, // report full amount as per agreement, aconto + paid this year
+      aconto_debt: 0,
+    },
     {
       tin: "222222-2222",
       ll8a_or_gavebrev: "L",
-      total: 8_000,
-      aconto_debt: 1_000,
-    }, // report 10k minus 2k aconto, aconto does NOT accumulate
+      total: 10_000, // report full amount as per agreement, aconto + paid this year
+      aconto_debt: 0,
+    },
+  ]);
+});
+
+test("Gavebrev: donating too much in the previous year is used as aconto first, even if donated too much again this year", async () => {
+  const db = await client;
+
+  await gavebrev(db, {
+    tin: "111111-1111",
+    years_ago: 1,
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    years_ago: 1,
+    percentage: 10,
+    of_income_over: 900_000,
+  });
+
+  await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
+  await incomeEveryone(db, { income_verified: 1_000_000 });
+
+  await donate(db, { tin: "111111-1111", amount: 12_000, years_ago: 1 }); // donates 2k too much last year
+  await donate(db, { tin: "222222-2222", amount: 12_000, years_ago: 1 }); // donates 2k too much last year
+
+  await donate(db, { tin: "111111-1111", amount: 11_000 }); // donates 1k too much again
+  await donate(db, { tin: "222222-2222", amount: 11_000 }); // donates 1k too much again
+
+  const taxReport = await findAnnualTaxReport(db);
+  expect(taxReport).toMatchObject([
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 10_000, // report amount as per agreement, since they paid it in full
+      aconto_debt: 3_000, // aconto was used first, so overpayments go to aconto for the next year
+    },
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 10_000, // report amount as per agreement, since they paid it in full
+      aconto_debt: 3_000, // aconto was used first, so overpayments go to aconto for the next year
+    },
+  ]);
+});
+
+test("Gavebrev: donating too much in the previous year is used as aconto first, even if donated too little this year", async () => {
+  const db = await client;
+
+  await gavebrev(db, {
+    tin: "111111-1111",
+    years_ago: 1,
+    amount: 10_000,
+    when_income_over: 0,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    years_ago: 1,
+    percentage: 10,
+    of_income_over: 900_000,
+  });
+
+  await incomeEveryone(db, { income_verified: 1_000_000, years_ago: 1 });
+  await incomeEveryone(db, { income_verified: 1_000_000 });
+
+  await donate(db, { tin: "111111-1111", amount: 12_000, years_ago: 1 }); // donates 2k too much last year
+  await donate(db, { tin: "222222-2222", amount: 12_000, years_ago: 1 }); // donates 2k too much last year
+
+  await donate(db, { tin: "111111-1111", amount: 7_000 }); // donates 3k too little, underpaying 1k including aconto
+  await donate(db, { tin: "222222-2222", amount: 7_000 }); // donates 3k too little, underpaying 1k including aconto
+
+  const taxReport = await findAnnualTaxReport(db);
+  expect(taxReport).toMatchObject([
+    {
+      tin: "111111-1111",
+      ll8a_or_gavebrev: "L",
+      total: 9_000, // report amount of aconto payments + actual payments this year
+      aconto_debt: -1_000, // debt will carry into the next year
+    },
+    {
+      tin: "222222-2222",
+      ll8a_or_gavebrev: "L",
+      total: 9_000, // report amount of aconto payments + actual payments this year
+      aconto_debt: -1_000, // debt will carry into the next year
+    },
   ]);
 });
 
@@ -957,19 +1041,19 @@ test("Gavebrev donations respect different tax deduction limits in different yea
   // set different tax deduction in a previous year
   await setMaxTaxDeduction(db, { value: 16_000, years_ago: 1 });
 
-  await donate(db, { tin: "111111-1111", amount: 120_000, years_ago: 1 }); // donates 20k too much
-  await donate(db, { tin: "222222-2222", amount: 30_000, years_ago: 1 }); // donates 20k too much
-  await donate(db, { tin: "111111-1111", amount: 120_000 }); // donates 20k too much
-  await donate(db, { tin: "222222-2222", amount: 30_000 }); // donates 20k too much
+  await donate(db, { tin: "111111-1111", amount: 120_000, years_ago: 1 }); // donates 20k too much, 4k is aconto
+  await donate(db, { tin: "222222-2222", amount: 30_000, years_ago: 1 }); // donates 20k too much, 4k is aconto
+  await donate(db, { tin: "111111-1111", amount: 120_000 }); // donates 20k too much, 3k is aconto
+  await donate(db, { tin: "222222-2222", amount: 30_000 }); // donates 20k too much, 3k is aconto
 
   const taxReport = await findAnnualTaxReport(db);
   expect(taxReport).toMatchObject([
     {
       tin: "111111-1111",
       ll8a_or_gavebrev: "L",
-      total: 96_000,
-      aconto_debt: 3_000,
-    }, // report max 100k - 4k aconto from last year
+      total: 100_000,
+      aconto_debt: 7_000,
+    }, // report max 100k + unused donations to aconto
     {
       tin: "111111-1111",
       ll8a_or_gavebrev: "A",
@@ -979,9 +1063,9 @@ test("Gavebrev donations respect different tax deduction limits in different yea
     {
       tin: "222222-2222",
       ll8a_or_gavebrev: "L",
-      total: 6_000,
-      aconto_debt: 3_000,
-    }, // report max 10% of 100k - 4k aconto from last year
+      total: 10_000,
+      aconto_debt: 7_000,
+    }, // report max 10% of 100k + unused donations to aconto
     {
       tin: "222222-2222",
       ll8a_or_gavebrev: "A",

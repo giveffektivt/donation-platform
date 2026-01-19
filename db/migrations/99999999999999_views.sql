@@ -819,7 +819,11 @@ with recursive
             gap.actual_total,
             c.non_gavebrev_total,
             b.gavebrev_total as result,
-            gap.actual_total - get.expected_total - c.non_gavebrev_total + least(0, data.aconto_debt) as aconto_debt
+            case
+                when b.gavebrev_total = 0
+                and data.aconto_debt > 0 then 0
+                else gap.actual_total + greatest(0, data.aconto_debt) - get.expected_total - c.non_gavebrev_total + least(0, data.aconto_debt)
+            end as aconto_debt
         from
             annual_tax_report_gavebrev_expected_totals get
             inner join data on data.tin = get.tin
@@ -829,16 +833,19 @@ with recursive
             left join max_tax_deduction m on m.year = get.year
             cross join lateral (
                 select
-                    greatest(0, get.expected_total - data.aconto_debt) as can_be_reported_this_year
+                    greatest(0, get.expected_total - least(0, data.aconto_debt)) as can_be_reported_this_year
             ) a
             cross join lateral (
                 select
-                    round(least(get.income * 0.15, least(a.can_be_reported_this_year, gap.actual_total))) as gavebrev_total,
-                    least(a.can_be_reported_this_year, gap.actual_total) as uncapped_gavebrev_total
+                    round(least(get.income * 0.15, least(a.can_be_reported_this_year, gap.actual_total + greatest(0, data.aconto_debt)))) as gavebrev_total,
+                    least(a.can_be_reported_this_year, gap.actual_total + greatest(0, data.aconto_debt)) as uncapped_gavebrev_total
             ) b
             cross join lateral (
                 select
-                    least(coalesce(least(m.value, get.limit_normal_donation), 0), greatest(0, gap.actual_total - b.uncapped_gavebrev_total)) as non_gavebrev_total
+                    least(
+                        coalesce(least(m.value, get.limit_normal_donation), 0),
+                        greatest(0, gap.actual_total + greatest(0, data.aconto_debt) - b.uncapped_gavebrev_total)
+                    ) as non_gavebrev_total
             ) c
     )
 select

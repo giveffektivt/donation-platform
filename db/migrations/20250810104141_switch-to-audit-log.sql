@@ -45,7 +45,7 @@ end;
 $$;
 
 -- obsolete now, use tables directly
-drop view charge,
+drop view if exists charge,
 charge_with_gateway_info,
 donation,
 donation_with_contact_info,

@@ -1,3 +1,8 @@
+\restrict dbmate
+
+-- Dumped from database version 17.2
+-- Dumped by pg_dump version 17.7
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -1167,15 +1172,18 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_results AS
             gap.actual_total,
             c.non_gavebrev_total,
             b.gavebrev_total AS result,
-            (((gap.actual_total - get.expected_total) - c.non_gavebrev_total) + LEAST((0)::numeric, data_1.aconto_debt)) AS aconto_debt
+                CASE
+                    WHEN ((b.gavebrev_total = (0)::numeric) AND (data_1.aconto_debt > (0)::numeric)) THEN (0)::numeric
+                    ELSE ((((gap.actual_total + GREATEST((0)::numeric, data_1.aconto_debt)) - get.expected_total) - c.non_gavebrev_total) + LEAST((0)::numeric, data_1.aconto_debt))
+                END AS aconto_debt
            FROM ((((((giveffektivt.annual_tax_report_gavebrev_expected_totals get
              JOIN data data_1 ON (((data_1.tin = get.tin) AND (data_1.year = (get.year - (1)::numeric)))))
              JOIN giveffektivt.annual_tax_report_gavebrev_all_payments gap ON (((gap.tin = get.tin) AND (gap.year = get.year))))
              LEFT JOIN giveffektivt.max_tax_deduction m ON ((m.year = get.year)))
-             CROSS JOIN LATERAL ( SELECT GREATEST((0)::numeric, (get.expected_total - data_1.aconto_debt)) AS can_be_reported_this_year) a)
-             CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, gap.actual_total))) AS gavebrev_total,
-                    LEAST(a.can_be_reported_this_year, gap.actual_total) AS uncapped_gavebrev_total) b)
-             CROSS JOIN LATERAL ( SELECT LEAST(COALESCE(LEAST(m.value, get.limit_normal_donation), (0)::numeric), GREATEST((0)::numeric, (gap.actual_total - b.uncapped_gavebrev_total))) AS non_gavebrev_total) c)
+             CROSS JOIN LATERAL ( SELECT GREATEST((0)::numeric, (get.expected_total - LEAST((0)::numeric, data_1.aconto_debt))) AS can_be_reported_this_year) a)
+             CROSS JOIN LATERAL ( SELECT round(LEAST((get.income * 0.15), LEAST(a.can_be_reported_this_year, (gap.actual_total + GREATEST((0)::numeric, data_1.aconto_debt))))) AS gavebrev_total,
+                    LEAST(a.can_be_reported_this_year, (gap.actual_total + GREATEST((0)::numeric, data_1.aconto_debt))) AS uncapped_gavebrev_total) b)
+             CROSS JOIN LATERAL ( SELECT LEAST(COALESCE(LEAST(m.value, get.limit_normal_donation), (0)::numeric), GREATEST((0)::numeric, ((gap.actual_total + GREATEST((0)::numeric, data_1.aconto_debt)) - b.uncapped_gavebrev_total))) AS non_gavebrev_total) c)
         )
  SELECT tin,
     year,
@@ -3856,6 +3864,8 @@ ALTER TABLE ONLY giveffektivt.survey
 --
 -- PostgreSQL database dump complete
 --
+
+\unrestrict dbmate
 
 
 --
