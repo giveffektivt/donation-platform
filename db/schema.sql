@@ -637,7 +637,8 @@ CREATE TABLE giveffektivt.gavebrev (
     started_at timestamp with time zone NOT NULL,
     stopped_at timestamp with time zone NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shared_skat_access_at timestamp with time zone
 );
 
 
@@ -3953,4 +3954,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20251112140137'),
     ('20251208225104'),
     ('20260116100833'),
+    ('20260119133936'),
     ('99999999999999');
