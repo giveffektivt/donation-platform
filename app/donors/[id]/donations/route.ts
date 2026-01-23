@@ -31,13 +31,6 @@ export async function GET(req: Request) {
       )
     ).map((p) => p.id);
 
-    if (!donations.length) {
-      return Response.json(
-        { status: 404, content: "Not found" },
-        { status: 404 },
-      );
-    }
-
     return Response.json({
       status: 200,
       content: enumerateIds(

@@ -23,13 +23,6 @@ export async function GET(req: Request) {
       user[process.env.AUTH0_EMAIL_CLAIM] as string,
     );
 
-    if (!donors.length) {
-      return Response.json(
-        { status: 404, content: "Not found" },
-        { status: 404 },
-      );
-    }
-
     return Response.json({
       status: 200,
       content: enumerateIds(
