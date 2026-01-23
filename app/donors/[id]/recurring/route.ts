@@ -25,22 +25,17 @@ export async function GET(req: Request) {
     return Response.json({
       status: 200,
       content: donations.map((d) => ({
-        ID: d.id,
-        status: d.cancelled ? "STOPPED" : "ACTIVE",
-        donorID: 0,
-        full_name: null,
-        KID: d.id,
-        timestamp_created: d.created_at.toISOString(),
-        monthly_charge_day: d.monthly_charge_day,
-        force_charge_date: null,
-        paused_until_date: null,
+        id: d.id,
+        kid: d.gateway_metadata?.bank_msg ?? d.id,
+        cancelled: d.cancelled,
+        createdAt: d.created_at.toISOString(),
+        chargeDay: d.monthly_charge_day,
         amount: d.amount,
-        agreement_url_code: null,
         method: d.method,
       })),
     });
   } catch (e) {
-    logError("donors/[id]/recurring/vipps: ", e);
+    logError("donors/[id]/recurring: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

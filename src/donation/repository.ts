@@ -642,7 +642,7 @@ export async function getRecurringDonationsByEmail(
       `
       select
         d.*,
-        coalesce(extract(day from c.created_at)::int, 0) as monthly_charge_day
+        extract(day from c.created_at)::int as monthly_charge_day
       from donation d
       join donor p on p.id = d.donor_id
       left join lateral (
