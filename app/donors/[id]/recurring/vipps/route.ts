@@ -36,6 +36,7 @@ export async function GET(req: Request) {
         paused_until_date: null,
         amount: d.amount,
         agreement_url_code: null,
+        method: d.method,
       })),
     });
   } catch (e) {
