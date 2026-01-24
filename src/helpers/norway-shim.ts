@@ -42,11 +42,6 @@ export const norwegianOrgs = [
       "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 10x mere i donationer til vores anbefalede velgørenhedsformål.",
     infoUrl: "https://giveffektivt.dk",
   },
-  // {
-  //   name: DonationRecipient.GivEffektivtsMedlemskab,
-  //   description: "Medlemskab!",
-  //   infoUrl: "https://giveffektivt.dk",
-  // },
 ];
 
 export const mapFromNorwegianPaymentMethods = (method: number) => {
@@ -76,15 +71,16 @@ export const mapFromNorwegianOrgId = (id: number): DonationRecipient => {
 };
 
 export const mapToNorwegianOrgId = (recipient: string): number => {
-  if (recipient === "Giv Effektivts anbefaling") {
+  if (
+    ["Giv Effektivts anbefaling", "Stor og velkendt effekt"].includes(recipient)
+  ) {
     return 1;
   }
-  if (recipient === "Stor og velkendt effekt") {
-    return 1;
-  }
-  // TODO temp
   if (recipient === "Giv Effektivts medlemskab") {
     return 99;
+  }
+  if (recipient === "Ormekur") {
+    return 98;
   }
   for (let i = 0; i < norwegianOrgs.length; i++) {
     if (norwegianOrgs[i].name === recipient) {
