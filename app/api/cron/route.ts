@@ -1,7 +1,7 @@
 import {
+  autoRenewFailedRecurringDonations,
   charge,
   logError,
-  renewAutoCancelledDonations,
   sendNewEmails,
 } from "src";
 
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
 
     await charge();
     await sendNewEmails();
-    await renewAutoCancelledDonations();
+    await autoRenewFailedRecurringDonations();
 
     return Response.json({ message: "OK" });
   } catch (err) {

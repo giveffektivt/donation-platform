@@ -5,7 +5,7 @@ import {
   generateRenewPaymentUrl,
   getDonationToUpdateQuickpayPaymentInfoById,
   getFailedRecurringDonations,
-  getFailedRecurringDonationsToAutoCancel,
+  getFailedRecurringDonationsToAutoRenew,
   logError,
   recreateQuickpayFailedRecurringDonation,
   sendFailedRecurringDonationEmail,
@@ -68,9 +68,9 @@ export async function getRenewPaymentLink(
   });
 }
 
-export async function renewAutoCancelledDonations() {
+export async function autoRenewFailedRecurringDonations() {
   await dbExecuteInTransaction(async (db) => {
-    const ids = await getFailedRecurringDonationsToAutoCancel(db);
+    const ids = await getFailedRecurringDonationsToAutoRenew(db);
     await sendFailedRecurringDonationEmails(db, ids);
   });
 }

@@ -237,12 +237,12 @@ export async function getFailedRecurringDonations(
   return (await client.query("select * from failed_recurring_donations")).rows;
 }
 
-export async function getFailedRecurringDonationsToAutoCancel(
+export async function getFailedRecurringDonationsToAutoRenew(
   client: PoolClient,
 ) {
   return (
     await client.query(
-      "select id from failed_recurring_donations_to_auto_cancel for update skip locked",
+      "select id from failed_recurring_donations_to_auto_renew for update skip locked",
     )
   ).rows.map((d) => d.id);
 }

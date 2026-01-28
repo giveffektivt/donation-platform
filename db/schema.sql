@@ -2217,10 +2217,10 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
 
 
 --
--- Name: failed_recurring_donations_to_auto_cancel; Type: VIEW; Schema: giveffektivt; Owner: -
+-- Name: failed_recurring_donations_to_auto_renew; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
-CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_cancel AS
+CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_renew AS
  WITH latest_charges AS (
          SELECT c.donation_id,
             c.status,
@@ -2231,9 +2231,9 @@ CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_cancel AS
         )
  SELECT donation_id AS id
    FROM latest_charges
-  WHERE (rn <= 3)
+  WHERE (rn <= 6)
   GROUP BY donation_id
- HAVING ((count(*) = 3) AND bool_and((status = 'error'::giveffektivt.charge_status)))
+ HAVING ((count(*) = 6) AND bool_and((status = 'error'::giveffektivt.charge_status)))
   ORDER BY donation_id
  LIMIT 2;
 

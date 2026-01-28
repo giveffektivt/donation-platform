@@ -12,9 +12,9 @@ annual_tax_report_gavebrev_since,
 annual_tax_report_gaveskema,
 annual_tax_report_pending_update,
 charged_donations,
-charged_donations_internal,
 charged_donations_by_transfer,
 charged_donations_by_transfer_internal,
+charged_donations_internal,
 charged_memberships,
 charged_memberships_internal,
 charged_or_created_donations,
@@ -28,7 +28,7 @@ donations_to_email,
 donor_acquisition,
 donor_impact_report,
 failed_recurring_donations,
-failed_recurring_donations_to_auto_cancel,
+failed_recurring_donations_to_auto_renew,
 gavebrev_checkins_to_create,
 gwwc_money_moved,
 ignored_renewals,
@@ -612,7 +612,7 @@ select
     on failed_recurring_donations to reader_sensitive;
 
 ---------
-create view failed_recurring_donations_to_auto_cancel as
+create view failed_recurring_donations_to_auto_renew as
 with
     latest_charges as (
         select
@@ -636,11 +636,11 @@ select
 from
     latest_charges
 where
-    rn <= 3
+    rn <= 6
 group by
     donation_id
 having
-    count(*) = 3
+    count(*) = 6
     and bool_and(status = 'error')
 order by
     1
@@ -649,10 +649,10 @@ limit
 
 grant
 select
-    on failed_recurring_donations_to_auto_cancel to reader_sensitive;
+    on failed_recurring_donations_to_auto_renew to reader_sensitive;
 
 grant
-update on failed_recurring_donations_to_auto_cancel to writer;
+update on failed_recurring_donations_to_auto_renew to writer;
 
 --------------------------------------
 create view annual_tax_report_const as
