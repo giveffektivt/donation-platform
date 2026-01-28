@@ -1,4 +1,9 @@
-import { charge, logError, sendNewEmails } from "src";
+import {
+  charge,
+  logError,
+  renewAutoCancelledDonations,
+  sendNewEmails,
+} from "src";
 
 export async function POST(req: Request) {
   try {
@@ -14,6 +19,7 @@ export async function POST(req: Request) {
 
     await charge();
     await sendNewEmails();
+    await renewAutoCancelledDonations();
 
     return Response.json({ message: "OK" });
   } catch (err) {

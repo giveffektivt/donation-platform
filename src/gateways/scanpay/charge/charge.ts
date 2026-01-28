@@ -3,7 +3,7 @@ import scanpay from "scanpay";
 import {
   ChargeStatus,
   type ChargeToChargeScanpay,
-  getDonorIdByChargeShortId,
+  getDonationIdByChargeShortId,
   logError,
   sendFailedRecurringDonationEmails,
   setChargeIdempotencyKey,
@@ -88,7 +88,7 @@ export async function scanpayChargeSubscription(
   await setChargeStatus(db, { id: charge.id, status });
 
   if (isCardExpired) {
-    const donorId = await getDonorIdByChargeShortId(db, charge.short_id);
-    await sendFailedRecurringDonationEmails(db, [donorId]);
+    const id = await getDonationIdByChargeShortId(db, charge.short_id);
+    await sendFailedRecurringDonationEmails(db, [id]);
   }
 }

@@ -1,7 +1,7 @@
 import type { PoolClient } from "pg";
 import {
   ChargeStatus,
-  getDonorIdByChargeShortId,
+  getDonationIdByChargeShortId,
   getFailedRecurringDonationByQuickpayOrder,
   insertInitialChargeQuickpay,
   logError,
@@ -87,8 +87,8 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
     });
 
     if (isCardExpired) {
-      const donorId = await getDonorIdByChargeShortId(db, change.order_id);
-      await sendFailedRecurringDonationEmails(db, [donorId]);
+      const id = await getDonationIdByChargeShortId(db, change.order_id);
+      await sendFailedRecurringDonationEmails(db, [id]);
     }
   }
 }

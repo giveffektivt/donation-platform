@@ -234,6 +234,16 @@ export async function getFailedRecurringDonations(
   return (await client.query("select * from failed_recurring_donations")).rows;
 }
 
+export async function getFailedRecurringDonationsToAutoCancel(
+  client: PoolClient,
+) {
+  return (
+    await client.query(
+      "select id from failed_recurring_donations_to_auto_cancel",
+    )
+  ).rows.map((d) => d.id);
+}
+
 export async function getFailedRecurringDonationByQuickpayOrder(
   client: PoolClient,
   quickpay_order: string,

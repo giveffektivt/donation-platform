@@ -83,14 +83,13 @@ export async function setChargeStatusByShortId(
   ]);
 }
 
-export async function getDonorIdByChargeShortId(
+export async function getDonationIdByChargeShortId(
   client: PoolClient,
   short_id: string,
 ): Promise<string> {
   return (
-    await client.query(
-      "select d.donor_id from donation d join charge c on d.id = c.donation_id where c.short_id=$1",
-      [short_id],
-    )
-  ).rows[0]?.donor_id;
+    await client.query("select donation_id from charge where short_id=$1", [
+      short_id,
+    ])
+  ).rows[0]?.donation_id;
 }

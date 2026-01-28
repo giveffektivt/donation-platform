@@ -28,6 +28,7 @@ donations_to_email,
 donor_acquisition,
 donor_impact_report,
 failed_recurring_donations,
+failed_recurring_donations_to_auto_cancel,
 gavebrev_checkins_to_create,
 gwwc_money_moved,
 ignored_renewals,
@@ -335,6 +336,14 @@ select
     );
 
 --------------------------------------
+select
+    cron.schedule (
+        'abort-abandoned-charges',
+        '10 * * * *',
+        'update charge set status=''error'' where status in (''created'', ''waiting'') and greatest(created_at, updated_at) < now() - interval ''5 days'''
+    );
+
+--------------------------------------
 create view donations_to_create_retry_charges as
 with
     latest_charges as (
@@ -368,7 +377,7 @@ select
 select
     cron.schedule (
         'create-retry-charges',
-        '0 * * * *',
+        '20 * * * *',
         'insert into charge(donation_id, created_at, status, retry) select donation_id, now(), ''created'', retry from donations_to_create_retry_charges'
     );
 
@@ -601,6 +610,46 @@ order by
 grant
 select
     on failed_recurring_donations to reader_sensitive;
+
+---------
+create view failed_recurring_donations_to_auto_cancel as
+with
+    latest_charges as (
+        select
+            donation_id,
+            status,
+            row_number() over (
+                partition by
+                    donation_id
+                order by
+                    c.created_at desc
+            ) as rn
+        from
+            charge c
+            join donation d on c.donation_id = d.id
+        where
+            d.frequency != 'once'
+            and not d.cancelled
+    )
+select
+    donation_id as id
+from
+    latest_charges
+where
+    rn <= 3
+group by
+    donation_id
+having
+    count(*) = 3
+    and bool_and(status = 'error')
+order by
+    1
+limit
+    2;
+
+grant
+select
+    on failed_recurring_donations_to_auto_cancel to reader_sensitive;
 
 --------------------------------------
 create view annual_tax_report_const as
