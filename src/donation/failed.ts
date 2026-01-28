@@ -69,7 +69,7 @@ export async function getRenewPaymentLink(
 }
 
 export async function renewAutoCancelledDonations() {
-  dbExecuteInTransaction(async (db) => {
+  await dbExecuteInTransaction(async (db) => {
     const ids = await getFailedRecurringDonationsToAutoCancel(db);
     await sendFailedRecurringDonationEmails(db, ids);
   });

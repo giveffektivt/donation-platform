@@ -16,8 +16,11 @@ import {
 export async function getDonationsToEmail(
   client: PoolClient,
 ): Promise<DonationToEmail[]> {
-  return (await client.query("select * from donations_to_email for update"))
-    .rows;
+  return (
+    await client.query(
+      "select * from donations_to_email for update skip locked",
+    )
+  ).rows;
 }
 
 export async function setDonationEmailed(
@@ -239,7 +242,7 @@ export async function getFailedRecurringDonationsToAutoCancel(
 ) {
   return (
     await client.query(
-      "select id from failed_recurring_donations_to_auto_cancel",
+      "select id from failed_recurring_donations_to_auto_cancel for update skip locked",
     )
   ).rows.map((d) => d.id);
 }

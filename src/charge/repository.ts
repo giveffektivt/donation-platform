@@ -49,8 +49,9 @@ export async function insertChargesForDonationsToCreateCharges(
 export async function getChargesToCharge(
   client: PoolClient,
 ): Promise<ChargeToCharge[]> {
-  return (await client.query(`select * from charges_to_charge for update`))
-    .rows;
+  return (
+    await client.query(`select * from charges_to_charge for update skip locked`)
+  ).rows;
 }
 
 export async function setChargeStatus(

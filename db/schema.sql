@@ -2217,6 +2217,28 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
 
 
 --
+-- Name: failed_recurring_donations_to_auto_cancel; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_cancel AS
+ WITH latest_charges AS (
+         SELECT c.donation_id,
+            c.status,
+            row_number() OVER (PARTITION BY c.donation_id ORDER BY c.created_at DESC) AS rn
+           FROM (giveffektivt.charge c
+             JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
+          WHERE ((d.frequency <> 'once'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
+        )
+ SELECT donation_id AS id
+   FROM latest_charges
+  WHERE (rn <= 3)
+  GROUP BY donation_id
+ HAVING ((count(*) = 3) AND bool_and((status = 'error'::giveffektivt.charge_status)))
+  ORDER BY donation_id
+ LIMIT 2;
+
+
+--
 -- Name: fundraiser_activity_checkin; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 

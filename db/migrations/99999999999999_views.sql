@@ -651,6 +651,9 @@ grant
 select
     on failed_recurring_donations_to_auto_cancel to reader_sensitive;
 
+grant
+update on failed_recurring_donations_to_auto_cancel to writer;
+
 --------------------------------------
 create view annual_tax_report_const as
 select
