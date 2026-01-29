@@ -23,6 +23,12 @@ export async function getTransferOverview(
   return (await client.query("select * from transfer_overview")).rows;
 }
 
+export async function getResultsMonthlyOutputs(
+  client: PoolClient,
+): Promise<TransferredDistribution[]> {
+  return (await client.query("select * from results_monthly_outputs")).rows;
+}
+
 export async function getTransferredDistribution(
   client: PoolClient,
 ): Promise<TransferredDistribution[]> {

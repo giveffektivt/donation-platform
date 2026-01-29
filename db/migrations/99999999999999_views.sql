@@ -35,6 +35,7 @@ ignored_renewals,
 kpi,
 pending_distribution,
 renew_donations_to_email,
+results_monthly_outputs,
 time_distribution_daily,
 time_distribution_monthly,
 transfer_overview,
@@ -1400,6 +1401,40 @@ order by
 grant
 select
     on transfer_overview to everyone;
+
+--------------------------------------
+create view results_monthly_outputs as
+select
+    total_dkk,
+    earmark,
+    transferred_at,
+    unit,
+    unit_impact,
+    recipient
+from
+    transfer_overview
+union all
+select
+    round(sum(amount)) as total_dkk,
+    earmark,
+    date_trunc('month', charged_at)::date::text as transferred_at,
+    'kr. til vores arbejde og vækst' as unit,
+    round(sum(amount)) as unit_impact,
+    'Giv Effektivt' as recipient
+from
+    charged_donations_by_transfer_internal
+where
+    earmark = 'Giv Effektivts arbejde og vækst'
+group by
+    earmark,
+    transferred_at
+order by
+    transferred_at,
+    total_dkk desc;
+
+grant
+select
+    on results_monthly_outputs to everyone;
 
 --------------------------------------
 create view transferred_distribution as

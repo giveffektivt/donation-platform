@@ -1,7 +1,7 @@
 import {
   dbClient,
   dbRelease,
-  getTransferOverview,
+  getResultsMonthlyOutputs,
   logError,
   type TransferredDistribution,
 } from "src";
@@ -12,7 +12,7 @@ export async function GET() {
   try {
     db = await dbClient();
 
-    const transfer_overview = await getTransferOverview(db);
+    const transfer_overview = await getResultsMonthlyOutputs(db);
 
     return Response.json({
       status: 200,

@@ -2485,6 +2485,72 @@ CREATE VIEW giveffektivt.renew_donations_to_email AS
 
 
 --
+-- Name: transfer_overview; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.transfer_overview AS
+ SELECT t.id,
+    t.earmark,
+    (
+        CASE
+            WHEN (t.created_at > now()) THEN 'Forventet: '::text
+            ELSE ''::text
+        END || t.recipient) AS recipient,
+        CASE
+            WHEN (t.recipient = 'Against Malaria Foundation'::giveffektivt.transfer_recipient) THEN 'Antimalaria myggenet'::text
+            WHEN (t.recipient = 'Malaria Consortium'::giveffektivt.transfer_recipient) THEN 'Malariabehandlinger'::text
+            WHEN (t.recipient = 'Helen Keller International'::giveffektivt.transfer_recipient) THEN 'A-vitamintilskud'::text
+            WHEN (t.recipient = 'New Incentives'::giveffektivt.transfer_recipient) THEN 'Vaccinationsprogrammer'::text
+            WHEN (t.recipient = 'Give Directly'::giveffektivt.transfer_recipient) THEN 'Dollars'::text
+            WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure'::text
+            ELSE NULL::text
+        END AS unit,
+    round(sum(cdt.amount)) AS total_dkk,
+    round((sum(cdt.amount) / max(t.exchange_rate))) AS total_usd,
+    round(max(t.unit_cost_external), 2) AS unit_cost_external,
+    round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
+    round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
+    round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
+    round(max(t.life_cost_external), 2) AS life_cost_external,
+    round((max(t.life_cost_external) * max(t.exchange_rate)), 2) AS life_cost_dkk,
+    round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
+    max(cdt.charged_at) AS computed_at,
+        CASE
+            WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
+            ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
+        END AS transferred_at
+   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
+     JOIN giveffektivt.transfer t ON (((cdt.transfer_id = t.id) OR ((cdt.transfer_id IS NULL) AND (cdt.earmark = t.earmark) AND (t.created_at > now())))))
+  GROUP BY t.id, t.earmark, t.recipient, t.created_at
+  ORDER BY t.created_at, (sum(cdt.amount)) DESC;
+
+
+--
+-- Name: results_monthly_outputs; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.results_monthly_outputs AS
+ SELECT transfer_overview.total_dkk,
+    transfer_overview.earmark,
+    transfer_overview.transferred_at,
+    transfer_overview.unit,
+    transfer_overview.unit_impact,
+    transfer_overview.recipient
+   FROM giveffektivt.transfer_overview
+UNION ALL
+ SELECT round(sum(charged_donations_by_transfer_internal.amount)) AS total_dkk,
+    charged_donations_by_transfer_internal.earmark,
+    ((date_trunc('month'::text, charged_donations_by_transfer_internal.charged_at))::date)::text AS transferred_at,
+    'kr. til vores arbejde og vækst'::text AS unit,
+    round(sum(charged_donations_by_transfer_internal.amount)) AS unit_impact,
+    'Giv Effektivt'::text AS recipient
+   FROM giveffektivt.charged_donations_by_transfer_internal
+  WHERE (charged_donations_by_transfer_internal.earmark = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient)
+  GROUP BY charged_donations_by_transfer_internal.earmark, ((date_trunc('month'::text, charged_donations_by_transfer_internal.charged_at))::date)::text
+  ORDER BY 3, 1 DESC;
+
+
+--
 -- Name: scanpay_seq; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
@@ -3218,47 +3284,6 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
      FULL JOIN payments_new_donors d ON (((a.period = d.period) AND (a.frequency = d.frequency) AND (a.bucket = d.bucket))))
   GROUP BY COALESCE(a.period, b.period)
   ORDER BY COALESCE(a.period, b.period) DESC;
-
-
---
--- Name: transfer_overview; Type: VIEW; Schema: giveffektivt; Owner: -
---
-
-CREATE VIEW giveffektivt.transfer_overview AS
- SELECT t.id,
-    t.earmark,
-    (
-        CASE
-            WHEN (t.created_at > now()) THEN 'Forventet: '::text
-            ELSE ''::text
-        END || t.recipient) AS recipient,
-        CASE
-            WHEN (t.recipient = 'Against Malaria Foundation'::giveffektivt.transfer_recipient) THEN 'Antimalaria myggenet'::text
-            WHEN (t.recipient = 'Malaria Consortium'::giveffektivt.transfer_recipient) THEN 'Malariabehandlinger'::text
-            WHEN (t.recipient = 'Helen Keller International'::giveffektivt.transfer_recipient) THEN 'A-vitamintilskud'::text
-            WHEN (t.recipient = 'New Incentives'::giveffektivt.transfer_recipient) THEN 'Vaccinationsprogrammer'::text
-            WHEN (t.recipient = 'Give Directly'::giveffektivt.transfer_recipient) THEN 'Dollars'::text
-            WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure'::text
-            ELSE NULL::text
-        END AS unit,
-    round(sum(cdt.amount)) AS total_dkk,
-    round((sum(cdt.amount) / max(t.exchange_rate))) AS total_usd,
-    round(max(t.unit_cost_external), 2) AS unit_cost_external,
-    round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
-    round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
-    round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
-    round(max(t.life_cost_external), 2) AS life_cost_external,
-    round((max(t.life_cost_external) * max(t.exchange_rate)), 2) AS life_cost_dkk,
-    round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
-    max(cdt.charged_at) AS computed_at,
-        CASE
-            WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
-            ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
-        END AS transferred_at
-   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
-     JOIN giveffektivt.transfer t ON (((cdt.transfer_id = t.id) OR ((cdt.transfer_id IS NULL) AND (cdt.earmark = t.earmark) AND (t.created_at > now())))))
-  GROUP BY t.id, t.earmark, t.recipient, t.created_at
-  ORDER BY t.created_at, (sum(cdt.amount)) DESC;
 
 
 --
