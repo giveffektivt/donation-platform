@@ -12,15 +12,19 @@ export async function GET(req: Request) {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const email = user[process.env.AUTH0_EMAIL_CLAIM] as string;
+
+  const allowedUsers = process.env.MINSIDE_ALLOWED;
+  if (allowedUsers && !allowedUsers.includes(email)) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   let db = null;
 
   try {
     db = await dbClient();
 
-    const donor = await getDonorByEmail(
-      db,
-      user[process.env.AUTH0_EMAIL_CLAIM] as string,
-    );
+    const donor = await getDonorByEmail(db, email);
 
     if (!donor) {
       return Response.json(
@@ -33,7 +37,7 @@ export async function GET(req: Request) {
       status: 200,
       content: {
         id: 0,
-        email: user[process.env.AUTH0_EMAIL_CLAIM],
+        email,
         name: donor.name,
         newsletter: false,
         registered: donor.created_at.toISOString(),
