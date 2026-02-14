@@ -1072,31 +1072,40 @@ select
 --------------------------------------
 create view annual_tax_report_pending_update as
 with
+    target_year as (
+        select
+            min(year) as year
+        from
+            annual_tax_report
+    ),
     last_reported as (
         select distinct
-            on (donor_cpr, ll8a_or_gavebrev, year) *
+            on (s.donor_cpr, s.ll8a_or_gavebrev, s.year) s.*
         from
-            skat
+            skat s
+            join target_year y on y.year = s.year
         order by
-            donor_cpr,
-            ll8a_or_gavebrev,
-            year,
-            created_at desc
+            s.donor_cpr,
+            s.ll8a_or_gavebrev,
+            s.year,
+            s.created_at desc
     )
 select
     coalesce(a.year, s.year) as year,
     coalesce(a.donor_cpr, s.donor_cpr) as donor_cpr,
     coalesce(a.ll8a_or_gavebrev, s.ll8a_or_gavebrev) as ll8a_or_gavebrev,
-    a.total - s.total as difference
+    coalesce(a.total, 0) - coalesce(s.total, 0) as difference
 from
     annual_tax_report a
-    join last_reported s on s.donor_cpr = a.donor_cpr
+    full outer join last_reported s on s.donor_cpr = a.donor_cpr
     and s.ll8a_or_gavebrev = a.ll8a_or_gavebrev
     and s.year = a.year
 where
-    s.total != a.total
+    coalesce(a.total, 0) != coalesce(s.total, 0)
 order by
-    donor_cpr;
+    coalesce(a.donor_cpr, s.donor_cpr),
+    coalesce(a.ll8a_or_gavebrev, s.ll8a_or_gavebrev),
+    coalesce(a.year, s.year);
 
 grant
 select

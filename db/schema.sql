@@ -1348,30 +1348,34 @@ CREATE TABLE giveffektivt.skat (
 --
 
 CREATE VIEW giveffektivt.annual_tax_report_pending_update AS
- WITH last_reported AS (
-         SELECT DISTINCT ON (skat.donor_cpr, skat.ll8a_or_gavebrev, skat.year) skat.id,
-            skat.const,
-            skat.ge_cvr,
-            skat.donor_cpr,
-            skat.year,
-            skat.blank,
-            skat.total,
-            skat.ll8a_or_gavebrev,
-            skat.ge_notes,
-            skat.rettekode,
-            skat.created_at,
-            skat.updated_at
-           FROM giveffektivt.skat
-          ORDER BY skat.donor_cpr, skat.ll8a_or_gavebrev, skat.year, skat.created_at DESC
+ WITH target_year AS (
+         SELECT min(annual_tax_report.year) AS year
+           FROM giveffektivt.annual_tax_report
+        ), last_reported AS (
+         SELECT DISTINCT ON (s_1.donor_cpr, s_1.ll8a_or_gavebrev, s_1.year) s_1.id,
+            s_1.const,
+            s_1.ge_cvr,
+            s_1.donor_cpr,
+            s_1.year,
+            s_1.blank,
+            s_1.total,
+            s_1.ll8a_or_gavebrev,
+            s_1.ge_notes,
+            s_1.rettekode,
+            s_1.created_at,
+            s_1.updated_at
+           FROM (giveffektivt.skat s_1
+             JOIN target_year y ON ((y.year = s_1.year)))
+          ORDER BY s_1.donor_cpr, s_1.ll8a_or_gavebrev, s_1.year, s_1.created_at DESC
         )
  SELECT COALESCE(a.year, s.year) AS year,
     COALESCE(a.donor_cpr, s.donor_cpr) AS donor_cpr,
     COALESCE(a.ll8a_or_gavebrev, s.ll8a_or_gavebrev) AS ll8a_or_gavebrev,
-    (a.total - s.total) AS difference
+    (COALESCE(a.total, (0)::numeric) - COALESCE(s.total, (0)::numeric)) AS difference
    FROM (giveffektivt.annual_tax_report a
-     JOIN last_reported s ON (((s.donor_cpr = a.donor_cpr) AND (s.ll8a_or_gavebrev = a.ll8a_or_gavebrev) AND (s.year = a.year))))
-  WHERE (s.total <> a.total)
-  ORDER BY COALESCE(a.donor_cpr, s.donor_cpr);
+     FULL JOIN last_reported s ON (((s.donor_cpr = a.donor_cpr) AND (s.ll8a_or_gavebrev = a.ll8a_or_gavebrev) AND (s.year = a.year))))
+  WHERE (COALESCE(a.total, (0)::numeric) <> COALESCE(s.total, (0)::numeric))
+  ORDER BY COALESCE(a.donor_cpr, s.donor_cpr), COALESCE(a.ll8a_or_gavebrev, s.ll8a_or_gavebrev), COALESCE(a.year, s.year);
 
 
 --
