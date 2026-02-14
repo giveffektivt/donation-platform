@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       content: {
         id: 0,
         email,
-        name: donor.name,
+        name: donor.name ?? "Anonym",
         newsletter: false,
         registered: donor.created_at.toISOString(),
       },
