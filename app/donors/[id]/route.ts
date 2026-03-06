@@ -26,21 +26,14 @@ export async function GET(req: Request) {
 
     const donor = await getDonorByEmail(db, email);
 
-    if (!donor) {
-      return Response.json(
-        { status: 404, content: "Not found" },
-        { status: 404 },
-      );
-    }
-
     return Response.json({
       status: 200,
       content: {
         id: 0,
         email,
-        name: donor.name ?? "Anonym",
+        name: donor?.name ?? "Anonym",
         newsletter: false,
-        registered: donor.created_at.toISOString(),
+        registered: (donor?.created_at ?? new Date()).toISOString(),
       },
     });
   } catch (e) {
