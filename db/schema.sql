@@ -1,7 +1,7 @@
 \restrict dbmate
 
 -- Dumped from database version 17.2
--- Dumped by pg_dump version 17.7
+-- Dumped by pg_dump version 17.8
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -330,20 +330,16 @@ begin return query
 with
     members_within_last_2_years as (
         select
-            min(p.email) as email,
-            min(p.name) as name,
-            min(c.created_at) as min_charged_at,
-            max(c.created_at) as max_charged_at
+            min(m.email) as email,
+            min(m.name) as name,
+            min(m.charged_at) as min_charged_at,
+            max(m.charged_at) as max_charged_at
         from
-            donor p
-            inner join donation d on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
+            charged_memberships m
         where
-            c.status = 'charged'
-            and d.recipient = 'Giv Effektivts medlemskab'
-            and c.created_at >= meeting_time - interval '2 years'
+            m.charged_at >= meeting_time - interval '2 years'
         group by
-            p.tin
+            m.tin
     ),
     participants as (
         select
