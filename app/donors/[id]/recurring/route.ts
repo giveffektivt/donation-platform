@@ -26,7 +26,8 @@ export async function GET(req: Request) {
       status: 200,
       content: donations.map((d) => ({
         id: d.id,
-        kid: d.gateway_metadata?.bank_msg ?? d.id,
+        kid: d.id,
+        bank_msg: d.gateway_metadata?.bank_msg,
         cancelled: d.cancelled,
         createdAt: d.created_at.toISOString(),
         chargeDay: d.monthly_charge_day,

@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       })),
     });
   } catch (e) {
-    logError("donors/[id]/recurring/vipps: ", e);
+    logError("donors/[id]/distributions: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);
