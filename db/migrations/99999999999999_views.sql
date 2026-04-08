@@ -36,6 +36,7 @@ kpi,
 pending_distribution,
 renew_donations_to_email,
 results_monthly_outputs,
+schedule_memberships_charges,
 time_distribution_daily,
 time_distribution_monthly,
 transfer_overview,
@@ -617,34 +618,35 @@ create view failed_recurring_donations_to_auto_renew as
 with
     latest_charges as (
         select
-            donation_id,
-            status,
+            c.donation_id as id,
+            c.status,
             row_number() over (
                 partition by
-                    donation_id
+                    c.donation_id
                 order by
-                    c.created_at desc
+                    c.created_at desc,
+                    c.id desc
             ) as rn
         from
-            charge c
-            join donation d on c.donation_id = d.id
+            donation d
+            join charge c on c.donation_id = d.id
         where
-            d.frequency != 'once'
+            d.frequency in ('monthly', 'yearly')
             and not d.cancelled
     )
 select
-    donation_id as id
+    id
 from
     latest_charges
 where
     rn <= 6
 group by
-    donation_id
+    id
 having
     count(*) = 6
     and bool_and(status = 'error')
 order by
-    1
+    id
 limit
     2;
 
@@ -2304,6 +2306,77 @@ from
 grant
 select
     on kpi to everyone;
+
+--------------------------------------
+-- Clearhaus stops subscriptions 397 days after inactivity, so assuming we will charge on April 5th every year,
+-- we can slightly move payment date on memberships who have ~397 days until next April 5th (leaving a couple of days for retries).
+-- MobilePay we can simply move everyone who already paid this year, as we assume there is no such limitation.
+create view schedule_memberships_charges as
+select
+    *,
+    case
+        when method = 'MobilePay'
+        and extract(
+            year
+            from
+                charged_at
+        ) = extract(
+            year
+            from
+                current_date
+        ) then next_year_to_charge_at
+        when method = 'Credit card'
+        and next_year_to_charge_at < charged_at + interval '395 days' then next_year_to_charge_at
+        else next_year_to_charge_at - interval '1 year'
+    end as next_charged_at
+from
+    (
+        select distinct
+            on (donation_id) *,
+            (
+                make_date(
+                    extract(
+                        year
+                        from
+                            current_date
+                    )::int + 1,
+                    4,
+                    5
+                ) + charged_at::time
+            )::timestamptz as next_year_to_charge_at
+        from
+            donations_overview d
+        where
+            not cancelled
+            and exists (
+                select
+                    1
+                from
+                    earmark e
+                where
+                    e.donation_id = d.donation_id
+                    and e.recipient = 'Giv Effektivts medlemskab'
+            )
+        order by
+            donation_id,
+            charged_at desc,
+            charge_id
+    ) as m
+where
+    status = 'charged'
+order by
+    charged_at;
+
+grant
+select
+    on schedule_memberships_charges to reader_sensitive;
+
+select
+    cron.schedule (
+        'schedule-membership-charges',
+        '0 5 * * *',
+        'insert into charge(donation_id, created_at, status) select donation_id, next_charged_at, ''created'' from schedule_memberships_charges'
+    );
 
 --------------------------------------
 create view donor_acquisition as

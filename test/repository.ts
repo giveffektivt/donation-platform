@@ -115,3 +115,23 @@ export async function insertMaxTaxDeduction(
     )
   ).rows[0];
 }
+
+export async function getChargesToCreate(
+  client: PoolClient,
+): Promise<{ donation_id: string; next_charge: Date }[]> {
+  return (
+    await client.query(
+      `select donation_id, next_charge from donations_to_create_charges`,
+    )
+  ).rows;
+}
+
+export async function getScheduleMembershipsCharges(
+  client: PoolClient,
+): Promise<{ donation_id: string; next_charged_at: Date }[]> {
+  return (
+    await client.query(
+      `select donation_id, next_charged_at from schedule_memberships_charges`,
+    )
+  ).rows;
+}

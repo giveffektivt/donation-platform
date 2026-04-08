@@ -1,7 +1,7 @@
 \restrict dbmate
 
 -- Dumped from database version 17.2
--- Dumped by pg_dump version 17.8
+-- Dumped by pg_dump version 17.9
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -2222,19 +2222,19 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
 
 CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_renew AS
  WITH latest_charges AS (
-         SELECT c.donation_id,
+         SELECT c.donation_id AS id,
             c.status,
-            row_number() OVER (PARTITION BY c.donation_id ORDER BY c.created_at DESC) AS rn
-           FROM (giveffektivt.charge c
-             JOIN giveffektivt.donation d ON ((c.donation_id = d.id)))
-          WHERE ((d.frequency <> 'once'::giveffektivt.donation_frequency) AND (NOT d.cancelled))
+            row_number() OVER (PARTITION BY c.donation_id ORDER BY c.created_at DESC, c.id DESC) AS rn
+           FROM (giveffektivt.donation d
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (NOT d.cancelled))
         )
- SELECT donation_id AS id
+ SELECT id
    FROM latest_charges
   WHERE (rn <= 6)
-  GROUP BY donation_id
+  GROUP BY id
  HAVING ((count(*) = 6) AND bool_and((status = 'error'::giveffektivt.charge_status)))
-  ORDER BY donation_id
+  ORDER BY id
  LIMIT 2;
 
 
@@ -2558,6 +2558,69 @@ CREATE TABLE giveffektivt.scanpay_seq (
     value integer NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+--
+-- Name: schedule_memberships_charges; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.schedule_memberships_charges AS
+ SELECT donor_id,
+    name,
+    email,
+    tin,
+    donation_id,
+    frequency,
+    amount,
+    earmarks,
+    cancelled,
+    method,
+    gateway,
+    donation_gateway_metadata,
+    tax_deductible,
+    fundraiser_id,
+    charge_id,
+    charge_short_id,
+    status,
+    retry,
+    charge_gateway_metadata,
+    charged_at,
+    donation_created_at,
+    next_year_to_charge_at,
+        CASE
+            WHEN ((method = 'MobilePay'::giveffektivt.payment_method) AND (EXTRACT(year FROM charged_at) = EXTRACT(year FROM CURRENT_DATE))) THEN next_year_to_charge_at
+            WHEN ((method = 'Credit card'::giveffektivt.payment_method) AND (next_year_to_charge_at < (charged_at + '395 days'::interval))) THEN next_year_to_charge_at
+            ELSE (next_year_to_charge_at - '1 year'::interval)
+        END AS next_charged_at
+   FROM ( SELECT DISTINCT ON (d.donation_id) d.donor_id,
+            d.name,
+            d.email,
+            d.tin,
+            d.donation_id,
+            d.frequency,
+            d.amount,
+            d.earmarks,
+            d.cancelled,
+            d.method,
+            d.gateway,
+            d.donation_gateway_metadata,
+            d.tax_deductible,
+            d.fundraiser_id,
+            d.charge_id,
+            d.charge_short_id,
+            d.status,
+            d.retry,
+            d.charge_gateway_metadata,
+            d.charged_at,
+            d.donation_created_at,
+            ((make_date(((EXTRACT(year FROM CURRENT_DATE))::integer + 1), 4, 5) + (d.charged_at)::time without time zone))::timestamp with time zone AS next_year_to_charge_at
+           FROM giveffektivt.donations_overview d
+          WHERE ((NOT d.cancelled) AND (EXISTS ( SELECT 1
+                   FROM giveffektivt.earmark e
+                  WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))))
+          ORDER BY d.donation_id, d.charged_at DESC, d.charge_id) m
+  WHERE (status = 'charged'::giveffektivt.charge_status)
+  ORDER BY charged_at;
 
 
 --

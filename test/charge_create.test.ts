@@ -6,7 +6,6 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  insertChargesForDonationsToCreateCharges,
   PaymentMethod,
   registerDonationViaBankTransfer,
   registerDonationViaQuickpay,
@@ -15,6 +14,8 @@ import {
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
 import {
+  getChargesToCreate,
+  getScheduleMembershipsCharges,
   insertChargeWithCreatedAt,
   setDonationCancelledById,
 } from "./repository";
@@ -29,7 +30,7 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-test("Insert charges for donations that need new charges", async () => {
+test("Donations due for a new charge appear with correct next charge date", async () => {
   const db = await client;
 
   // Two donors having two donations each (3 recurring and 1 one-time)
@@ -111,33 +112,21 @@ test("Insert charges for donations that need new charges", async () => {
     status: ChargeStatus.Charged,
   });
 
-  const newCharges = await insertChargesForDonationsToCreateCharges(db);
+  const chargesToCreate = await getChargesToCreate(db);
 
   const expected = [
-    {
-      donation_id: donation1.id,
-      created_at: utc(subYears(now, 1)),
-      status: ChargeStatus.Created,
-    },
-    {
-      donation_id: donation3.id,
-      created_at: utc(now),
-      status: ChargeStatus.Created,
-    },
-    {
-      donation_id: donation4.id,
-      created_at: utc(now),
-      status: ChargeStatus.Created,
-    },
+    { donation_id: donation1.id, next_charge: utc(subYears(now, 1)) },
+    { donation_id: donation3.id, next_charge: utc(now) },
+    { donation_id: donation4.id, next_charge: utc(now) },
   ];
 
-  newCharges.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
+  chargesToCreate.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
   expected.sort((a, b) => a.donation_id.localeCompare(b.donation_id));
 
-  expect(newCharges).toMatchObject(expected);
+  expect(chargesToCreate).toMatchObject(expected);
 });
 
-test("Donation that has no charges should not have new charges created", async () => {
+test("Donation that has no charges does not appear in the create charges view", async () => {
   const db = await client;
 
   await registerDonationViaQuickpay(db, {
@@ -152,10 +141,10 @@ test("Donation that has no charges should not have new charges created", async (
     ],
   });
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toEqual([]);
+  expect(await getChargesToCreate(db)).toEqual([]);
 });
 
-test("Donation that is cancelled should not have new charges created", async () => {
+test("Cancelled donation does not appear in the create charges view", async () => {
   const db = await client;
 
   const donation = await registerDonationViaQuickpay(db, {
@@ -178,10 +167,10 @@ test("Donation that is cancelled should not have new charges created", async () 
     status: ChargeStatus.Charged,
   });
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toEqual([]);
+  expect(await getChargesToCreate(db)).toEqual([]);
 });
 
-test("Bank transfer donation should not have new charges created", async () => {
+test("Bank transfer donation does not appear in the create charges view", async () => {
   const db = await client;
 
   const donation = await registerDonationViaBankTransfer(db, {
@@ -201,10 +190,10 @@ test("Bank transfer donation should not have new charges created", async () => {
     status: ChargeStatus.Charged,
   });
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toEqual([]);
+  expect(await getChargesToCreate(db)).toEqual([]);
 });
 
-test("Active donation whose past charge was unsuccessful should *still* have new charges created (until we set it as cancelled)", async () => {
+test("Active donation with a past failed charge still appears in the create charges view", async () => {
   const db = await client;
 
   const donation = await registerMembershipViaQuickpay(db, {
@@ -225,17 +214,9 @@ test("Active donation whose past charge was unsuccessful should *still* have new
     status: ChargeStatus.Error,
   });
 
-  const expected = [
-    {
-      donation_id: donation.id,
-      created_at: utc(subYears(now, 1)),
-      status: ChargeStatus.Created,
-    },
-  ];
-
-  expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(
-    expected,
-  );
+  expect(await getChargesToCreate(db)).toMatchObject([
+    { donation_id: donation.id, next_charge: utc(subYears(now, 1)) },
+  ]);
 });
 
 test("Donations with already scheduled future charges should not get more charges created", async () => {
@@ -290,5 +271,118 @@ test("Donations with already scheduled future charges should not get more charge
     status: ChargeStatus.Created,
   });
 
-  expect(await insertChargesForDonationsToCreateCharges(db)).toEqual([]);
+  expect(await getChargesToCreate(db)).toEqual([]);
+});
+
+test("Card membership charged last December is scheduled for this April", async () => {
+  const db = await client;
+  const currentYear = new Date().getFullYear();
+
+  const donation = await registerMembershipViaQuickpay(db, {
+    email: "hello@example.com",
+    tin: "111111-1111",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(new Date(currentYear - 1, 11, 15)),
+    donation_id: donation.id,
+    status: ChargeStatus.Charged,
+  });
+
+  expect(await getScheduleMembershipsCharges(db)).toMatchObject([
+    {
+      donation_id: donation.id,
+      next_charged_at: utc(new Date(currentYear, 3, 5)),
+    },
+  ]);
+});
+
+test("Card membership charged this January is scheduled for this April", async () => {
+  const db = await client;
+  const currentYear = new Date().getFullYear();
+
+  const donation = await registerMembershipViaQuickpay(db, {
+    email: "hello@example.com",
+    tin: "111111-1111",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(new Date(currentYear, 0, 15)),
+    donation_id: donation.id,
+    status: ChargeStatus.Charged,
+  });
+
+  expect(await getScheduleMembershipsCharges(db)).toMatchObject([
+    {
+      donation_id: donation.id,
+      next_charged_at: utc(new Date(currentYear, 3, 5)),
+    },
+  ]);
+});
+
+test("MobilePay membership charged this January is scheduled for next April", async () => {
+  const db = await client;
+  const currentYear = new Date().getFullYear();
+
+  const donation = await registerDonationViaQuickpay(db, {
+    email: "hello@example.com",
+    amount: 50,
+    frequency: DonationFrequency.Yearly,
+    method: PaymentMethod.MobilePay,
+    taxDeductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsMedlemskab, percentage: 100 },
+    ],
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(new Date(currentYear, 0, 15)),
+    donation_id: donation.id,
+    status: ChargeStatus.Charged,
+  });
+
+  expect(await getScheduleMembershipsCharges(db)).toMatchObject([
+    {
+      donation_id: donation.id,
+      next_charged_at: utc(new Date(currentYear + 1, 3, 5)),
+    },
+  ]);
+});
+
+test("Card membership charged this March is scheduled for next April", async () => {
+  const db = await client;
+  const currentYear = new Date().getFullYear();
+
+  const donation = await registerMembershipViaQuickpay(db, {
+    email: "hello@example.com",
+    tin: "111111-1111",
+    name: "John",
+    address: "Street 1",
+    postcode: "1234",
+    city: "Copenhagen",
+    country: "Denmark",
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(new Date(currentYear, 2, 15)),
+    donation_id: donation.id,
+    status: ChargeStatus.Charged,
+  });
+
+  expect(await getScheduleMembershipsCharges(db)).toMatchObject([
+    {
+      donation_id: donation.id,
+      next_charged_at: utc(new Date(currentYear + 1, 3, 5)),
+    },
+  ]);
 });

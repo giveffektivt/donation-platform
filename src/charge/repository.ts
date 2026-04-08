@@ -34,18 +34,6 @@ export async function insertInitialChargeQuickpay(
   ).rows[0];
 }
 
-export async function insertChargesForDonationsToCreateCharges(
-  client: PoolClient,
-): Promise<Charge[]> {
-  return (
-    await client.query(
-      `insert into charge (donation_id, created_at, status)
-       select donation_id, next_charge, 'created' from donations_to_create_charges
-       returning *`,
-    )
-  ).rows;
-}
-
 export async function getChargesToCharge(
   client: PoolClient,
 ): Promise<ChargeToCharge[]> {
