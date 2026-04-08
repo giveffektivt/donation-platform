@@ -1,4 +1,4 @@
-import { setDate, subMonths, subYears } from "date-fns";
+import { addMonths, setDate, subMonths, subYears } from "date-fns";
 import {
   ChargeStatus,
   DonationFrequency,
@@ -236,4 +236,59 @@ test("Active donation whose past charge was unsuccessful should *still* have new
   expect(await insertChargesForDonationsToCreateCharges(db)).toMatchObject(
     expected,
   );
+});
+
+test("Donations with already scheduled future charges should not get more charges created", async () => {
+  const db = await client;
+  const now = setDate(new Date(), 1);
+
+  const donationA = await registerDonationViaQuickpay(db, {
+    email: "donor-a@example.com",
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    taxDeductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
+  });
+
+  const donationB = await registerDonationViaQuickpay(db, {
+    email: "donor-b@example.com",
+    amount: 100,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+    taxDeductible: false,
+    earmarks: [
+      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+    ],
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 2)),
+    donation_id: donationA.id,
+    status: ChargeStatus.Charged,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(addMonths(now, 1)),
+    donation_id: donationA.id,
+    status: ChargeStatus.Created,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(subMonths(now, 2)),
+    donation_id: donationB.id,
+    status: ChargeStatus.Error,
+  });
+
+  await insertChargeWithCreatedAt(db, {
+    created_at: utc(addMonths(now, 1)),
+    donation_id: donationB.id,
+    status: ChargeStatus.Created,
+  });
+
+  expect(await insertChargesForDonationsToCreateCharges(db)).toEqual([]);
 });
