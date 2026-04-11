@@ -167,10 +167,10 @@ CREATE TABLE giveffektivt.donation (
 
 
 --
--- Name: change_donation(uuid, numeric, jsonb); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: change_donation(uuid, numeric, jsonb, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.change_donation(p_donation_id uuid, p_amount numeric DEFAULT NULL::numeric, p_earmarks jsonb DEFAULT NULL::jsonb) RETURNS giveffektivt.donation
+CREATE FUNCTION giveffektivt.change_donation(p_donation_id uuid, p_amount numeric DEFAULT NULL::numeric, p_earmarks jsonb DEFAULT NULL::jsonb, p_tin text DEFAULT NULL::text) RETURNS giveffektivt.donation
     LANGUAGE plpgsql
     AS $$
 declare
@@ -179,7 +179,7 @@ declare
     v_old_donation donation%rowtype;
     v_new_donation donation%rowtype;
 begin
-    if p_amount is null and p_earmarks is null then
+    if p_amount is null and p_earmarks is null and p_tin is null then
         raise exception 'nothing to change, all arguments are null';
     end if;
 
@@ -218,7 +218,7 @@ begin
         p_message => v_old_donation.message,
         p_earmarks => coalesce(p_earmarks, v_old_earmarks),
         p_email => v_donor.email,
-        p_tin => v_donor.tin,
+        p_tin => coalesce(p_tin, v_donor.tin),
         p_name => v_donor.name,
         p_address => v_donor.address,
         p_postcode => v_donor.postcode,

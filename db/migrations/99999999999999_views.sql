@@ -3306,14 +3306,14 @@ execute on function register_donation (
 ) to writer;
 
 --------------------------------------
-create function change_donation (p_donation_id uuid, p_amount numeric default null, p_earmarks jsonb default null) returns donation language plpgsql as $$
+create function change_donation (p_donation_id uuid, p_amount numeric default null, p_earmarks jsonb default null, p_tin text default null) returns donation language plpgsql as $$
 declare
     v_donor donor%rowtype;
     v_old_earmarks jsonb;
     v_old_donation donation%rowtype;
     v_new_donation donation%rowtype;
 begin
-    if p_amount is null and p_earmarks is null then
+    if p_amount is null and p_earmarks is null and p_tin is null then
         raise exception 'nothing to change, all arguments are null';
     end if;
 
@@ -3352,7 +3352,7 @@ begin
         p_message => v_old_donation.message,
         p_earmarks => coalesce(p_earmarks, v_old_earmarks),
         p_email => v_donor.email,
-        p_tin => v_donor.tin,
+        p_tin => coalesce(p_tin, v_donor.tin),
         p_name => v_donor.name,
         p_address => v_donor.address,
         p_postcode => v_donor.postcode,
@@ -3374,7 +3374,7 @@ end
 $$;
 
 grant
-execute on function change_donation (uuid, numeric, jsonb) to writer;
+execute on function change_donation (uuid, numeric, jsonb, text) to writer;
 
 --------------------------------------
 create function change_donor_tax_unit (p_donor_id uuid, p_new_name text, p_new_tin text) returns donor language plpgsql as $$

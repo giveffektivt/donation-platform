@@ -499,7 +499,7 @@ export async function getDonorIdsByEmail(
       select id
       from donor
       where email = $1
-      order by created_at`,
+      order by tin is null, created_at`,
       [email],
     )
   ).rows;
@@ -747,4 +747,97 @@ export async function getDonationDistributions(
       [email, ids],
     )
   ).rows;
+}
+
+export async function getRecurringDonationByIdAndEmail(
+  client: PoolClient,
+  donationId: string,
+  email: string,
+) {
+  return (
+    await client.query(
+      `
+      select
+        d.*,
+        p.tin,
+        coalesce(
+          json_agg(json_build_object('recipient', e.recipient, 'percentage', e.percentage))
+            filter (where e.donation_id is not null),
+          '[]'::json
+        ) as earmarks
+      from donation d
+      join donor p on p.id = d.donor_id
+      left join earmark e on e.donation_id = d.id
+      where d.id = $1 and p.email = $2 and d.frequency = 'monthly' and not d.cancelled
+      group by d.id, p.tin
+      `,
+      [donationId, email],
+    )
+  ).rows[0] ?? null;
+}
+
+export async function changeDonation(
+  client: PoolClient,
+  donationId: string,
+  amount: number | null,
+  earmarks: { recipient: string; percentage: number }[] | null,
+  tin: string | null,
+) {
+  return (
+    await client.query(
+      `select * from change_donation(
+        p_donation_id => $1,
+        p_amount => $2,
+        p_earmarks => $3,
+        p_tin => $4
+      )`,
+      [
+        donationId,
+        amount,
+        earmarks !== null ? JSON.stringify(earmarks) : null,
+        tin,
+      ],
+    )
+  ).rows[0];
+}
+
+export async function adjustChargeDay(
+  client: PoolClient,
+  donationId: string,
+  chargeDay: number,
+): Promise<void> {
+  await client.query(
+    `
+    with
+      ref as (
+        select created_at
+        from charge
+        where donation_id = $1
+        order by created_at desc
+        limit 1
+      ),
+      base as (
+        select make_date(
+          extract(year from now())::int,
+          extract(month from now())::int,
+          $2
+        ) + coalesce((select created_at from ref), now())::time as ts
+      ),
+      target as (
+        select
+          case when ts > now() then ts else ts + interval '1 month' end as new_created_at
+        from base
+      ),
+      updated as (
+        update charge
+        set created_at = (select new_created_at from target)
+        where donation_id = $1 and status = 'created'
+        returning id
+      )
+    insert into charge (donation_id, status, created_at)
+    select $1, 'created', (select new_created_at from target)
+    where not exists (select 1 from updated)
+    `,
+    [donationId, chargeDay],
+  );
 }
