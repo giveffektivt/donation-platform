@@ -241,6 +241,164 @@ $$;
 
 
 --
+-- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.donor (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text,
+    email text NOT NULL,
+    address text,
+    postcode text,
+    city text,
+    tin text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    country text,
+    birthday date
+);
+
+
+--
+-- Name: change_donor_tax_unit(uuid, text, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.change_donor_tax_unit(p_donor_id uuid, p_new_name text, p_new_tin text) RETURNS giveffektivt.donor
+    LANGUAGE plpgsql
+    AS $$
+declare
+    v_old_donor donor%rowtype;
+    v_new_donor donor%rowtype;
+    v_year_start timestamptz := date_trunc('year', now());
+    v_donation donation%rowtype;
+    v_new_donation donation%rowtype;
+    v_donation_has_historical_charges boolean;
+    v_donation_has_recent_charges boolean;
+begin
+    update donor
+    set name = p_new_name
+    where id = p_donor_id
+    returning * into v_old_donor;
+
+    if not found then
+        raise exception 'donor with ID % not found', p_donor_id;
+    end if;
+
+    if coalesce(v_old_donor.tin, '') = coalesce(p_new_tin, '') then
+        return v_old_donor;
+    end if;
+
+    update donor
+    set name = p_new_name
+    where email = v_old_donor.email
+      and coalesce(tin, '') = coalesce(p_new_tin, '')
+    returning * into v_new_donor;
+
+    if v_new_donor.id is null then
+        insert into donor (email, tin, name, address, postcode, city, country, birthday, created_at)
+        values (
+            v_old_donor.email, p_new_tin, p_new_name,
+            v_old_donor.address, v_old_donor.postcode, v_old_donor.city,
+            v_old_donor.country, v_old_donor.birthday, v_old_donor.created_at
+        )
+        returning * into v_new_donor;
+    end if;
+
+    for v_donation in
+        select *
+        from donation
+        where donor_id = p_donor_id
+    loop
+        if exists (
+            select 1 from earmark
+            where donation_id = v_donation.id
+              and recipient = 'Giv Effektivts medlemskab'
+        ) then
+            continue;
+        end if;
+
+        select
+            count(*) filter (where created_at < v_year_start) > 0,
+            count(*) filter (where created_at >= v_year_start) > 0
+        into v_donation_has_historical_charges, v_donation_has_recent_charges
+        from charge
+        where donation_id = v_donation.id;
+
+        if not v_donation_has_historical_charges then
+            update donation
+            set donor_id = v_new_donor.id
+            where id = v_donation.id;
+
+            continue;
+        end if;
+
+        if not v_donation_has_recent_charges and (v_donation.frequency = 'once' or v_donation.cancelled) then
+            continue;
+        end if;
+
+        insert into donation (
+            donor_id, amount, frequency, gateway, method, tax_deductible,
+            gateway_metadata, fundraiser_id, message,
+            public_message_author, message_author, emailed, cancelled, created_at
+        )
+        values (
+            v_new_donor.id, v_donation.amount, v_donation.frequency,
+            v_donation.gateway, v_donation.method, v_donation.tax_deductible,
+            v_donation.gateway_metadata, v_donation.fundraiser_id, v_donation.message,
+            v_donation.public_message_author, v_donation.message_author,
+            v_donation.emailed, v_donation.cancelled, v_donation.created_at
+        )
+        returning * into v_new_donation;
+
+        insert into earmark (donation_id, recipient, percentage)
+        select v_new_donation.id, recipient, percentage
+        from earmark
+        where donation_id = v_donation.id;
+
+        update charge
+        set donation_id = v_new_donation.id
+        where donation_id = v_donation.id and created_at >= v_year_start;
+
+        update donation
+        set cancelled = true
+        where id = v_donation.id;
+    end loop;
+
+    if not exists (select 1 from donation where donor_id = v_new_donor.id) and not exists (select 1 from gavebrev where donor_id = v_new_donor.id) then
+        update survey
+        set donor_id = v_old_donor.id
+        where donor_id = v_new_donor.id;
+
+        delete from donor where id = v_new_donor.id;
+        v_new_donor := v_old_donor;
+    end if;
+
+    if v_new_donor.id <> p_donor_id and not exists (select 1 from donation where donor_id = p_donor_id) and not exists (select 1 from gavebrev where donor_id = p_donor_id) then
+        update survey
+        set donor_id = v_new_donor.id
+        where donor_id = p_donor_id;
+
+        delete from donor where id = p_donor_id;
+    end if;
+
+    if not exists (
+        select 1 from donation
+        where donor_id = v_new_donor.id
+    ) then
+        update donor
+        set tin = p_new_tin
+        where id = v_new_donor.id
+        returning * into v_new_donor;
+
+        return v_old_donor;
+    end if;
+
+    return v_new_donor;
+end
+$$;
+
+
+--
 -- Name: earmark_sum_check(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -705,25 +863,6 @@ CREATE TABLE giveffektivt.charge_transfer (
     earmark giveffektivt.donation_recipient NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: donor; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.donor (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    name text,
-    email text NOT NULL,
-    address text,
-    postcode text,
-    city text,
-    tin text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    country text,
-    birthday date
 );
 
 

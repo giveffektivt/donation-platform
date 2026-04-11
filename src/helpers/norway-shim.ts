@@ -113,6 +113,18 @@ export const enumerateIds = (data: object[]) =>
     ...item,
   }));
 
+export const toTaxUnit = (donor: any, idx: number) => ({
+  id: idx + 1,
+  donorId: 0,
+  name: donor.name ?? "Anonym",
+  ssn: donor.tin ?? "",
+  registered: donor.created_at.toISOString(),
+  archived: null,
+  sumDonations: donor.sum_donations,
+  numDonations: donor.num_donations,
+  taxDeductions: donor.tax_deductions,
+});
+
 export const buildOrganizations = (
   orgs: {
     name: string;

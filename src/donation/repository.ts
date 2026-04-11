@@ -490,6 +490,39 @@ export async function getDonorIdsByEmail(
   ).rows;
 }
 
+export async function insertDonorTaxUnit(
+  client: PoolClient,
+  email: string,
+  name?: string,
+  tin?: string,
+): Promise<{ id: string }> {
+  return (
+    await client.query(
+      `
+      insert into donor (email, name, tin)
+      values (lower(trim($1)), $2, $3)
+      on conflict (email, coalesce(tin, '')) do update
+      set name = excluded.name
+      returning id
+      `,
+      [email, name, tin],
+    )
+  ).rows[0];
+}
+
+export async function changeDonorTaxUnit(
+  client: PoolClient,
+  id: string,
+  name?: string,
+  tin?: string,
+): Promise<{ id: string } | null> {
+  const result = await client.query(
+    `select id from change_donor_tax_unit($1, $2, $3)`,
+    [id, name, tin],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function getDonorsDetailedByEmail(
   client: PoolClient,
   email: string,
@@ -497,15 +530,16 @@ export async function getDonorsDetailedByEmail(
   return (
     await client.query(
       `
-      with donor_donations as (
+      with donor_list as (
+        select id as donor_id, name, tin, created_at
+        from donor
+        where email = $1
+      ),
+      donor_donations as (
         select
           donor_id,
-          name,
-          tin,
-          donation_created_at as created_at,
           donation_id,
           amount,
-          tax_deductible,
           charged_at,
           extract(year from charged_at) as donation_year
         from charged_donations
@@ -513,14 +547,15 @@ export async function getDonorsDetailedByEmail(
       ),
       donor_stats as (
         select
-          donor_id,
-          name,
-          tin,
-          min(created_at) as created_at,
-          coalesce(sum(amount), 0) as sum_donations,
-          count(donation_id) as num_donations
-        from donor_donations
-        group by donor_id, name, tin
+          dl.donor_id,
+          dl.name,
+          dl.tin,
+          dl.created_at,
+          coalesce(sum(dd.amount), 0) as sum_donations,
+          count(dd.donation_id) as num_donations
+        from donor_list dl
+        left join donor_donations dd on dd.donor_id = dl.donor_id
+        group by dl.donor_id, dl.name, dl.tin, dl.created_at
       ),
       combined_tax_data as (
         select
@@ -559,19 +594,20 @@ export async function getDonorsDetailedByEmail(
       ),
       tax_deductions as (
         select
-          dd.donor_id,
+          dl.donor_id,
           dd.donation_year as year,
           sum(dd.amount) as sum_donations,
           coalesce(
             sb.l_total + least(sb.a_total, coalesce((select value from max_tax_deduction where year = dd.donation_year limit 1), 0)),
             0
           ) as deduction
-        from donor_donations dd
+        from donor_list dl
+        join donor_donations dd on dd.donor_id = dl.donor_id
         left join skat_by_year sb on
-          replace(dd.tin, '-', '') = sb.donor_cpr and
+          replace(dl.tin, '-', '') = sb.donor_cpr and
           dd.donation_year = sb.year
         where dd.donation_year is not null
-        group by dd.donor_id, dd.donation_year, sb.l_total, sb.a_total
+        group by dl.donor_id, dd.donation_year, sb.l_total, sb.a_total
         order by dd.donation_year desc
       )
       select
@@ -596,7 +632,7 @@ export async function getDonorsDetailedByEmail(
       from donor_stats ds
       left join tax_deductions td on ds.donor_id = td.donor_id
       group by ds.donor_id, ds.name, ds.tin, ds.created_at, ds.sum_donations, ds.num_donations
-      order by ds.created_at
+      order by ds.tin is null, ds.created_at
       `,
       [email],
     )
