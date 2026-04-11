@@ -34,6 +34,21 @@ export async function setDonationEmailed(
   ]);
 }
 
+export async function setDonationCancelledByIdAndEmail(
+  client: PoolClient,
+  id: string,
+  email: string,
+) {
+  return await client.query(
+    `update donation d
+     set cancelled = true
+     from donor p
+     where d.id = $1 and d.donor_id = p.id and p.email = $2
+     returning d.id`,
+    [id, email],
+  );
+}
+
 export async function setDonationCancelledByQuickpayOrder(
   client: PoolClient,
   quickpay_order: string,
@@ -688,7 +703,8 @@ export async function getRecurringDonationsByEmail(
         order by ch.created_at desc
         limit 1
       ) c on true
-      where p.email = $1 and d.frequency <> 'once';
+      where p.email = $1 and d.frequency <> 'once'
+      order by d.updated_at desc;
       `,
       [email],
     )
