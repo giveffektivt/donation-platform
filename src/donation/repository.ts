@@ -499,7 +499,7 @@ export async function getDonorIdsByEmail(
       select id
       from donor
       where email = $1
-      order by tin is null, created_at`,
+      order by tin is null, created_at, id`,
       [email],
     )
   ).rows;
@@ -647,7 +647,7 @@ export async function getDonorsDetailedByEmail(
       from donor_stats ds
       left join tax_deductions td on ds.donor_id = td.donor_id
       group by ds.donor_id, ds.name, ds.tin, ds.created_at, ds.sum_donations, ds.num_donations
-      order by ds.tin is null, ds.created_at
+      order by ds.tin is null, ds.created_at, ds.donor_id
       `,
       [email],
     )
