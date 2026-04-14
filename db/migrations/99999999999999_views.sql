@@ -3422,9 +3422,19 @@ begin
         where donor_id = p_donor_id
     loop
         if exists (
-            select 1 from earmark
-            where donation_id = v_donation.id
-              and recipient = 'Giv Effektivts medlemskab'
+            select 1
+            from earmark e
+            where e.donation_id = v_donation.id
+              and e.recipient = 'Giv Effektivts medlemskab'
+        )
+        and (
+            not v_donation.cancelled
+            or exists (
+                select 1
+                from charge c
+                where c.donation_id = v_donation.id
+                  and c.status in ('charged', 'waiting')
+            )
         ) then
             continue;
         end if;
