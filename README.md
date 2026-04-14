@@ -64,3 +64,5 @@ There are integration tests validating database logic, which can be executed usi
 - _How to test the payment gateway?_
 
 Use [Quickpay test cards](https://learn.quickpay.net/tech-talk/appendixes/test/#test-data) and these transactions would automatically be treated as test transactions.
+
+
