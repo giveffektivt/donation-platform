@@ -83,6 +83,7 @@ export async function GET(req: Request) {
         chargeDay: d.monthly_charge_day,
         amount: d.amount,
         method: d.method,
+        is_payment_expired: d.is_payment_expired,
       })),
     });
   } catch (e) {
