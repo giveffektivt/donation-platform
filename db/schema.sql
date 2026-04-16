@@ -231,8 +231,14 @@ begin
     update donation set gateway_metadata = v_old_donation.gateway_metadata where id = v_new_donation.id;
 
     if v_old_donation.method != 'Bank transfer' then
-        insert into charge(donation_id, status, created_at)
-        select v_new_donation.id, 'created', (select max(created_at) + interval '1 month' from charge where donation_id = v_old_donation.id);
+        insert into charge (donation_id, status, created_at)
+        select v_new_donation.id, 'created', next_created_at
+        from (
+            select max(created_at) + interval '1 month' as next_created_at
+            from charge
+            where donation_id = v_old_donation.id
+        )
+        where next_created_at is not null;
     end if;
 
     return v_new_donation;
