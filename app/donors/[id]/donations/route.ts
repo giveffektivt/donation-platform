@@ -44,6 +44,7 @@ export async function GET(req: Request) {
           KID: d.donation_id,
           taxUnitId: donorIds.indexOf(d.donor_id) + 1,
           timestamp: d.charged_at.toISOString(),
+          impact: d.impact,
         })),
       ),
     });

@@ -134,3 +134,30 @@ export type Donor = {
   tin: string | null;
   created_at: Date;
 };
+
+export type DonationImpact = {
+  recipient: string;
+  unit: string;
+  amount: number;
+  count: number;
+};
+
+export type ChargedDonation = {
+  donor_id: string;
+  name: string;
+  email: string;
+  tin: string;
+  donation_id: string;
+  frequency: DonationFrequency;
+  amount: number;
+  earmarks: string;
+  cancelled: boolean;
+  method: PaymentMethod;
+  gateway: PaymentGateway;
+  tax_deductible: boolean;
+  charge_id: string;
+  charge_short_id: string;
+  charged_at: Date;
+  donation_created_at: Date;
+  impact: DonationImpact[];
+};

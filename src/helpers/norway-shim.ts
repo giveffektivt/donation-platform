@@ -3,51 +3,51 @@ import { DonationRecipient, PaymentMethod } from "src/donation/types";
 export const norwegianOrgs = [
   {
     name: "Smart fordeling",
-    abbreviation: "GE-SMART",
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt.",
     infoUrl: "https://giveffektivt.dk/anbefalinger",
   },
   {
     name: DonationRecipient.MyggenetModMalaria,
-    abbreviation: "GE-MYGMAL",
     description: "Myggenet beskytter familier imod malariamyg, mens de sover.",
     infoUrl: "https://giveffektivt.dk/myggenet",
   },
   {
     name: DonationRecipient.MedicinModMalaria,
-    abbreviation: "GE-MEDMAL",
     description:
       "Der uddeles forebyggende malariamedicin i perioder, hvor smittetallet er særligt højt.",
     infoUrl: "https://giveffektivt.dk/malariamedicin",
   },
   {
     name: DonationRecipient.VitaminModMangelsygdomme,
-    abbreviation: "GE-VIT",
     description:
       "A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.",
     infoUrl: "https://giveffektivt.dk/a-vitamin",
   },
   {
     name: DonationRecipient.VaccinerTilSpædbørn,
-    abbreviation: "GE-VAC",
     description:
       "Forældre får en økonomisk belønning for at få deres børn vaccineret.",
     infoUrl: "https://giveffektivt.dk/boernevacciner",
   },
   {
     name: DonationRecipient.KontantoverførslerTilVerdensFattigste,
-    abbreviation: "GE-CASH",
     description:
       "Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.",
     infoUrl: "https://giveffektivt.dk/kontantoverfoersler",
   },
   {
     name: DonationRecipient.GivEffektivtsArbejdeOgVækst,
-    abbreviation: "GE-DRIFT",
     description:
       "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 10x mere i donationer til vores anbefalede velgørenhedsformål.",
     infoUrl: "https://giveffektivt.dk",
+  },
+  {
+    name: "Ormekure",
+    description:
+      "Ormekure til skolebørn forbedrer sundhed og øger skolegang og fremtidig indkomst.",
+    infoUrl: "https://giveffektivt.dk",
+    isActive: false,
   },
 ];
 
@@ -97,16 +97,6 @@ export const mapToNorwegianOrgId = (recipient: string): number => {
   throw new Error(`Unknown organization ${recipient}`);
 };
 
-export const mapToNorwegianAbbr = (recipient: DonationRecipient): string => {
-  if (
-    ["Giv Effektivts anbefaling", "Stor og velkendt effekt"].includes(recipient)
-  ) {
-    return norwegianOrgs[0].abbreviation;
-  }
-  const org = norwegianOrgs.find((o) => o.name === recipient);
-  return org?.abbreviation ?? recipient;
-};
-
 export const enumerateIds = (data: object[]) =>
   data.map((item, idx) => ({
     id: idx + 1,
@@ -128,9 +118,9 @@ export const toTaxUnit = (donor: any, idx: number) => ({
 export const buildOrganizations = (
   orgs: {
     name: string;
-    abbreviation: string;
     description: string;
     infoUrl: string;
+    isActive?: boolean;
   }[],
 ) =>
   enumerateIds(
@@ -138,12 +128,11 @@ export const buildOrganizations = (
       name: org.name,
       widgetDisplayName: org.name,
       widgetContext: null,
-      abbreviation: org.abbreviation,
       shortDescription: org.description,
       longDescription: org.name,
       standardShare: idx === 0 ? 100 : 0,
       informationUrl: org.infoUrl,
-      isActive: true,
+      isActive: org.isActive ?? true,
       ordering: idx + 1,
       causeAreaId: 1,
     })),

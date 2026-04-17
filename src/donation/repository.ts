@@ -2,6 +2,7 @@ import type { PoolClient } from "pg";
 import {
   DonationFrequency,
   DonationRecipient,
+  type ChargedDonation,
   type DonationToEmail,
   type DonationWithGatewayInfoBankTransfer,
   type DonationWithGatewayInfoQuickpay,
@@ -661,23 +662,121 @@ export async function getAggregatedDonationsByEmail(
   return (
     await client.query(
       `
-      select earmark, sum(amount) as total, extract(year from charged_at) as year
-      from charged_donations_by_transfer
-      where email = $1
-      group by earmark, extract(year from charged_at)
+      with donations as (
+        select
+          case
+            when cdt.earmark = 'Giv Effektivts arbejde og vækst' then 'Giv Effektivts arbejde og vækst'
+            when t.recipient = 'Against Malaria Foundation' then 'Myggenet mod malaria'
+            when t.recipient = 'Malaria Consortium' then 'Medicin mod malaria'
+            when t.recipient = 'Helen Keller International' then 'Vitamin mod mangelsygdomme'
+            when t.recipient = 'New Incentives' then 'Vacciner til spædbørn'
+            when t.recipient = 'Give Directly' then 'Kontantoverførsler til verdens fattigste'
+            when t.recipient = 'SCI Foundation' then 'Ormekure'
+          end as earmark,
+          cdt.amount,
+          cdt.charged_at
+        from charged_donations_by_transfer cdt
+        left join transfer t
+          on cdt.transfer_id = t.id
+          or (
+            cdt.transfer_id is null
+            and cdt.earmark = t.earmark
+            and t.created_at > now()
+          )
+        where cdt.email = $1
+      )
+      select
+        earmark,
+        sum(amount) as total,
+        extract(year from charged_at) as year
+      from donations
+      group by
+        earmark,
+        extract(year from charged_at)
       `,
       [email],
     )
   ).rows;
 }
 
-export async function getDonationsByEmail(client: PoolClient, email: string) {
+export async function getDonationsByEmail(
+  client: PoolClient,
+  email: string,
+): Promise<ChargedDonation[]> {
   return (
-    await client.query(
+    await client.query<ChargedDonation>(
       `
-      select *
-      from charged_donations_by_transfer
-      where email = $1
+      select
+        cd.donor_id,
+        cd.name,
+        cd.email,
+        cd.tin,
+        cd.donation_id,
+        cd.frequency,
+        cd.amount,
+        cd.earmarks,
+        cd.cancelled,
+        cd.method,
+        cd.gateway,
+        cd.tax_deductible,
+        cd.charge_id,
+        cd.charge_short_id,
+        cd.charged_at,
+        cd.donation_created_at,
+        coalesce(
+          (
+            select jsonb_agg(
+              jsonb_build_object(
+                'recipient', case
+                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'Giv Effektivt'
+                  else (case when t.created_at > now() then 'Forventet: ' else '' end) || t.recipient
+                end,
+                'unit', case
+                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'kr. til vores arbejde og vækst'
+                  when t.recipient = 'Against Malaria Foundation' then 'Antimalaria myggenet'
+                  when t.recipient = 'Malaria Consortium' then 'Malariabehandlinger'
+                  when t.recipient = 'Helen Keller International' then 'A-vitamintilskud'
+                  when t.recipient = 'New Incentives' then 'Vaccinationsprogrammer'
+                  when t.recipient = 'Give Directly' then 'Dollars'
+                  when t.recipient = 'SCI Foundation' then 'Ormekure'
+                end,
+                'description', case
+                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 10x mere i donationer til vores anbefalede velgørenhedsformål.'
+                  when t.recipient = 'Against Malaria Foundation' then 'Myggenet beskytter familier imod malariamyg, mens de sover.'
+                  when t.recipient = 'Malaria Consortium' then 'Der uddeles forebyggende malariamedicin i perioder, hvor smittetallet er særligt højt.'
+                  when t.recipient = 'Helen Keller International' then 'A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.'
+                  when t.recipient = 'New Incentives' then 'Forældre får en økonomisk belønning for at få deres børn vaccineret.'
+                  when t.recipient = 'Give Directly' then 'Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.'
+                  when t.recipient = 'SCI Foundation' then 'Ormekure til skolebørn forbedrer sundhed og øger skolegang og fremtidig indkomst.'
+                end,
+                'amount', round(cd.amount * e.percentage / 100, 1),
+                'count', case
+                  when e.recipient = 'Giv Effektivts arbejde og vækst' then round(cd.amount * e.percentage / 100, 1)
+                  else round(
+                    (cd.amount * e.percentage / 100) / t.exchange_rate
+                    / (t.unit_cost_external / t.unit_cost_conversion),
+                    1
+                  )
+                end
+              )
+            )
+            from earmark e
+            left join charge_transfer ct
+              on ct.charge_id = cd.charge_id and ct.earmark = e.recipient
+            left join transfer t
+              on ct.transfer_id = t.id
+              or (
+                ct.transfer_id is null
+                and e.recipient = t.earmark
+                and t.created_at > now()
+              )
+            where e.donation_id = cd.donation_id
+              and (t.id is not null or e.recipient = 'Giv Effektivts arbejde og vækst')
+          ),
+          '[]'::jsonb
+        ) as impact
+      from charged_donations cd
+      where cd.email = $1
       `,
       [email],
     )

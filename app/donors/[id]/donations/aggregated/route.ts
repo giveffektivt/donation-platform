@@ -3,8 +3,6 @@ import {
   dbRelease,
   getAggregatedDonationsByEmail,
   logError,
-  mapToNorwegianAbbr,
-  mapToNorwegianOrgId,
   verifyJwtBearerToken,
 } from "src";
 
@@ -27,9 +25,7 @@ export async function GET(req: Request) {
     return Response.json({
       status: 200,
       content: data.map((e) => ({
-        id: mapToNorwegianOrgId(e.earmark),
         organization: e.earmark,
-        abbriv: mapToNorwegianAbbr(e.earmark),
         value: e.total,
         year: e.year,
       })),
