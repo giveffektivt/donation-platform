@@ -39,8 +39,8 @@ export const norwegianOrgs = [
   {
     name: DonationRecipient.GivEffektivtsArbejdeOgVækst,
     description:
-      "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 10x mere i donationer til vores anbefalede velgørenhedsformål.",
-    infoUrl: "https://giveffektivt.dk",
+      "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 7x mere i donationer til vores anbefalede velgørenhedsformål.",
+    infoUrl: "https://giveffektivt.dk/x-faktor",
   },
   {
     name: "Ormekure",

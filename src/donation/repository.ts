@@ -740,14 +740,14 @@ export async function getDonationsByEmail(
                   when t.recipient = 'Give Directly' then 'Dollars'
                   when t.recipient = 'SCI Foundation' then 'Ormekure'
                 end,
-                'description', case
-                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 10x mere i donationer til vores anbefalede velgørenhedsformål.'
-                  when t.recipient = 'Against Malaria Foundation' then 'Myggenet beskytter familier imod malariamyg, mens de sover.'
-                  when t.recipient = 'Malaria Consortium' then 'Der uddeles forebyggende malariamedicin i perioder, hvor smittetallet er særligt højt.'
-                  when t.recipient = 'Helen Keller International' then 'A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.'
-                  when t.recipient = 'New Incentives' then 'Forældre får en økonomisk belønning for at få deres børn vaccineret.'
-                  when t.recipient = 'Give Directly' then 'Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.'
-                  when t.recipient = 'SCI Foundation' then 'Ormekure til skolebørn forbedrer sundhed og øger skolegang og fremtidig indkomst.'
+                'organization', case
+                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'Giv Effektivts arbejde og vækst'
+                  when t.recipient = 'Against Malaria Foundation' then 'Myggenet mod malaria'
+                  when t.recipient = 'Malaria Consortium' then 'Medicin mod malaria'
+                  when t.recipient = 'Helen Keller International' then 'Vitamin mod mangelsygdomme'
+                  when t.recipient = 'New Incentives' then 'Vacciner til spædbørn'
+                  when t.recipient = 'Give Directly' then 'Kontantoverførsler til verdens fattigste'
+                  when t.recipient = 'SCI Foundation' then 'Ormekure'
                 end,
                 'amount', round(cd.amount * e.percentage / 100, 1),
                 'count', case
