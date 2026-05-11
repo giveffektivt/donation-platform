@@ -101,19 +101,6 @@ const PayloadSchema = z
 
 export async function POST(req: Request) {
   try {
-    const ip: string =
-      req.headers.get("X-Real-IP") ??
-      req.headers.get("X-Forwarded-for") ??
-      "no ip";
-
-    const blockedIps = process.env.BLOCKED_IPS
-      ? process.env.BLOCKED_IPS.split(",")
-      : [];
-
-    if (blockedIps.includes(ip)) {
-      throw new Error(`Blocked IP address: ${ip}`);
-    }
-
     const submitData = await PayloadSchema.parseAsync(await req.json());
 
     const [response, donorId] = await processPayment(submitData);

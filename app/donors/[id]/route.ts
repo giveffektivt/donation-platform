@@ -14,11 +14,6 @@ export async function GET(req: Request) {
 
   const email = user[process.env.AUTH0_EMAIL_CLAIM] as string;
 
-  const allowedUsers = process.env.MINSIDE_ALLOWED;
-  if (allowedUsers && !allowedUsers.includes(email)) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
   let db = null;
 
   try {

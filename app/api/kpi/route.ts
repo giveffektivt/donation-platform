@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import {
   dbClient,
   dbRelease,
-  getClearhausUpcomingSettlement,
   getKpi,
   getPendingDistribution,
   getTimeDistribution,
@@ -25,14 +24,13 @@ export async function GET(request: NextRequest) {
   try {
     db = await dbClient();
 
-    const [kpi, pending, transferred, transfer_overview, collected, clearhaus] =
+    const [kpi, pending, transferred, transfer_overview, collected] =
       await Promise.all([
         getKpi(db),
         getPendingDistribution(db),
         getTransferredDistribution(db),
         getTransferOverview(db),
         getTimeDistribution(db, from, to, useDaily),
-        getClearhausUpcomingSettlement(db, process.env.CLEARHAUS_MERCHANT_ID),
       ]);
 
     return Response.json(
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
         transferred,
         transfer_overview,
         collected,
-        clearhaus,
       },
       {
         headers: {

@@ -19,17 +19,12 @@ declare global {
       CRON_API_KEY: string;
       GAVEBREV_API_KEY: string;
       FAILED_RECURRING_DONATIONS_API_KEY: string;
-      EMAIL_RECEIPT_USERNAME: string;
-      EMAIL_RECEIPT_PASSWORD: string;
-      EMAIL_DONATION_USERNAME: string;
-      EMAIL_DONATION_PASSWORD: string;
       MAILERSEND_API_KEY: string;
       MAILERSEND_TEMPLATE_DONATION: string;
       MAILERSEND_TEMPLATE_MEMBERSHIP: string;
       MAILERSEND_TEMPLATE_PAYMENT_EXPIRED: string;
       BREVO_API_URL: string;
       BREVO_API_KEY: string;
-      CLEARHAUS_MERCHANT_ID: string;
       AUTH0_EMAIL_CLAIM: string;
     }
   }
