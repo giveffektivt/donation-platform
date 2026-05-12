@@ -2,22 +2,40 @@ import Rollbar from "rollbar";
 
 const rollbar = new Rollbar({
   accessToken: process.env.ROLLBAR_SERVER_TOKEN,
-  captureUncaught: true,
+  captureUncaught: false,
   captureUnhandledRejections: false,
   environment: process.env.VERCEL_ENV,
   captureIp: false,
-  transform: (payload: any) => {
-    payload.custom = undefined;
-  },
 });
 
 export const logError = (message: string, error?: unknown) => {
-  const err = toError(error);
-  console.error(message, ...(err !== undefined ? [err] : []));
-  rollbar.error(message, ...(err !== undefined ? [err] : []));
+  const strippedError = toRollbarError(error);
+  const stderrError = toLogError(error);
+
+  console.error(message, ...(stderrError !== undefined ? [stderrError] : []));
+  rollbar.error(
+    message,
+    ...(strippedError !== undefined ? [strippedError] : []),
+  );
 };
 
-const toError = (error: unknown) => {
+const toLogError = (error: unknown) => {
+  if (!error) {
+    return undefined;
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  if (typeof error === "string" || error instanceof String) {
+    return { error: error.toString() };
+  }
+
+  return error;
+};
+
+const toRollbarError = (error: unknown) => {
   if (!error) {
     return undefined;
   }
