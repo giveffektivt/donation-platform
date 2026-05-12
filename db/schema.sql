@@ -1745,17 +1745,6 @@ CREATE VIEW giveffektivt.charges_to_charge AS
 
 
 --
--- Name: clearhaus_settlement; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.clearhaus_settlement (
-    merchant_id numeric NOT NULL,
-    amount numeric NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
 -- Name: fundraiser; Type: TABLE; Schema: giveffektivt; Owner: -
 --
 
@@ -2703,16 +2692,6 @@ UNION ALL
   WHERE (charged_donations_by_transfer_internal.earmark = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient)
   GROUP BY charged_donations_by_transfer_internal.earmark, ((date_trunc('month'::text, charged_donations_by_transfer_internal.charged_at))::date)::text
   ORDER BY 3, 1 DESC;
-
-
---
--- Name: scanpay_seq; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.scanpay_seq (
-    value integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
 
 
 --
@@ -3743,14 +3722,6 @@ ALTER TABLE ONLY giveffektivt.charge_transfer
 
 
 --
--- Name: clearhaus_settlement clearhaus_settlement_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt.clearhaus_settlement
-    ADD CONSTRAINT clearhaus_settlement_pkey PRIMARY KEY (merchant_id, created_at);
-
-
---
 -- Name: earmark earmark_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -3788,14 +3759,6 @@ ALTER TABLE ONLY giveffektivt.max_tax_deduction
 
 ALTER TABLE ONLY giveffektivt.ops_budget
     ADD CONSTRAINT ops_budget_pkey PRIMARY KEY (id);
-
-
---
--- Name: scanpay_seq scanpay_seq_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
---
-
-ALTER TABLE ONLY giveffektivt.scanpay_seq
-    ADD CONSTRAINT scanpay_seq_pkey PRIMARY KEY (value);
 
 
 --
@@ -3856,13 +3819,6 @@ CREATE INDEX audit_log_table_name_idx ON giveffektivt.audit_log USING btree (tab
 --
 
 CREATE UNIQUE INDEX donor_unique_email_tin ON giveffektivt.donor USING btree (email, COALESCE(tin, ''::text));
-
-
---
--- Name: idx_clearhaus_settlement_merchant_latest_amount; Type: INDEX; Schema: giveffektivt; Owner: -
---
-
-CREATE INDEX idx_clearhaus_settlement_merchant_latest_amount ON giveffektivt.clearhaus_settlement USING btree (merchant_id, created_at DESC) INCLUDE (amount);
 
 
 --
@@ -4220,4 +4176,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20251208225104'),
     ('20260116100833'),
     ('20260119133936'),
+    ('20260512084723'),
     ('99999999999999');
