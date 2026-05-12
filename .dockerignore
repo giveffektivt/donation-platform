@@ -3,6 +3,7 @@
 .next
 node_modules
 coverage
+db
 dist
 build
 out
