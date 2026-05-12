@@ -4,7 +4,6 @@ import {
   mapFromNorwegianOrgId,
   mapFromNorwegianPaymentMethods,
   type NewDonation,
-  PaymentGateway,
   PaymentMethod,
   processBankTransferDonation,
   processQuickpayDonation,
@@ -139,17 +138,9 @@ async function processPayment(donation: NewDonation): Promise<[Data, string]> {
     }
 
     case PaymentMethod.CreditCard:
-    case PaymentMethod.MobilePay:
-      switch (process.env.PAYMENT_GATEWAY) {
-        case PaymentGateway.Quickpay: {
-          const [redirect, donorId] = await processQuickpayDonation(donation);
-          return [{ message: "OK", redirect }, donorId];
-        }
-
-        default:
-          throw new Error(
-            `donation/register: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${donation.method}'`,
-          );
-      }
+    case PaymentMethod.MobilePay: {
+      const [redirect, donorId] = await processQuickpayDonation(donation);
+      return [{ message: "OK", redirect }, donorId];
+    }
   }
 }

@@ -4,7 +4,6 @@ import {
   getBankAccount,
   logError,
   type NewDonation,
-  PaymentGateway,
   PaymentMethod,
   processBankTransferDonation,
   processQuickpayDonation,
@@ -98,33 +97,16 @@ async function processPayment(payload: NewDonation): Promise<[Data, string]> {
       return [
         {
           message: "OK",
-          bank: {
-            account: getBankAccount(),
-            message: bankTransferId,
-          },
+          bank: { account: getBankAccount(), message: bankTransferId },
         },
         donorId,
       ];
     }
 
     case PaymentMethod.CreditCard:
-    case PaymentMethod.MobilePay:
-      switch (process.env.PAYMENT_GATEWAY) {
-        case PaymentGateway.Quickpay: {
-          const [redirect, donorId] = await processQuickpayDonation(payload);
-          return [
-            {
-              message: "OK",
-              redirect,
-            },
-            donorId,
-          ];
-        }
-
-        default:
-          throw new Error(
-            `api/donation: PAYMENT_GATEWAY '${process.env.PAYMENT_GATEWAY}' is unable to process payment method '${payload.method}'`,
-          );
-      }
+    case PaymentMethod.MobilePay: {
+      const [redirect, donorId] = await processQuickpayDonation(payload);
+      return [{ message: "OK", redirect }, donorId];
+    }
   }
 }

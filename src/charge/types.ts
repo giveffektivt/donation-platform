@@ -1,6 +1,5 @@
 import type {
   DonationGatewayMetadataQuickpay,
-  DonationGatewayMetadataScanpay,
   PaymentGateway,
   PaymentMethod,
 } from "src";
@@ -35,15 +34,6 @@ export type ChargeToCharge = {
   method: PaymentMethod;
 };
 
-export type ChargeToChargeScanpay = ChargeToCharge & {
-  gateway_metadata: ChargeGatewayMetadataScanpay;
-  donation_gateway_metadata: DonationGatewayMetadataScanpay;
-};
-
 export type ChargeToChargeQuickpay = ChargeToCharge & {
   donation_gateway_metadata: DonationGatewayMetadataQuickpay;
-};
-
-export type ChargeGatewayMetadataScanpay = {
-  idempotency_key: string;
 };

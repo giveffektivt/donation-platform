@@ -26,7 +26,6 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "rollbar": "^2.26.5",
-    "scanpay": "https://github.com/scanpaydk/node-scanpay.git#testing",
     "zod": "^4.3.5"
   },
   "devDependencies": {

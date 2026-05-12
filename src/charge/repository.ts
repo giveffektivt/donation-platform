@@ -1,10 +1,5 @@
 import type { PoolClient } from "pg";
-import type {
-  Charge,
-  ChargeToCharge,
-  ChargeToChargeScanpay,
-  ChargeWithGatewayMetadata,
-} from "src";
+import type { Charge, ChargeToCharge, ChargeWithGatewayMetadata } from "src";
 
 export async function insertCharge(
   client: PoolClient,
@@ -50,16 +45,6 @@ export async function setChargeStatus(
     charge.status,
     charge.id,
   ]);
-}
-
-export async function setChargeIdempotencyKey(
-  client: PoolClient,
-  charge: Partial<ChargeToChargeScanpay>,
-) {
-  return await client.query(
-    `update charge set gateway_metadata = gateway_metadata::jsonb || format('{"idempotency_key": "%s"}', $1::text)::jsonb where id=$2`,
-    [charge.gateway_metadata?.idempotency_key, charge.id],
-  );
 }
 
 export async function setChargeStatusByShortId(

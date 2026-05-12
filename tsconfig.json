@@ -29,7 +29,6 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "src/scanpay.d.tsy.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],

@@ -1,12 +1,10 @@
 import {
   type ChargeToChargeQuickpay,
-  type ChargeToChargeScanpay,
   dbExecuteInTransaction,
   getChargesToCharge,
   logError,
   PaymentGateway,
   quickpayChargeSubscription,
-  scanpayChargeSubscription,
 } from "src";
 
 export async function charge() {
@@ -18,12 +16,6 @@ export async function charge() {
             await quickpayChargeSubscription(
               db,
               charge as ChargeToChargeQuickpay,
-            );
-            break;
-          case PaymentGateway.Scanpay:
-            await scanpayChargeSubscription(
-              db,
-              charge as ChargeToChargeScanpay,
             );
             break;
           default:
