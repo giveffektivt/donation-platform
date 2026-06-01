@@ -237,6 +237,35 @@ export async function recreateFailedRecurringDonation(
   ).rows[0];
 }
 
+export async function setDonationBetalingsserviceMetadata(
+  client: PoolClient,
+  donationId: string,
+  metadata: {
+    uuid: string;
+    status_code: string;
+    reg_no: string;
+    account_no: string;
+  },
+) {
+  return await client.query(
+    `update donation
+     set gateway_metadata = gateway_metadata::jsonb || jsonb_build_object(
+       'bs_uuid', $2::text,
+       'bs_status_code', $3::text,
+       'bs_reg_no', $4::text,
+       'bs_account_no', $5::text
+     )
+     where id = $1`,
+    [
+      donationId,
+      metadata.uuid,
+      metadata.status_code,
+      metadata.reg_no,
+      metadata.account_no,
+    ],
+  );
+}
+
 export async function setDonationQuickpayId(
   client: PoolClient,
   donation: Partial<DonationWithGatewayInfoQuickpay>,

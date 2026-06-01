@@ -1,12 +1,10 @@
 import { addYears, differenceInDays, startOfYear } from "date-fns";
 import { EmailParams, MailerSend, Recipient } from "mailersend";
 import {
-  type BankTransferInfo,
   DonationRecipient,
   type DonationToEmail,
   dbExecuteInTransaction,
   EmailedStatus,
-  getBankAccount,
   getDonationsToEmail,
   logError,
   setDonationEmailed,
@@ -72,10 +70,7 @@ export async function sendMembershipEmail(donation: DonationToEmail) {
   }
 }
 
-export async function sendPaymentEmail(
-  donation: DonationToEmail,
-  bank?: BankTransferInfo,
-) {
+export async function sendPaymentEmail(donation: DonationToEmail) {
   const days_until_next_year = differenceInDays(
     startOfYear(addYears(new Date(), 1)),
     new Date(),
@@ -96,8 +91,6 @@ export async function sendPaymentEmail(
           amount: donation.amount.toLocaleString("da-DK"),
           frequency: donation.frequency,
           tax_deductible: donation.tax_deductible,
-          bank_account: getBankAccount(),
-          bank_msg: bank?.msg ?? null,
           days_until_next_year,
         },
       },

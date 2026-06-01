@@ -67,7 +67,11 @@ export type DonationGatewayMetadataQuickpay = {
 };
 
 export type DonationGatewayMetadataBankTransfer = {
-  bank_msg: string;
+  bs_reference?: string;
+  bs_uuid?: string;
+  bs_status_code?: string;
+  bs_reg_no?: string;
+  bs_account_no?: string;
 };
 
 export type DonationToEmail = {
@@ -101,11 +105,6 @@ export type FailedRecurringDonationToEmail = {
   recipient: string;
   amount: number;
   payment_link: string;
-};
-
-export type BankTransferInfo = {
-  amount: number;
-  msg: string;
 };
 
 export type Fundraiser = {

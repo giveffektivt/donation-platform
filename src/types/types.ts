@@ -15,6 +15,10 @@ export type NewDonation = {
   publicMessageAuthor?: boolean;
   messageAuthor?: string;
   message?: string;
+  bankAccount?: {
+    regNo: string;
+    accountNo: string;
+  };
 };
 
 export type NewMembership = {

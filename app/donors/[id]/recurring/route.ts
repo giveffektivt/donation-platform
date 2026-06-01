@@ -77,7 +77,6 @@ export async function GET(req: Request) {
       content: donations.map((d) => ({
         id: d.id,
         kid: d.id,
-        bank_msg: d.gateway_metadata?.bank_msg,
         cancelled: d.cancelled,
         createdAt: d.created_at.toISOString(),
         chargeDay: d.monthly_charge_day,

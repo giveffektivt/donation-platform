@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 17.2
+-- Dumped from database version 17.7
 -- Dumped by pg_dump version 17.9
 
 SET statement_timeout = 0;
@@ -749,8 +749,10 @@ begin
 
     if p_gateway = 'Quickpay' then
         v_gateway_metadata := format('{"quickpay_order": "%s"}', gen_short_id('donation', 'gateway_metadata->>''quickpay_order''', 'd-'))::jsonb;
+    elsif p_gateway = 'Bank transfer' and p_frequency = 'monthly' then
+        v_gateway_metadata := format('{"bs_reference": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bs_reference''', 'bs', 8))::jsonb;
     elsif p_gateway = 'Bank transfer' then
-        v_gateway_metadata := format('{"bank_msg": "%s"}', gen_short_id('donation', 'gateway_metadata->>''bank_msg''', 'd-'))::jsonb;
+        v_gateway_metadata := '{}'::jsonb;
     else
         raise exception 'unsupported gateway: %', p_gateway;
     end if;

@@ -21,6 +21,7 @@
     "jwks-rsa": "^3.2.0",
     "kysely": "^0.28.9",
     "mailersend": "^2.6.0",
+    "mastercard-oauth1-signer": "^1.1.8",
     "next": "^16.1.2",
     "pg": "^8.17.1",
     "react": "^19.2.3",

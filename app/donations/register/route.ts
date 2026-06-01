@@ -1,20 +1,22 @@
 import {
+  BetalingsserviceError,
   DonationFrequency,
   logError,
   mapFromNorwegianOrgId,
   mapFromNorwegianPaymentMethods,
   type NewDonation,
   PaymentMethod,
-  processBankTransferDonation,
+  createOpenBankingPaymentForCharge,
   processQuickpayDonation,
+  registerBankDonation,
+  registerBetalingsserviceMandate,
   SubscribeToNewsletter,
 } from "src";
 import { z } from "zod";
 
 type Data = {
   message: string;
-  redirect?: string;
-  bankMsg?: string;
+  redirect: string;
 };
 
 const PayloadSchema = z
@@ -68,11 +70,34 @@ const PayloadSchema = z
     method: z.number().transform(mapFromNorwegianPaymentMethods),
     recurring: z.coerce.boolean(),
     amount: z.coerce.number().min(1).transform(Math.round),
+    regnr: z.preprocess(
+      (val) => (!val ? undefined : val),
+      z
+        .string()
+        .regex(/^\d{4}$/)
+        .optional(),
+    ),
+    kontonr: z.preprocess(
+      (val) => (!val ? undefined : val),
+      z
+        .string()
+        .regex(/^\d{4,10}$/)
+        .optional(),
+    ),
   })
   .refine((data) => !data.donor.taxDeduction || !!data.donor.ssn, {
     path: ["ssn"],
     error: "ssn is required for tax deductions",
   })
+  .refine(
+    (data) =>
+      !(data.recurring && data.method === PaymentMethod.BankTransfer) ||
+      (!!data.donor.ssn && !!data.regnr && !!data.kontonr),
+    {
+      path: ["regnr"],
+      error: "ssn, regnr and kontonr are required for recurring bank donations",
+    },
+  )
   .refine(
     (data) =>
       data.distributionCauseAreas.reduce((s, o) => s + o.percentage, 0) === 100,
@@ -96,6 +121,10 @@ const PayloadSchema = z
     publicMessageAuthor: data.fundraiser?.showName,
     messageAuthor: data.fundraiser?.messageSenderName,
     message: data.fundraiser?.message,
+    bankAccount:
+      data.regnr && data.kontonr
+        ? { regNo: data.regnr, accountNo: data.kontonr }
+        : undefined,
   }));
 
 export async function POST(req: Request) {
@@ -121,11 +150,21 @@ export async function POST(req: Request) {
         donorID: donorId,
         hasAnsweredReferral: false,
         paymentProviderUrl: response.redirect,
-        KID: response.bankMsg,
       },
     });
   } catch (err) {
     logError("donation/register:", err);
+    if (err instanceof BetalingsserviceError) {
+      return Response.json(
+        { message: err.message, code: err.code },
+        {
+          status:
+            err.httpStatus >= 400 && err.httpStatus < 500
+              ? err.httpStatus
+              : 502,
+        },
+      );
+    }
     return Response.json({}, { status: 500 });
   }
 }
@@ -133,8 +172,32 @@ export async function POST(req: Request) {
 async function processPayment(donation: NewDonation): Promise<[Data, string]> {
   switch (donation.method) {
     case PaymentMethod.BankTransfer: {
-      const [bankMsg, donorId] = await processBankTransferDonation(donation);
-      return [{ message: "OK", bankMsg }, donorId];
+      const { donation: registered, charge } =
+        await registerBankDonation(donation);
+
+      if (donation.frequency === DonationFrequency.Monthly) {
+        if (!donation.tin || !donation.bankAccount) {
+          throw new Error(
+            "donation/register: unexpected error, zod didn't catch that monthly bank transfer requires tin and bankAccount",
+          );
+        }
+        await registerBetalingsserviceMandate(registered, {
+          tin: donation.tin,
+          regNo: donation.bankAccount.regNo,
+          accountNo: donation.bankAccount.accountNo,
+        });
+      }
+
+      const { authorizationUrl } = await createOpenBankingPaymentForCharge(
+        registered,
+        charge,
+        process.env.SUCCESS_URL,
+      );
+
+      return [
+        { message: "OK", redirect: authorizationUrl },
+        registered.donor_id,
+      ];
     }
 
     case PaymentMethod.CreditCard:

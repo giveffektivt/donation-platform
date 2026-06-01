@@ -13,6 +13,33 @@ export async function insertCharge(
   ).rows[0];
 }
 
+export async function setChargeOpenBankingPaymentId(
+  client: PoolClient,
+  chargeId: string,
+  paymentId: string,
+) {
+  return await client.query(
+    `update charge
+     set gateway_metadata = gateway_metadata::jsonb || jsonb_build_object('aiia_payment_id', $1::text)
+     where id = $2`,
+    [paymentId, chargeId],
+  );
+}
+
+export async function getChargeByOpenBankingPaymentId(
+  client: PoolClient,
+  paymentId: string,
+): Promise<ChargeWithGatewayMetadata | null> {
+  return (
+    (
+      await client.query(
+        `select * from charge where gateway_metadata ->> 'aiia_payment_id' = $1`,
+        [paymentId],
+      )
+    ).rows[0] ?? null
+  );
+}
+
 export async function insertInitialChargeQuickpay(
   client: PoolClient,
   quickpay_order: string,

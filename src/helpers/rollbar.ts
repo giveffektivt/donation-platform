@@ -13,10 +13,12 @@ export const logError = (message: string, error?: unknown) => {
   const stderrError = toLogError(error);
 
   console.error(message, ...(stderrError !== undefined ? [stderrError] : []));
-  rollbar.error(
-    message,
-    ...(strippedError !== undefined ? [strippedError] : []),
-  );
+  if (process.env.ROLLBAR_SERVER_TOKEN) {
+    rollbar.error(
+      message,
+      ...(strippedError !== undefined ? [strippedError] : []),
+    );
+  }
 };
 
 const toLogError = (error: unknown) => {
