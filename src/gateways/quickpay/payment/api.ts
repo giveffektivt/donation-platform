@@ -69,7 +69,6 @@ export async function quickpayOneTimeUrl(
     {
       amount: donation.amount * 100,
       continue_url: successUrl,
-      callback_url: process.env.QUICKPAY_CALLBACK_URL,
       auto_capture: true,
       language: "da",
       payment_methods: isMobilePay ? "mobilepay" : "",
@@ -93,7 +92,6 @@ export async function quickpaySubscriptionUrl(
     {
       amount: donation.amount * 100,
       continue_url: successUrl,
-      callback_url: process.env.QUICKPAY_CALLBACK_URL,
       language: "da",
       payment_methods: isMobilePay ? "mobilepay-subscriptions" : "",
     },
@@ -156,7 +154,6 @@ async function request(
       "Accept-Version": "v10",
       "Content-Type": "application/json",
       Authorization: authorization,
-      "QuickPay-Callback-Url": process.env.QUICKPAY_CALLBACK_URL,
     },
     body: JSON.stringify(body),
   });
