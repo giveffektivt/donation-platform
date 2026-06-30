@@ -39,11 +39,20 @@ const CauseAreaSchema = z
     standardSplit: z.boolean().optional(),
     organizations: z.array(EarmarkSchema).optional(),
   })
-  .transform((ca) =>
-    ca.standardSplit
-      ? [{ recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 100 }]
-      : (ca.organizations ?? null),
-  );
+  .transform((ca) => {
+    if (ca.standardSplit) {
+      return [
+        {
+          recipient: DonationRecipient.GivEffektivtsAnbefaling,
+          percentage: 100,
+        },
+      ];
+    }
+
+    const organizations =
+      ca.organizations?.filter((org) => org.percentage > 0) ?? [];
+    return organizations.length > 0 ? organizations : null;
+  });
 
 const UpdateRecurringSchema = z.object({
   distribution: z
