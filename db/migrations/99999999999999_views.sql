@@ -2516,11 +2516,14 @@ with
             p.name
         from
             donor p
+            join donation d on d.donor_id = p.id
+            join charge c on c.donation_id = d.id
         where
-            p.name is not null
+            c.status = 'charged'
+            and p.name is not null
         order by
             p.email,
-            p.created_at
+            c.created_at desc
     ),
     cvrs as (
         select distinct

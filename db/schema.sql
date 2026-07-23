@@ -1,7 +1,7 @@
 \restrict dbmate
 
 -- Dumped from database version 17.2
--- Dumped by pg_dump version 17.9
+-- Dumped by pg_dump version 17.10
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1936,9 +1936,11 @@ CREATE VIEW giveffektivt.crm_export AS
         ), names AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.name
-           FROM giveffektivt.donor p
-          WHERE (p.name IS NOT NULL)
-          ORDER BY p.email, p.created_at
+           FROM ((giveffektivt.donor p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (p.name IS NOT NULL))
+          ORDER BY p.email, c.created_at DESC
         ), cvrs AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.tin AS cvr
