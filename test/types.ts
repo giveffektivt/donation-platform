@@ -45,5 +45,5 @@ export type OfficialTaxReportLine = {
 export type Earmark = {
   donation_id: string;
   recipient: DonationRecipient;
-  percentage: number;
+  amount: number;
 };

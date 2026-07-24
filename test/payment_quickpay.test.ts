@@ -17,13 +17,7 @@ import {
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import {
-  findAllCharges,
-  findAllDonations,
-  findAllDonors,
-  findAllEarmarks,
-  insertChargeWithCreatedAt,
-} from "./repository";
+import { findAllCharges, findAllDonations, findAllDonors, findAllEarmarks, insertChargeWithCreatedAt } from "./repository";
 
 const client = dbClient();
 
@@ -41,8 +35,8 @@ test("One-time donation using Quickpay", async () => {
   const [donation, charge] = await insertQuickpayDataDonation(db, {
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 9 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
     ],
     amount: 10,
     frequency: DonationFrequency.Once,
@@ -78,12 +72,12 @@ test("One-time donation using Quickpay", async () => {
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 90,
+      amount: 9,
     },
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 10,
+      amount: 1,
     },
   ]);
 
@@ -104,8 +98,8 @@ test("Monthly donation using Quickpay", async () => {
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 9 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
@@ -141,12 +135,12 @@ test("Monthly donation using Quickpay", async () => {
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 90,
+      amount: 9,
     },
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 10,
+      amount: 1,
     },
   ]);
 
@@ -200,7 +194,7 @@ test("Membership using Quickpay", async () => {
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.GivEffektivtsMedlemskab,
-      percentage: 100,
+      amount: 50,
     },
   ]);
 
@@ -215,8 +209,8 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 9 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
@@ -261,12 +255,12 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 90,
+      amount: 9,
     },
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 10,
+      amount: 1,
     },
   ]);
 
@@ -287,8 +281,8 @@ test("Recreate failed recurring donation", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 80 },
-      { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 240 },
+      { recipient: DonationRecipient.VaccinerTilSpædbørn, amount: 60 },
     ],
   });
 
@@ -343,12 +337,8 @@ test("Recreate failed recurring donation", async () => {
     },
   ];
 
-  donations.sort((a, b) =>
-    a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1,
-  );
-  expectedDonations.sort((a, b) =>
-    a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1,
-  );
+  donations.sort((a, b) => (a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1));
+  expectedDonations.sort((a, b) => (a.cancelled === b.cancelled ? 0 : a.cancelled ? -1 : 1));
 
   expect(donations).toMatchObject(expectedDonations);
 
@@ -360,22 +350,22 @@ test("Recreate failed recurring donation", async () => {
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 80,
+      amount: 240,
     },
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.VaccinerTilSpædbørn,
-      percentage: 20,
+      amount: 60,
     },
     {
       donation_id: donations[1].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 80,
+      amount: 240,
     },
     {
       donation_id: donations[1].id,
       recipient: DonationRecipient.VaccinerTilSpædbørn,
-      percentage: 20,
+      amount: 60,
     },
   ]);
 

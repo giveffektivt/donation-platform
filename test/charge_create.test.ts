@@ -13,12 +13,7 @@ import {
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import {
-  getChargesToCreate,
-  getScheduleMembershipsCharges,
-  insertChargeWithCreatedAt,
-  setDonationCancelledById,
-} from "./repository";
+import { getChargesToCreate, getScheduleMembershipsCharges, insertChargeWithCreatedAt, setDonationCancelledById } from "./repository";
 
 const client = dbClient();
 
@@ -51,8 +46,8 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -64,8 +59,8 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     taxDeductible: true,
     tin: "222222-2222",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
     ],
   });
 
@@ -136,8 +131,8 @@ test("Donation that has no charges does not appear in the create charges view", 
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -154,8 +149,8 @@ test("Cancelled donation does not appear in the create charges view", async () =
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -179,8 +174,8 @@ test("Bank transfer donation does not appear in the create charges view", async 
     frequency: DonationFrequency.Once,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -214,9 +209,7 @@ test("Active donation with a past failed charge still appears in the create char
     status: ChargeStatus.Error,
   });
 
-  expect(await getChargesToCreate(db)).toMatchObject([
-    { donation_id: donation.id, next_charge: utc(subYears(now, 1)) },
-  ]);
+  expect(await getChargesToCreate(db)).toMatchObject([{ donation_id: donation.id, next_charge: utc(subYears(now, 1)) }]);
 });
 
 test("Donations with already scheduled future charges should not get more charges created", async () => {
@@ -230,8 +223,8 @@ test("Donations with already scheduled future charges should not get more charge
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -242,8 +235,8 @@ test("Donations with already scheduled future charges should not get more charge
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -340,9 +333,7 @@ test("MobilePay membership charged this January is scheduled for next April", as
     frequency: DonationFrequency.Yearly,
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
-    earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsMedlemskab, percentage: 100 },
-    ],
+    earmarks: [{ recipient: DonationRecipient.GivEffektivtsMedlemskab, amount: 50 }],
   });
 
   await insertChargeWithCreatedAt(db, {

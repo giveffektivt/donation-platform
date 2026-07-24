@@ -202,7 +202,10 @@ begin
 
     select * from donor where id = v_old_donation.donor_id into v_donor;
 
-    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    select json_agg(json_build_object(
+        'recipient', recipient,
+        'amount', amount * coalesce(p_amount, v_old_donation.amount) / v_old_donation.amount
+    ))
     from earmark
     where donation_id = p_donation_id
     into v_old_earmarks;
@@ -369,8 +372,8 @@ begin
         )
         returning * into v_new_donation;
 
-        insert into earmark (donation_id, recipient, percentage)
-        select v_new_donation.id, recipient, percentage
+        insert into earmark (donation_id, recipient, amount)
+        select v_new_donation.id, recipient, amount
         from earmark
         where donation_id = v_donation.id;
 
@@ -427,13 +430,18 @@ CREATE FUNCTION giveffektivt.earmark_sum_check() RETURNS trigger
 declare
   v_donation_id uuid := coalesce(new.donation_id, old.donation_id);
   v_sum numeric;
+  v_amount numeric;
 begin
-  select coalesce(sum(percentage), 0) into v_sum
+  select coalesce(sum(amount), 0) into v_sum
   from earmark
   where donation_id = v_donation_id;
 
-  if v_sum <> 100 then
-    raise exception 'donation % earmarks must sum to 100, got %', v_donation_id, v_sum;
+  select amount into v_amount
+  from donation
+  where id = v_donation_id;
+
+  if v_sum <> v_amount then
+    raise exception 'donation % earmarks must sum to donation amount %, got %', v_donation_id, v_amount, v_sum;
   end if;
 
   return null;
@@ -653,7 +661,7 @@ begin
 
     select * from donor where id = v_old_donation.donor_id into v_donor;
 
-    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    select json_agg(json_build_object('recipient', recipient, 'amount', amount))
     from earmark
     where donation_id = p_donation_id
     into v_old_earmarks;
@@ -708,7 +716,7 @@ begin
     end if;
 
     if jsonb_typeof(p_earmarks) <> 'array' or jsonb_array_length(p_earmarks) = 0 then
-        raise exception 'earmarks must be a non-empty JSON array of {recipient, percentage}';
+        raise exception 'earmarks must be a non-empty JSON array of {recipient, amount}';
     end if;
 
     select exists(
@@ -720,21 +728,21 @@ begin
         raise exception 'including membership with another earmark is not supported yet';
     end if;
 
-    select coalesce(sum((e->>'percentage')::numeric),0) into v_total
+    select coalesce(sum((e->>'amount')::numeric),0) into v_total
     from jsonb_array_elements(p_earmarks) e;
 
-    if round(v_total, 6) <> 100 then
-        raise exception 'sum of earmark percentages must be 100, got %', v_total;
+    if v_total <> p_amount then
+        raise exception 'sum of earmark amounts must equal donation amount %, got %', p_amount, v_total;
     end if;
 
     select exists(
         select 1
         from jsonb_array_elements(p_earmarks) e
-        where (e->>'percentage')::numeric <= 0
+        where (e->>'amount')::numeric <= 0
     ) into v_has_nonpos;
 
     if v_has_nonpos then
-        raise exception 'all earmark percentages must be > 0';
+        raise exception 'all earmark amounts must be > 0';
     end if;
 
     select r into v_dup
@@ -787,8 +795,8 @@ begin
     )
     returning * into v_donation;
 
-    insert into earmark (donation_id, recipient, percentage)
-    select v_donation.id, (e->>'recipient')::donation_recipient, (e->>'percentage')::numeric
+    insert into earmark (donation_id, recipient, amount)
+    select v_donation.id, (e->>'recipient')::donation_recipient, (e->>'amount')::numeric
     from jsonb_array_elements(p_earmarks) e;
 
     return v_donation;
@@ -892,10 +900,10 @@ CREATE TABLE giveffektivt.charge_transfer (
 CREATE TABLE giveffektivt.earmark (
     donation_id uuid NOT NULL,
     recipient giveffektivt.donation_recipient NOT NULL,
-    percentage numeric NOT NULL,
+    amount numeric NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT earmark_percentage_check CHECK (((percentage >= (0)::numeric) AND (percentage <= (100)::numeric)))
+    CONSTRAINT earmark_amount_check CHECK ((amount > (0)::numeric))
 );
 
 
@@ -911,7 +919,7 @@ CREATE VIEW giveffektivt.donations_overview_internal AS
     d.id AS donation_id,
     d.frequency,
     d.amount,
-    COALESCE(( SELECT string_agg((((e.recipient || '='::text) || e.percentage) || '%'::text), ', '::text ORDER BY e.percentage DESC) AS string_agg
+    COALESCE(( SELECT string_agg(((e.recipient || '='::text) || e.amount), ', '::text ORDER BY e.amount DESC) AS string_agg
            FROM giveffektivt.earmark e
           WHERE (e.donation_id = d.id)), ''::text) AS earmarks,
     d.cancelled,
@@ -992,7 +1000,7 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer_internal AS
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(((cd.amount * e.percentage) / (100)::numeric), 1) AS amount,
+    round(e.amount, 1) AS amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -1647,7 +1655,7 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(((cd.amount * e.percentage) / (100)::numeric), 1) AS amount,
+    round(e.amount, 1) AS amount,
     cd.frequency,
     cd.cancelled,
     cd.method,

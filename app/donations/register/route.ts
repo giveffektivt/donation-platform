@@ -23,33 +23,30 @@ const PayloadSchema = z
       .array(
         z
           .object({
-            percentageShare: z.coerce
-              .number()
-              .min(0)
-              .max(100)
-              .optional()
-              .default(100),
+            amount: z.coerce.number().positive(),
             organizations: z.array(
               z
                 .object({
                   id: z.number().transform(mapFromNorwegianOrgId),
-                  percentageShare: z.coerce.number().min(0).max(100),
+                  amount: z.coerce.number().positive(),
                 })
-                .transform(({ id, percentageShare }) => ({
-                  recipient: id,
-                  percentage: percentageShare,
-                })),
+                .transform(({ id, amount }) => ({ recipient: id, amount })),
             ),
           })
-          .transform((area) =>
-            area.organizations.map((organization) => ({
-              recipient: organization.recipient,
-              percentage:
-                (organization.percentage * area.percentageShare) / 100,
-            })),
-          ),
+          .refine(
+            (area) =>
+              area.organizations.reduce(
+                (sum, organization) => sum + organization.amount,
+                0,
+              ) === area.amount,
+            {
+              path: ["organizations"],
+              error: "organizations must sum to cause area amount",
+            },
+          )
+          .transform((area) => area.organizations),
       )
-      .transform((areas) => areas.flat().filter((o) => o.percentage > 0)),
+      .transform((areas) => areas.flat()),
     donor: z.object({
       email: z.email().max(500),
       taxDeduction: z.boolean().optional().default(false),
@@ -87,12 +84,13 @@ const PayloadSchema = z
   })
   .refine(
     (data) =>
-      Math.abs(
-        data.distributionCauseAreas.reduce((s, o) => s + o.percentage, 0) - 100,
-      ) < 0.000001,
+      data.distributionCauseAreas.reduce(
+        (sum, earmark) => sum + earmark.amount,
+        0,
+      ) === data.amount,
     {
       path: ["distributionCauseAreas"],
-      error: "cause areas must sum to 100",
+      error: "cause areas must sum to donation amount",
     },
   )
   .transform((data) => ({

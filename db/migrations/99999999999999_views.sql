@@ -65,10 +65,10 @@ select
         (
             select
                 string_agg(
-                    e.recipient || '=' || e.percentage || '%',
+                    e.recipient || '=' || e.amount,
                     ', '
                     order by
-                        e.percentage desc
+                        e.amount desc
                 )
             from
                 earmark e
@@ -248,7 +248,7 @@ select
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(cd.amount * e.percentage / 100, 1) as amount,
+    round(e.amount, 1) as amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -274,7 +274,7 @@ select
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(cd.amount * e.percentage / 100, 1) as amount,
+    round(e.amount, 1) as amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -3226,7 +3226,7 @@ begin
     end if;
 
     if jsonb_typeof(p_earmarks) <> 'array' or jsonb_array_length(p_earmarks) = 0 then
-        raise exception 'earmarks must be a non-empty JSON array of {recipient, percentage}';
+        raise exception 'earmarks must be a non-empty JSON array of {recipient, amount}';
     end if;
 
     select exists(
@@ -3238,21 +3238,21 @@ begin
         raise exception 'including membership with another earmark is not supported yet';
     end if;
 
-    select coalesce(sum((e->>'percentage')::numeric),0) into v_total
+    select coalesce(sum((e->>'amount')::numeric),0) into v_total
     from jsonb_array_elements(p_earmarks) e;
 
-    if round(v_total, 6) <> 100 then
-        raise exception 'sum of earmark percentages must be 100, got %', v_total;
+    if v_total <> p_amount then
+        raise exception 'sum of earmark amounts must equal donation amount %, got %', p_amount, v_total;
     end if;
 
     select exists(
         select 1
         from jsonb_array_elements(p_earmarks) e
-        where (e->>'percentage')::numeric <= 0
+        where (e->>'amount')::numeric <= 0
     ) into v_has_nonpos;
 
     if v_has_nonpos then
-        raise exception 'all earmark percentages must be > 0';
+        raise exception 'all earmark amounts must be > 0';
     end if;
 
     select r into v_dup
@@ -3305,8 +3305,8 @@ begin
     )
     returning * into v_donation;
 
-    insert into earmark (donation_id, recipient, percentage)
-    select v_donation.id, (e->>'recipient')::donation_recipient, (e->>'percentage')::numeric
+    insert into earmark (donation_id, recipient, amount)
+    select v_donation.id, (e->>'recipient')::donation_recipient, (e->>'amount')::numeric
     from jsonb_array_elements(p_earmarks) e;
 
     return v_donation;
@@ -3364,7 +3364,10 @@ begin
 
     select * from donor where id = v_old_donation.donor_id into v_donor;
 
-    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    select json_agg(json_build_object(
+        'recipient', recipient,
+        'amount', amount * coalesce(p_amount, v_old_donation.amount) / v_old_donation.amount
+    ))
     from earmark
     where donation_id = p_donation_id
     into v_old_earmarks;
@@ -3509,8 +3512,8 @@ begin
         )
         returning * into v_new_donation;
 
-        insert into earmark (donation_id, recipient, percentage)
-        select v_new_donation.id, recipient, percentage
+        insert into earmark (donation_id, recipient, amount)
+        select v_new_donation.id, recipient, amount
         from earmark
         where donation_id = v_donation.id;
 
@@ -3575,7 +3578,7 @@ begin
 
     select * from donor where id = v_old_donation.donor_id into v_donor;
 
-    select json_agg(json_build_object('recipient', recipient, 'percentage', percentage))
+    select json_agg(json_build_object('recipient', recipient, 'amount', amount))
     from earmark
     where donation_id = p_donation_id
     into v_old_earmarks;

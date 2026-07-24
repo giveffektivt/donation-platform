@@ -16,14 +16,7 @@ import {
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import {
-  findAllCharges,
-  findAllDonations,
-  findAllDonors,
-  findAllEarmarks,
-  findAllGavebrevs,
-  insertChargeWithCreatedAt,
-} from "./repository";
+import { findAllCharges, findAllDonations, findAllDonors, findAllEarmarks, findAllGavebrevs, insertChargeWithCreatedAt } from "./repository";
 
 const client = dbClient();
 
@@ -35,16 +28,12 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-const baseEarmarks = [
-  { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-  { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+const baseEarmarks = (amount: number) => [
+  { recipient: DonationRecipient.SmartFordeling, amount: amount * 0.95 },
+  { recipient: DonationRecipient.MedicinModMalaria, amount: amount * 0.05 },
 ];
 
-const registerRecurringWithTin = async (
-  db: PoolClient,
-  email: string,
-  tin: string,
-) =>
+const registerRecurringWithTin = async (db: PoolClient, email: string, tin: string) =>
   await registerDonationViaQuickpay(db, {
     email,
     amount: 100,
@@ -52,14 +41,10 @@ const registerRecurringWithTin = async (
     method: PaymentMethod.CreditCard,
     taxDeductible: true,
     tin,
-    earmarks: baseEarmarks,
+    earmarks: baseEarmarks(100),
   });
 
-const registerOnceWithTin = async (
-  db: PoolClient,
-  email: string,
-  tin: string,
-) =>
+const registerOnceWithTin = async (db: PoolClient, email: string, tin: string) =>
   await registerDonationViaQuickpay(db, {
     email,
     amount: 50,
@@ -67,7 +52,7 @@ const registerOnceWithTin = async (
     method: PaymentMethod.CreditCard,
     taxDeductible: true,
     tin,
-    earmarks: baseEarmarks,
+    earmarks: baseEarmarks(50),
   });
 
 const thisYear = (day: number) => utc(setDate(new Date(), day));
@@ -76,17 +61,12 @@ const lastYear = () => utc(subYears(new Date(), 1));
 
 const twoYearsAgo = () => utc(subYears(new Date(), 2));
 
-const nextMonth = () =>
-  utc(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 5));
+const nextMonth = () => utc(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 5));
 
 test("Change donor tax unit: only name", async () => {
   const db = await client;
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "alice@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "alice@example.com", "111111-1111");
   const donorsBefore = await findAllDonors(db);
   expect(donorsBefore).toHaveLength(1);
   const originalId = donorsBefore[0].id;
@@ -102,12 +82,7 @@ test("Change donor tax unit: only name", async () => {
     status: ChargeStatus.Charged,
   });
 
-  const returned = await changeDonorTaxUnit(
-    db,
-    originalId,
-    "Alice Updated",
-    "111111-1111",
-  );
+  const returned = await changeDonorTaxUnit(db, originalId, "Alice Updated", "111111-1111");
 
   const donorsAfter = await findAllDonors(db);
   expect(donorsAfter).toHaveLength(1);
@@ -129,18 +104,14 @@ test("Change donor tax unit: only name", async () => {
 test("Change donor tax unit: empty donor", async () => {
   const db = await client;
 
-  const emptyDonor = await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["bob@example.com", "Bob Original", "111111-1111"],
-  );
+  const emptyDonor = await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, [
+    "bob@example.com",
+    "Bob Original",
+    "111111-1111",
+  ]);
   const donorId = emptyDonor.rows[0].id;
 
-  const returned = await changeDonorTaxUnit(
-    db,
-    donorId,
-    "Bob Updated",
-    "999999-9999",
-  );
+  const returned = await changeDonorTaxUnit(db, donorId, "Bob Updated", "999999-9999");
 
   const donorsAfter = await findAllDonors(db);
   expect(donorsAfter).toHaveLength(1);
@@ -157,23 +128,16 @@ test("Change donor tax unit: empty donor", async () => {
 test("Change donor tax unit: empty donor, merge donor records", async () => {
   const db = await client;
 
-  await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["bob@example.com", "Bob Existing", "999999-9999"],
-  );
+  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, ["bob@example.com", "Bob Existing", "999999-9999"]);
 
-  const emptyDonor = await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["bob@example.com", "Bob Original", "111111-1111"],
-  );
+  const emptyDonor = await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, [
+    "bob@example.com",
+    "Bob Original",
+    "111111-1111",
+  ]);
   const donorId = emptyDonor.rows[0].id;
 
-  const returned = await changeDonorTaxUnit(
-    db,
-    donorId,
-    "Bob Updated",
-    "999999-9999",
-  );
+  const returned = await changeDonorTaxUnit(db, donorId, "Bob Updated", "999999-9999");
 
   const donorsAfter = await findAllDonors(db);
   expect(donorsAfter).toHaveLength(1);
@@ -190,11 +154,7 @@ test("Change donor tax unit: empty donor, merge donor records", async () => {
 test("Change donor tax unit: only donated this year", async () => {
   const db = await client;
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "carol@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "carol@example.com", "111111-1111");
   const donor = (await findAllDonors(db))[0];
 
   await insertChargeWithCreatedAt(db, {
@@ -208,12 +168,7 @@ test("Change donor tax unit: only donated this year", async () => {
     status: ChargeStatus.Created,
   });
 
-  const returned = await changeDonorTaxUnit(
-    db,
-    donor.id,
-    "Carol Updated",
-    "222222-2222",
-  );
+  const returned = await changeDonorTaxUnit(db, donor.id, "Carol Updated", "222222-2222");
 
   const donorsAfter = await findAllDonors(db);
   expect(donorsAfter).toHaveLength(1);
@@ -239,17 +194,14 @@ test("Change donor tax unit: only donated this year", async () => {
 test("Change donor tax unit: only donated this year, merge donor rows", async () => {
   const db = await client;
 
-  const targetDonor = await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["dave@example.com", "Dave Target", "222222-2222"],
-  );
+  const targetDonor = await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, [
+    "dave@example.com",
+    "Dave Target",
+    "222222-2222",
+  ]);
   const targetId = targetDonor.rows[0].id;
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "dave@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "dave@example.com", "111111-1111");
 
   const allDonors = await findAllDonors(db);
   const sourceDonor = allDonors.find((d) => d.id === donation.donor_id)!;
@@ -299,11 +251,7 @@ test("Change donor tax unit: only donated this year, with gavebrev", async () =>
   const gavebrevsBefore = await findAllGavebrevs(db);
   expect(gavebrevsBefore).toHaveLength(1);
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "dave@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "dave@example.com", "111111-1111");
   const donor = (await findAllDonors(db))[0];
 
   await insertChargeWithCreatedAt(db, {
@@ -348,10 +296,7 @@ test("Change donor tax unit: only donated this year, with gavebrev", async () =>
 test("Change donor tax unit: only donated this year, with gavebrev, merge donor rows", async () => {
   const db = await client;
 
-  await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["dave@example.com", "Dave Existing", "222222-2222"],
-  );
+  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, ["dave@example.com", "Dave Existing", "222222-2222"]);
 
   await registerGavebrev(db, {
     name: "Dave Original",
@@ -365,11 +310,7 @@ test("Change donor tax unit: only donated this year, with gavebrev, merge donor 
   const gavebrevsBefore = await findAllGavebrevs(db);
   expect(gavebrevsBefore).toHaveLength(1);
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "dave@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "dave@example.com", "111111-1111");
 
   await insertChargeWithCreatedAt(db, {
     created_at: thisYear(5),
@@ -385,12 +326,7 @@ test("Change donor tax unit: only donated this year, with gavebrev, merge donor 
   const donorsBefore = await findAllDonors(db);
   expect(donorsBefore).toHaveLength(2);
 
-  await changeDonorTaxUnit(
-    db,
-    donation.donor_id,
-    "Dave Updated",
-    "222222-2222",
-  );
+  await changeDonorTaxUnit(db, donation.donor_id, "Dave Updated", "222222-2222");
 
   const donorsAfter = await findAllDonors(db);
   expect(donorsAfter).toHaveLength(2);
@@ -421,18 +357,10 @@ test("Change donor tax unit: only donated this year, with gavebrev, merge donor 
 test("Change donor tax unit: one-time donation charged last year", async () => {
   const db = await client;
 
-  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3)`, [
-    "eve@example.com",
-    "Eve Original",
-    "111111-1111",
-  ]);
+  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3)`, ["eve@example.com", "Eve Original", "111111-1111"]);
   const donor = (await findAllDonors(db))[0];
 
-  const donation = await registerOnceWithTin(
-    db,
-    "eve@example.com",
-    "111111-1111",
-  );
+  const donation = await registerOnceWithTin(db, "eve@example.com", "111111-1111");
 
   await insertChargeWithCreatedAt(db, {
     created_at: lastYear(),
@@ -440,12 +368,7 @@ test("Change donor tax unit: one-time donation charged last year", async () => {
     status: ChargeStatus.Charged,
   });
 
-  const returned = await changeDonorTaxUnit(
-    db,
-    donor.id,
-    "Eve Updated",
-    "222222-2222",
-  );
+  const returned = await changeDonorTaxUnit(db, donor.id, "Eve Updated", "222222-2222");
 
   const donorsAfter = await findAllDonors(db);
   expect(donorsAfter).toHaveLength(1);
@@ -466,18 +389,10 @@ test("Change donor tax unit: one-time donation charged last year", async () => {
 test("Change donor tax unit: cancelled old monthly donation", async () => {
   const db = await client;
 
-  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3)`, [
-    "frank@example.com",
-    "Frank Original",
-    "111111-1111",
-  ]);
+  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3)`, ["frank@example.com", "Frank Original", "111111-1111"]);
   const donor = (await findAllDonors(db))[0];
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "frank@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "frank@example.com", "111111-1111");
 
   await insertChargeWithCreatedAt(db, {
     created_at: lastYear(),
@@ -485,9 +400,7 @@ test("Change donor tax unit: cancelled old monthly donation", async () => {
     status: ChargeStatus.Charged,
   });
 
-  await db.query("update donation set cancelled = true where id = $1", [
-    donation.id,
-  ]);
+  await db.query("update donation set cancelled = true where id = $1", [donation.id]);
 
   await changeDonorTaxUnit(db, donor.id, "Frank Updated", "222222-2222");
 
@@ -511,11 +424,7 @@ test("Change donor tax unit: cancelled old monthly donation", async () => {
 test("Change donor tax unit: cancelled old membership", async () => {
   const db = await client;
 
-  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3)`, [
-    "frank2@example.com",
-    "Frank2 Original",
-    "111111-1111",
-  ]);
+  await db.query(`insert into donor (email, name, tin) values ($1, $2, $3)`, ["frank2@example.com", "Frank2 Original", "111111-1111"]);
   const donor = (await findAllDonors(db))[0];
 
   const donation = await registerMembershipViaQuickpay(db, {
@@ -534,9 +443,7 @@ test("Change donor tax unit: cancelled old membership", async () => {
     status: ChargeStatus.Charged,
   });
 
-  await db.query("update donation set cancelled = true where id = $1", [
-    donation.id,
-  ]);
+  await db.query("update donation set cancelled = true where id = $1", [donation.id]);
 
   await changeDonorTaxUnit(db, donor.id, "Frank2 Updated", "222222-2222");
 
@@ -560,11 +467,7 @@ test("Change donor tax unit: cancelled old membership", async () => {
 test("Change donor tax unit: old but recent monthly donation", async () => {
   const db = await client;
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "grace@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "grace@example.com", "111111-1111");
   const donor = (await findAllDonors(db))[0];
 
   const oldCharge = await insertChargeWithCreatedAt(db, {
@@ -629,12 +532,12 @@ test("Change donor tax unit: old but recent monthly donation", async () => {
   expect(
     newEarmarks.map((e) => ({
       recipient: e.recipient,
-      percentage: e.percentage,
+      amount: e.amount,
     })),
   ).toEqual(
     expect.arrayContaining([
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ]),
   );
 
@@ -645,17 +548,14 @@ test("Change donor tax unit: old but recent monthly donation", async () => {
 test("Change donor tax unit: old but recent monthly donation, merge donor rows", async () => {
   const db = await client;
 
-  const existingDonor = await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["henry@example.com", "Henry Existing", "222222-2222"],
-  );
+  const existingDonor = await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, [
+    "henry@example.com",
+    "Henry Existing",
+    "222222-2222",
+  ]);
   const existingDonorId = existingDonor.rows[0].id;
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "henry@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "henry@example.com", "111111-1111");
   const allDonors = await findAllDonors(db);
   const sourceDonor = allDonors.find((d) => d.tin === "111111-1111")!;
 
@@ -721,12 +621,12 @@ test("Change donor tax unit: old but recent monthly donation, merge donor rows",
   expect(
     newEarmarks.map((e) => ({
       recipient: e.recipient,
-      percentage: e.percentage,
+      amount: e.amount,
     })),
   ).toEqual(
     expect.arrayContaining([
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ]),
   );
 
@@ -737,17 +637,14 @@ test("Change donor tax unit: old but recent monthly donation, merge donor rows",
 test("Change donor tax unit: old but recent cancelled monthly donation, merge donor rows", async () => {
   const db = await client;
 
-  const existingDonor = await db.query(
-    `insert into donor (email, name, tin) values ($1, $2, $3) returning *`,
-    ["henry@example.com", "Henry Existing", "222222-2222"],
-  );
+  const existingDonor = await db.query(`insert into donor (email, name, tin) values ($1, $2, $3) returning *`, [
+    "henry@example.com",
+    "Henry Existing",
+    "222222-2222",
+  ]);
   const existingDonorId = existingDonor.rows[0].id;
 
-  const donation = await registerRecurringWithTin(
-    db,
-    "henry@example.com",
-    "111111-1111",
-  );
+  const donation = await registerRecurringWithTin(db, "henry@example.com", "111111-1111");
   const allDonors = await findAllDonors(db);
   const sourceDonor = allDonors.find((d) => d.tin === "111111-1111")!;
 
@@ -767,9 +664,7 @@ test("Change donor tax unit: old but recent cancelled monthly donation, merge do
     status: ChargeStatus.Created,
   });
 
-  await db.query("update donation set cancelled = true where id = $1", [
-    donation.id,
-  ]);
+  await db.query("update donation set cancelled = true where id = $1", [donation.id]);
 
   await changeDonorTaxUnit(db, sourceDonor.id, "Henry Updated", "222222-2222");
 
@@ -817,12 +712,12 @@ test("Change donor tax unit: old but recent cancelled monthly donation, merge do
   expect(
     newEarmarks.map((e) => ({
       recipient: e.recipient,
-      percentage: e.percentage,
+      amount: e.amount,
     })),
   ).toEqual(
     expect.arrayContaining([
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ]),
   );
 
@@ -886,20 +781,14 @@ test("Change donor tax unit: old but recent membership", async () => {
   expect(byId[futureCharge.id]).toMatchObject({ donation_id: donation.id });
 
   const earmarks = await findAllEarmarks(db);
-  const donationEarmarks = earmarks.filter(
-    (e) => e.donation_id === donation.id,
-  );
+  const donationEarmarks = earmarks.filter((e) => e.donation_id === donation.id);
   expect(donationEarmarks).toHaveLength(1);
 });
 
 test("Change donor tax unit: old but recent membership, merge donor rows", async () => {
   const db = await client;
 
-  const existingDonation = await registerRecurringWithTin(
-    db,
-    "henry2@example.com",
-    "222222-2222",
-  );
+  const existingDonation = await registerRecurringWithTin(db, "henry2@example.com", "222222-2222");
   const existingDonorId = existingDonation.donor_id;
 
   const donation = await registerMembershipViaQuickpay(db, {
@@ -965,25 +854,17 @@ test("Change donor tax unit: old but recent membership, merge donor rows", async
   expect(byId[futureCharge.id]).toMatchObject({ donation_id: donation.id });
 
   const earmarks = await findAllEarmarks(db);
-  const donationEarmarks = earmarks.filter(
-    (e) => e.donation_id === donation.id,
-  );
+  const donationEarmarks = earmarks.filter((e) => e.donation_id === donation.id);
   expect(donationEarmarks).toHaveLength(1);
 });
 
 test("Change donor tax unit: old but recent cancelled membership, merge donor rows", async () => {
   const db = await client;
 
-  const existingDonation = await registerRecurringWithTin(
-    db,
-    "henry2@example.com",
-    "222222-2222",
-  );
+  const existingDonation = await registerRecurringWithTin(db, "henry2@example.com", "222222-2222");
   const existingDonorId = existingDonation.donor_id;
 
-  await db.query("update donation set cancelled = true where id = $1", [
-    existingDonation.id,
-  ]);
+  await db.query("update donation set cancelled = true where id = $1", [existingDonation.id]);
 
   const donation = await registerMembershipViaQuickpay(db, {
     email: "henry2@example.com",
@@ -1013,9 +894,7 @@ test("Change donor tax unit: old but recent cancelled membership, merge donor ro
     status: ChargeStatus.Created,
   });
 
-  await db.query("update donation set cancelled = true where id = $1", [
-    donation.id,
-  ]);
+  await db.query("update donation set cancelled = true where id = $1", [donation.id]);
 
   await changeDonorTaxUnit(db, sourceDonor.id, "Henry2 Updated", "222222-2222");
 
@@ -1052,8 +931,6 @@ test("Change donor tax unit: old but recent cancelled membership, merge donor ro
   expect(byId[futureCharge.id]).toMatchObject({ donation_id: donation.id });
 
   const earmarks = await findAllEarmarks(db);
-  const donationEarmarks = earmarks.filter(
-    (e) => e.donation_id === donation.id,
-  );
+  const donationEarmarks = earmarks.filter((e) => e.donation_id === donation.id);
   expect(donationEarmarks).toHaveLength(1);
 });

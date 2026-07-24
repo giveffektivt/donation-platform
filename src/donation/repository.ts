@@ -82,7 +82,7 @@ export async function registerDonationViaQuickpay(
     publicMessageAuthor?: boolean;
     messageAuthor?: string;
     message?: string;
-    earmarks: { recipient: DonationRecipient; percentage: number }[];
+    earmarks: { recipient: DonationRecipient; amount: number }[];
     email: string;
     tin?: string;
   },
@@ -161,7 +161,7 @@ export async function registerMembershipViaQuickpay(
         JSON.stringify([
           {
             recipient: DonationRecipient.GivEffektivtsMedlemskab,
-            percentage: 100,
+            amount: 50,
           },
         ]),
         data.email,
@@ -187,7 +187,7 @@ export async function registerDonationViaBankTransfer(
     publicMessageAuthor?: boolean;
     messageAuthor?: string;
     message?: string;
-    earmarks: { recipient: DonationRecipient; percentage: number }[];
+    earmarks: { recipient: DonationRecipient; amount: number }[];
     email: string;
     tin?: string;
   },
@@ -749,11 +749,11 @@ export async function getDonationsByEmail(
                   when t.recipient = 'Give Directly' then 'Kontantoverførsler til verdens fattigste'
                   when t.recipient = 'SCI Foundation' then 'Ormekure'
                 end,
-                'amount', round(cd.amount * e.percentage / 100, 1),
+                'amount', round(e.amount, 1),
                 'count', case
-                  when e.recipient = 'Giv Effektivts arbejde og vækst' then round(cd.amount * e.percentage / 100, 1)
+                  when e.recipient = 'Giv Effektivts arbejde og vækst' then round(e.amount, 1)
                   else round(
-                    (cd.amount * e.percentage / 100) / t.exchange_rate
+                    e.amount / t.exchange_rate
                     / (t.unit_cost_external / t.unit_cost_conversion),
                     1
                   )
@@ -830,13 +830,14 @@ export async function getDonationDistributions(
       select
           d.id,
           d.donor_id,
+          d.amount,
           coalesce(
               (
                   select
                       jsonb_agg(
-                          jsonb_build_object('recipient', e.recipient, 'percentage', e.percentage)
+                          jsonb_build_object('recipient', e.recipient, 'amount', e.amount)
                           order by
-                              e.percentage desc
+                              e.amount desc
                       )
                   from
                       earmark e
@@ -870,7 +871,7 @@ export async function getRecurringDonationByIdAndEmail(
         d.*,
         p.tin,
         coalesce(
-          json_agg(json_build_object('recipient', e.recipient, 'percentage', e.percentage))
+          json_agg(json_build_object('recipient', e.recipient, 'amount', e.amount))
             filter (where e.donation_id is not null),
           '[]'::json
         ) as earmarks
@@ -890,7 +891,7 @@ export async function changeDonation(
   client: PoolClient,
   donationId: string,
   amount: number | null,
-  earmarks: { recipient: string; percentage: number }[] | null,
+  earmarks: { recipient: string; amount: number }[] | null,
   tin: string | null,
 ) {
   return (

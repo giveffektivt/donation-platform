@@ -9,7 +9,7 @@ export type NewDonation = {
   method: PaymentMethod;
   earmarks: {
     recipient: DonationRecipient;
-    percentage: number;
+    amount: number;
   }[];
   fundraiserId?: string;
   publicMessageAuthor?: boolean;

@@ -62,7 +62,7 @@ const PayloadSchema = z
   })
   .transform(({ recipient, ...rest }) => ({
     ...rest,
-    earmarks: [{ recipient, percentage: 100 }],
+    earmarks: [{ recipient, amount: rest.amount }],
   }));
 
 export async function POST(req: Request) {

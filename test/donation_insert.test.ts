@@ -56,7 +56,7 @@ test("Insert donation for Giv Effektivt membership using Quickpay", async () => 
     {
       donation_id: donation.id,
       recipient: DonationRecipient.GivEffektivtsMedlemskab,
-      percentage: 100,
+      amount: 50,
     },
   ]);
 });
@@ -72,8 +72,8 @@ test("Insert donation using Quickpay", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
     ],
   });
 
@@ -96,12 +96,12 @@ test("Insert donation using Quickpay", async () => {
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 95,
+      amount: 116.85,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      percentage: 5,
+      amount: 6.15,
     },
   ]);
 });
@@ -116,8 +116,8 @@ test("Insert donation using bank transfer", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
     ],
   });
 
@@ -140,12 +140,12 @@ test("Insert donation using bank transfer", async () => {
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 95,
+      amount: 116.85,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      percentage: 5,
+      amount: 6.15,
     },
   ]);
 });
@@ -166,8 +166,8 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
     ],
     fundraiserId: fundraiser.id,
     publicMessageAuthor: false,
@@ -195,12 +195,12 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 95,
+      amount: 116.85,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      percentage: 5,
+      amount: 6.15,
     },
   ]);
 });
@@ -220,8 +220,8 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
     frequency: DonationFrequency.Monthly,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
     ],
     fundraiserId: fundraiser.id,
     publicMessageAuthor: true,
@@ -249,12 +249,12 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 95,
+      amount: 116.85,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      percentage: 5,
+      amount: 6.15,
     },
   ]);
 });

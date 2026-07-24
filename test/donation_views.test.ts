@@ -19,11 +19,7 @@ import {
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
-import {
-  findAllDonors,
-  insertChargeWithCreatedAt,
-  setDonationCancelledById,
-} from "./repository";
+import { findAllDonors, insertChargeWithCreatedAt, setDonationCancelledById } from "./repository";
 
 const client = dbClient();
 
@@ -59,7 +55,7 @@ test("Finds first successful donations to email", async () => {
     earmarks: [
       {
         recipient: DonationRecipient.VitaminModMangelsygdomme,
-        percentage: 100,
+        amount: 77,
       },
     ],
   });
@@ -141,8 +137,8 @@ test("Should not include recipient if donation is earmarked using %-split", asyn
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
     ],
   });
 
@@ -177,8 +173,8 @@ test("Should not email to a credit card one-time donation that wasn't charged ye
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -195,8 +191,8 @@ test("Should not email to a credit card one-time donation with a failed charge",
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -260,8 +256,8 @@ test("Should not email to a MobilePay one-time donation that wasn't charged yet"
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -278,8 +274,8 @@ test("Should not email to a MobilePay one-time donation with a failed charge", a
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -303,7 +299,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
     earmarks: [
       {
         recipient: DonationRecipient.VitaminModMangelsygdomme,
-        percentage: 100,
+        amount: 77,
       },
     ],
   });
@@ -335,8 +331,8 @@ test("Should not email to a MobilePay recurring donation with a failed charge", 
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -444,7 +440,7 @@ test("Finds failed recurring donations to email", async () => {
     earmarks: [
       {
         recipient: DonationRecipient.VitaminModMangelsygdomme,
-        percentage: 100,
+        amount: 88,
       },
     ],
     fundraiserId: "00000000-0000-0000-0000-000000000000",
@@ -525,8 +521,8 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -557,8 +553,8 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -585,8 +581,8 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
     ],
   });
 
@@ -604,8 +600,8 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -683,8 +679,8 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
     ],
   });
 
@@ -696,8 +692,8 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
     ],
   });
 
@@ -732,8 +728,8 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
     ],
   });
 
@@ -764,8 +760,8 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
     ],
   });
 
@@ -776,34 +772,18 @@ test("Finds donations that can get a link to renew payment", async () => {
     frequency: DonationFrequency.Monthly,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
   // ...should allow only the first two donations to renew payment
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation1.id),
-  ).toEqual(donation1);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation2.id),
-  ).toEqual(donation2);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation3.id),
-  ).toEqual(donation3);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation4.id),
-  ).toEqual(undefined);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation5.id),
-  ).toEqual(undefined);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation6.id),
-  ).toEqual(undefined);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation7.id),
-  ).toEqual(undefined);
-  expect(
-    await getDonationToUpdateQuickpayPaymentInfoById(db, donation8.id),
-  ).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation1.id)).toEqual(donation1);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation2.id)).toEqual(donation2);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation3.id)).toEqual(donation3);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation4.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation5.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation6.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation7.id)).toEqual(undefined);
+  expect(await getDonationToUpdateQuickpayPaymentInfoById(db, donation8.id)).toEqual(undefined);
 });

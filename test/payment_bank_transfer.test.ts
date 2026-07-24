@@ -10,12 +10,7 @@ import {
   PaymentMethod,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
-import {
-  findAllCharges,
-  findAllDonations,
-  findAllDonors,
-  findAllEarmarks,
-} from "./repository";
+import { findAllCharges, findAllDonations, findAllDonors, findAllEarmarks } from "./repository";
 
 const client = dbClient();
 
@@ -34,8 +29,8 @@ test("One-time donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 9 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
     ],
     frequency: DonationFrequency.Once,
     method: PaymentMethod.BankTransfer,
@@ -73,12 +68,12 @@ test("One-time donation using bank transfer", async () => {
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 90,
+      amount: 9,
     },
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 10,
+      amount: 1,
     },
   ]);
 
@@ -93,8 +88,8 @@ test("Monthly donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 9 },
+      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.BankTransfer,
@@ -132,12 +127,12 @@ test("Monthly donation using bank transfer", async () => {
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.SmartFordeling,
-      percentage: 90,
+      amount: 9,
     },
     {
       donation_id: donations[0].id,
       recipient: DonationRecipient.VitaminModMangelsygdomme,
-      percentage: 10,
+      amount: 1,
     },
   ]);
 

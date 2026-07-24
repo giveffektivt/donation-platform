@@ -1447,10 +1447,7 @@ type donateArgs = {
   years_ago?: number;
 };
 
-const donate = async (
-  db: PoolClient,
-  { tin, amount, tax_deductible = true, years_ago = 0 }: donateArgs,
-) => {
+const donate = async (db: PoolClient, { tin, amount, tax_deductible = true, years_ago = 0 }: donateArgs) => {
   const donation = await registerDonationViaQuickpay(db, {
     email: `${tin}@example.com`,
     amount,
@@ -1459,8 +1456,8 @@ const donate = async (
     tin,
     taxDeductible: tax_deductible,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: amount * 0.95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: amount * 0.05 },
     ],
   });
 
@@ -1482,14 +1479,7 @@ type gavebrevArgs = {
 
 const gavebrev = async (
   db: PoolClient,
-  {
-    tin,
-    amount,
-    percentage,
-    years_ago = 0,
-    when_income_over,
-    of_income_over,
-  }: gavebrevArgs,
+  { tin, amount, percentage, years_ago = 0, when_income_over, of_income_over }: gavebrevArgs,
 ): Promise<Gavebrev> => {
   const startYear = getYear(years_ago);
 
@@ -1530,13 +1520,7 @@ type incomeEveryoneArgs = {
 
 const incomeEveryone = async (
   db: PoolClient,
-  {
-    income_verified = 1_000_000,
-    years_ago = 0,
-    limit_normal_donation = 0,
-    custom_minimal_income,
-    custom_maximum_income,
-  }: incomeEveryoneArgs,
+  { income_verified = 1_000_000, years_ago = 0, limit_normal_donation = 0, custom_minimal_income, custom_maximum_income }: incomeEveryoneArgs,
 ) => {
   for (const donor of await findAllDonors(db)) {
     await insertGavebrevCheckin(db, {
@@ -1555,14 +1539,10 @@ type maxTaxDeductionArgs = {
   years_ago?: number;
 };
 
-const setMaxTaxDeduction = async (
-  db: PoolClient,
-  { value = 0, years_ago = 0 }: maxTaxDeductionArgs,
-) => {
+const setMaxTaxDeduction = async (db: PoolClient, { value = 0, years_ago = 0 }: maxTaxDeductionArgs) => {
   await insertMaxTaxDeduction(db, getYear(years_ago), value);
 };
 
-const getDate = (years_ago = 0) =>
-  subYears(subMonths(new Date(), 9), years_ago);
+const getDate = (years_ago = 0) => subYears(subMonths(new Date(), 9), years_ago);
 
 const getYear = (years_ago = 0) => getDate(years_ago).getFullYear();

@@ -30,11 +30,11 @@ const stripNulls = (val: unknown): unknown => {
 const EarmarkSchema = z
   .object({
     id: z.number().int().min(1),
-    percentageShare: z.coerce.number().min(0).max(100),
+    amount: z.coerce.number().positive(),
   })
   .transform((org) => ({
     recipient: mapFromNorwegianOrgId(org.id),
-    percentage: org.percentageShare,
+    amount: org.amount,
   }));
 
 const CauseAreaSchema = z
@@ -45,10 +45,19 @@ const CauseAreaSchema = z
       .refine((id) => [1, 2, 4, 5, 99].includes(id))
       .optional()
       .default(99),
-    percentageShare: z.coerce.number().min(0).max(100).optional().default(100),
+    amount: z.coerce.number().positive(),
     standardSplit: z.boolean().optional(),
     organizations: z.array(EarmarkSchema).optional(),
   })
+  .refine(
+    (ca) =>
+      ca.standardSplit ||
+      ca.organizations?.reduce((sum, org) => sum + org.amount, 0) === ca.amount,
+    {
+      path: ["organizations"],
+      message: "Organizations must sum to cause area amount",
+    },
+  )
   .transform((ca) => {
     const overarchingSmartDistribution = ca.organizations?.find(
       (org) => org.recipient === DonationRecipient.SmartFordeling,
@@ -66,47 +75,33 @@ const CauseAreaSchema = z
                     : ca.id === 4
                       ? DonationRecipient.GivEffektivtsArbejdeOgVækst
                       : DonationRecipient.Andet,
-            percentage: 100,
+            amount: ca.amount,
           },
         ]
-      : (ca.organizations?.filter((org) => org.percentage > 0) ?? []);
+      : (ca.organizations ?? []);
 
     return organizations.map((org) => ({
       recipient: org.recipient,
-      percentage: (org.percentage * ca.percentageShare) / 100,
+      amount: ca.standardSplit ? ca.amount : org.amount,
     }));
   });
 
-const UpdateRecurringSchema = z
-  .object({
-    distribution: z
-      .object({
-        taxUnitId: z.number().int().min(1).optional(),
-        causeAreas: z.array(CauseAreaSchema).optional(),
-      })
-      .optional(),
-    chargeDay: z
-      .number()
-      .int()
-      .min(0)
-      .max(28)
-      .transform((v) => (v === 0 ? 28 : v))
-      .optional(),
-    amount: z.number().positive().optional(),
-  })
-  .refine(
-    (data) =>
-      !data.distribution?.causeAreas ||
-      Math.abs(
-        data.distribution.causeAreas
-          .flat()
-          .reduce((sum, earmark) => sum + earmark.percentage, 0) - 100,
-      ) < 0.000001,
-    {
-      path: ["distribution", "causeAreas"],
-      message: "Cause areas must sum to 100",
-    },
-  );
+const UpdateRecurringSchema = z.object({
+  distribution: z
+    .object({
+      taxUnitId: z.number().int().min(1).optional(),
+      causeAreas: z.array(CauseAreaSchema).optional(),
+    })
+    .optional(),
+  chargeDay: z
+    .number()
+    .int()
+    .min(0)
+    .max(28)
+    .transform((v) => (v === 0 ? 28 : v))
+    .optional(),
+  amount: z.number().positive().optional(),
+});
 
 export async function GET(req: Request) {
   const user = await verifyJwtBearerToken(req.headers.get("authorization"));
@@ -189,7 +184,7 @@ export async function PUT(req: NextRequest) {
       return Response.json({ message: "Not found" }, { status: 404 });
     }
 
-    const currentEarmarks: { recipient: string; percentage: number }[] =
+    const currentEarmarks: { recipient: string; amount: number }[] =
       donation.earmarks ?? [];
 
     if (
@@ -204,6 +199,17 @@ export async function PUT(req: NextRequest) {
     }
 
     const newEarmarks = payload.distribution?.causeAreas?.flat() ?? null;
+
+    if (
+      newEarmarks !== null &&
+      newEarmarks.reduce((sum, earmark) => sum + earmark.amount, 0) !==
+        (payload.amount ?? donation.amount)
+    ) {
+      return Response.json(
+        { message: "Cause areas must sum to donation amount" },
+        { status: 400 },
+      );
+    }
 
     if (
       newEarmarks !== null &&
@@ -238,14 +244,14 @@ export async function PUT(req: NextRequest) {
       newEarmarks !== null &&
       JSON.stringify(
         newEarmarks
-          .map((e) => ({ recipient: e.recipient, percentage: e.percentage }))
+          .map((e) => ({ recipient: e.recipient, amount: e.amount }))
           .sort((a, b) => a.recipient.localeCompare(b.recipient)),
       ) !==
         JSON.stringify(
           currentEarmarks
             .map((e) => ({
               recipient: e.recipient,
-              percentage: e.percentage,
+              amount: e.amount,
             }))
             .sort((a, b) => a.recipient.localeCompare(b.recipient)),
         );

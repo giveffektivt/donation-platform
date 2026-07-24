@@ -34,7 +34,7 @@ export async function insertBankTransferData(
 
 async function sendEmails(
   email: string,
-  earmarks: { recipient: DonationRecipient; percentage: number }[],
+  earmarks: { recipient: DonationRecipient; amount: number }[],
   donation: DonationWithGatewayInfoBankTransfer,
 ) {
   console.log(`Sending bank transfer donation email: ${donation.id}`);

@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
       content: donations.map((d) => {
         const earmarks = d.earmarks as {
           recipient: string;
-          percentage: number;
+          amount: number;
         }[];
         const causeAreas = norwegianCauseAreas
           .map((causeArea) => {
@@ -55,8 +55,8 @@ export async function GET(req: NextRequest) {
                 causeArea.id
               );
             });
-            const percentageShare = causeAreaEarmarks.reduce(
-              (sum, earmark) => sum + earmark.percentage,
+            const amount = causeAreaEarmarks.reduce(
+              (sum, earmark) => sum + earmark.amount,
               0,
             );
             const smartRecipient =
@@ -76,18 +76,17 @@ export async function GET(req: NextRequest) {
               id: causeArea.id,
               name: causeArea.name,
               standardSplit,
-              percentageShare,
+              amount,
+              percentageShare: (amount / d.amount) * 100,
               organizations: causeAreaEarmarks.map((earmark) => ({
                 id: mapToNorwegianOrgId(earmark.recipient),
                 name: earmark.recipient,
-                percentageShare:
-                  percentageShare === 0
-                    ? 0
-                    : (earmark.percentage / percentageShare) * 100,
+                amount: earmark.amount,
+                percentageShare: (earmark.amount / amount) * 100,
               })),
             };
           })
-          .filter((causeArea) => causeArea.percentageShare > 0);
+          .filter((causeArea) => causeArea.amount > 0);
 
         return {
           id: d.id,

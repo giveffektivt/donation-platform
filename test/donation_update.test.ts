@@ -34,8 +34,8 @@ test("Update donation to mark it as emailed", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -43,9 +43,7 @@ test("Update donation to mark it as emailed", async () => {
 
   await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
 
-  expect(await findAllDonations(db)).toMatchObject([
-    { emailed: EmailedStatus.Yes },
-  ]);
+  expect(await findAllDonations(db)).toMatchObject([{ emailed: EmailedStatus.Yes }]);
 });
 
 test("Cancel donation by its Quickpay order ID", async () => {
@@ -58,8 +56,8 @@ test("Cancel donation by its Quickpay order ID", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
@@ -67,10 +65,7 @@ test("Cancel donation by its Quickpay order ID", async () => {
   expect(await findAllDonations(db)).toMatchObject([{ cancelled: false }]);
   await setDonationCancelledByQuickpayOrder(db, "some-incorrect-order");
   expect(await findAllDonations(db)).toMatchObject([{ cancelled: false }]);
-  await setDonationCancelledByQuickpayOrder(
-    db,
-    donation.gateway_metadata.quickpay_order,
-  );
+  await setDonationCancelledByQuickpayOrder(db, donation.gateway_metadata.quickpay_order);
   expect(await findAllDonations(db)).toMatchObject([{ cancelled: true }]);
 });
 
@@ -84,30 +79,16 @@ test("Update donation payment method by its Quickpay order ID", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
     ],
   });
 
-  expect(await findAllDonations(db)).toMatchObject([
-    { method: PaymentMethod.CreditCard },
-  ]);
+  expect(await findAllDonations(db)).toMatchObject([{ method: PaymentMethod.CreditCard }]);
 
-  await setDonationMethodByQuickpayOrder(
-    db,
-    "some-incorrect-order",
-    PaymentMethod.MobilePay,
-  );
-  expect(await findAllDonations(db)).toMatchObject([
-    { method: PaymentMethod.CreditCard },
-  ]);
+  await setDonationMethodByQuickpayOrder(db, "some-incorrect-order", PaymentMethod.MobilePay);
+  expect(await findAllDonations(db)).toMatchObject([{ method: PaymentMethod.CreditCard }]);
 
-  await setDonationMethodByQuickpayOrder(
-    db,
-    donation.gateway_metadata.quickpay_order,
-    PaymentMethod.MobilePay,
-  );
-  expect(await findAllDonations(db)).toMatchObject([
-    { method: PaymentMethod.MobilePay },
-  ]);
+  await setDonationMethodByQuickpayOrder(db, donation.gateway_metadata.quickpay_order, PaymentMethod.MobilePay);
+  expect(await findAllDonations(db)).toMatchObject([{ method: PaymentMethod.MobilePay }]);
 });
