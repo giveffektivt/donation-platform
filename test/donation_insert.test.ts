@@ -72,7 +72,7 @@ test("Insert donation using Quickpay", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -95,7 +95,7 @@ test("Insert donation using Quickpay", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 95,
     },
     {
@@ -116,7 +116,7 @@ test("Insert donation using bank transfer", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -139,7 +139,7 @@ test("Insert donation using bank transfer", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 95,
     },
     {
@@ -166,7 +166,7 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
     fundraiserId: fundraiser.id,
@@ -194,7 +194,7 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 95,
     },
     {
@@ -220,7 +220,7 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
     frequency: DonationFrequency.Monthly,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
     fundraiserId: fundraiser.id,
@@ -248,7 +248,7 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
   expect(earmarks).toMatchObject([
     {
       donation_id: donation.id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 95,
     },
     {

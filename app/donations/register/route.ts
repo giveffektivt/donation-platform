@@ -21,23 +21,35 @@ const PayloadSchema = z
   .object({
     distributionCauseAreas: z
       .array(
-        z.object({
-          organizations: z.array(
-            z
-              .object({
-                id: z.number().transform(mapFromNorwegianOrgId),
-                percentageShare: z.coerce.number(),
-              })
-              .transform(({ id, percentageShare }) => ({
-                recipient: id,
-                percentage: percentageShare,
-              })),
+        z
+          .object({
+            percentageShare: z.coerce
+              .number()
+              .min(0)
+              .max(100)
+              .optional()
+              .default(100),
+            organizations: z.array(
+              z
+                .object({
+                  id: z.number().transform(mapFromNorwegianOrgId),
+                  percentageShare: z.coerce.number().min(0).max(100),
+                })
+                .transform(({ id, percentageShare }) => ({
+                  recipient: id,
+                  percentage: percentageShare,
+                })),
+            ),
+          })
+          .transform((area) =>
+            area.organizations.map((organization) => ({
+              recipient: organization.recipient,
+              percentage:
+                (organization.percentage * area.percentageShare) / 100,
+            })),
           ),
-        }),
       )
-      .transform((areas) =>
-        areas.flatMap((a) => a.organizations).filter((o) => o.percentage > 0),
-      ),
+      .transform((areas) => areas.flat().filter((o) => o.percentage > 0)),
     donor: z.object({
       email: z.email().max(500),
       taxDeduction: z.boolean().optional().default(false),
@@ -75,7 +87,9 @@ const PayloadSchema = z
   })
   .refine(
     (data) =>
-      data.distributionCauseAreas.reduce((s, o) => s + o.percentage, 0) === 100,
+      Math.abs(
+        data.distributionCauseAreas.reduce((s, o) => s + o.percentage, 0) - 100,
+      ) < 0.000001,
     {
       path: ["distributionCauseAreas"],
       error: "cause areas must sum to 100",

@@ -18,7 +18,10 @@ const stripNulls = (val: unknown): unknown => {
   if (Array.isArray(val)) return val.map(stripNulls);
   if (val !== null && typeof val === "object")
     return Object.entries(val).reduce(
-      (acc, [k, v]) => ({ ...acc, [k]: v === null ? undefined : stripNulls(v) }),
+      (acc, [k, v]) => ({
+        ...acc,
+        [k]: v === null ? undefined : stripNulls(v),
+      }),
       {},
     );
   return val;
@@ -36,34 +39,74 @@ const EarmarkSchema = z
 
 const CauseAreaSchema = z
   .object({
+    id: z
+      .number()
+      .int()
+      .refine((id) => [1, 2, 4, 5, 99].includes(id))
+      .optional()
+      .default(99),
+    percentageShare: z.coerce.number().min(0).max(100).optional().default(100),
     standardSplit: z.boolean().optional(),
     organizations: z.array(EarmarkSchema).optional(),
   })
   .transform((ca) => {
-    if (ca.standardSplit) {
-      return [
-        {
-          recipient: DonationRecipient.GivEffektivtsAnbefaling,
-          percentage: 100,
-        },
-      ];
-    }
+    const overarchingSmartDistribution = ca.organizations?.find(
+      (org) => org.recipient === DonationRecipient.SmartFordeling,
+    );
+    const organizations = ca.standardSplit
+      ? [
+          overarchingSmartDistribution ?? {
+            recipient:
+              ca.id === 99
+                ? DonationRecipient.SmartFordeling
+                : ca.id === 1
+                  ? DonationRecipient.SmartFordelingGlobalSundhed
+                  : ca.id === 2
+                    ? DonationRecipient.SmartFordelingDyrevelfærd
+                    : ca.id === 4
+                      ? DonationRecipient.GivEffektivtsArbejdeOgVækst
+                      : DonationRecipient.Andet,
+            percentage: 100,
+          },
+        ]
+      : (ca.organizations?.filter((org) => org.percentage > 0) ?? []);
 
-    const organizations =
-      ca.organizations?.filter((org) => org.percentage > 0) ?? [];
-    return organizations.length > 0 ? organizations : null;
+    return organizations.map((org) => ({
+      recipient: org.recipient,
+      percentage: (org.percentage * ca.percentageShare) / 100,
+    }));
   });
 
-const UpdateRecurringSchema = z.object({
-  distribution: z
-    .object({
-      taxUnitId: z.number().int().min(1).optional(),
-      causeAreas: z.array(CauseAreaSchema).optional(),
-    })
-    .optional(),
-  chargeDay: z.number().int().min(0).max(28).transform((v) => (v === 0 ? 28 : v)).optional(),
-  amount: z.number().positive().optional(),
-});
+const UpdateRecurringSchema = z
+  .object({
+    distribution: z
+      .object({
+        taxUnitId: z.number().int().min(1).optional(),
+        causeAreas: z.array(CauseAreaSchema).optional(),
+      })
+      .optional(),
+    chargeDay: z
+      .number()
+      .int()
+      .min(0)
+      .max(28)
+      .transform((v) => (v === 0 ? 28 : v))
+      .optional(),
+    amount: z.number().positive().optional(),
+  })
+  .refine(
+    (data) =>
+      !data.distribution?.causeAreas ||
+      Math.abs(
+        data.distribution.causeAreas
+          .flat()
+          .reduce((sum, earmark) => sum + earmark.percentage, 0) - 100,
+      ) < 0.000001,
+    {
+      path: ["distribution", "causeAreas"],
+      message: "Cause areas must sum to 100",
+    },
+  );
 
 export async function GET(req: Request) {
   const user = await verifyJwtBearerToken(req.headers.get("authorization"));
@@ -160,7 +203,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const newEarmarks = payload.distribution?.causeAreas?.[0] ?? null;
+    const newEarmarks = payload.distribution?.causeAreas?.flat() ?? null;
 
     if (
       newEarmarks !== null &&
@@ -180,10 +223,7 @@ export async function PUT(req: NextRequest) {
       const donors = await getDonorsDetailedByEmail(db, email);
       const taxUnitIndex = payload.distribution.taxUnitId - 1;
       if (taxUnitIndex < 0 || taxUnitIndex >= donors.length) {
-        return Response.json(
-          { message: "Invalid taxUnitId" },
-          { status: 400 },
-        );
+        return Response.json({ message: "Invalid taxUnitId" }, { status: 400 });
       }
       const resolvedTin = donors[taxUnitIndex].tin ?? null;
       newTin = resolvedTin !== (donation.tin ?? null) ? resolvedTin : null;

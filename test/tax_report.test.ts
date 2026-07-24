@@ -1459,7 +1459,7 @@ const donate = async (
     tin,
     taxDeductible: tax_deductible,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });

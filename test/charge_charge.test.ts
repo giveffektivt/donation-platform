@@ -50,7 +50,7 @@ test("Find created charges to charge", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -63,7 +63,7 @@ test("Find created charges to charge", async () => {
     taxDeductible: true,
     tin: "222222-2222",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -163,7 +163,7 @@ test("Donation that has no charges should not be charged", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -182,7 +182,7 @@ test("Donation that is cancelled should not be charged", async () => {
     taxDeductible: false,
 
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -207,7 +207,7 @@ test("Bank transfer donation should not be charged", async () => {
     frequency: DonationFrequency.Once,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -231,7 +231,7 @@ test("Old charges in created status should *still* be charged again (until we se
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -269,7 +269,7 @@ test("Charges with error status should not be charged again", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -293,7 +293,7 @@ test("Charges with created_at in the future should not be charged yet", async ()
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -317,7 +317,7 @@ test("Retry charge should be charged even if original charge failed", async () =
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });

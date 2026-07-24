@@ -1,7 +1,10 @@
 export enum DonationRecipient {
   GivEffektivtsMedlemskab = "Giv Effektivts medlemskab",
 
-  GivEffektivtsAnbefaling = "Giv Effektivts anbefaling",
+  SmartFordeling = "Smart fordeling",
+  SmartFordelingGlobalSundhed = "Smart fordeling - global sundhed",
+  SmartFordelingDyrevelfærd = "Smart fordeling - dyrevelfærd",
+  Andet = "Andet",
   MyggenetModMalaria = "Myggenet mod malaria",
   MedicinModMalaria = "Medicin mod malaria",
   VitaminModMangelsygdomme = "Vitamin mod mangelsygdomme",

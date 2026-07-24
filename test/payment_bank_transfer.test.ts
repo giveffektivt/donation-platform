@@ -34,7 +34,7 @@ test("One-time donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
       { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
     ],
     frequency: DonationFrequency.Once,
@@ -72,7 +72,7 @@ test("One-time donation using bank transfer", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 90,
     },
     {
@@ -93,7 +93,7 @@ test("Monthly donation using bank transfer", async () => {
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
       { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
     ],
     frequency: DonationFrequency.Monthly,
@@ -131,7 +131,7 @@ test("Monthly donation using bank transfer", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 90,
     },
     {

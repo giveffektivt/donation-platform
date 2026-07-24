@@ -1,6 +1,7 @@
 import {
   dbClient,
   dbRelease,
+  DonationRecipient,
   getResultsMonthlyOutputs,
   logError,
   type TransferredDistribution,
@@ -69,10 +70,13 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
       };
     }
     const currentUnit = unitMap[item.unit];
-    const cat =
-      item.earmark === "Giv Effektivts anbefaling"
-        ? "smartDistribution"
-        : "direct";
+    const cat = [
+      DonationRecipient.SmartFordeling,
+      DonationRecipient.SmartFordelingGlobalSundhed,
+      DonationRecipient.SmartFordelingDyrevelfærd,
+    ].includes(item.earmark as DonationRecipient)
+      ? "smartDistribution"
+      : "direct";
     function addValue(orgAgg: OrgAggregation) {
       if (!orgAgg[item.recipient]) {
         orgAgg[item.recipient] = {

@@ -31,7 +31,7 @@ test("Insert donor same email different tin", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
     ],
   });
@@ -103,7 +103,7 @@ test("Insert donor same email same tin enriches same record with new info", asyn
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
     ],
   });
@@ -189,7 +189,7 @@ test("Insert donor lowercases and trims email", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
     ],
   });

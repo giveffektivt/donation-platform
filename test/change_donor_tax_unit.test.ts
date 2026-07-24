@@ -36,7 +36,7 @@ afterEach(async () => {
 });
 
 const baseEarmarks = [
-  { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+  { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
   { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
 ];
 
@@ -633,7 +633,7 @@ test("Change donor tax unit: old but recent monthly donation", async () => {
     })),
   ).toEqual(
     expect.arrayContaining([
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ]),
   );
@@ -725,7 +725,7 @@ test("Change donor tax unit: old but recent monthly donation, merge donor rows",
     })),
   ).toEqual(
     expect.arrayContaining([
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ]),
   );
@@ -821,7 +821,7 @@ test("Change donor tax unit: old but recent cancelled monthly donation, merge do
     })),
   ).toEqual(
     expect.arrayContaining([
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ]),
   );

@@ -34,7 +34,7 @@ test("Insert charge for a donation", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -68,7 +68,7 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -113,7 +113,7 @@ test("Do not insert initial charge for a matching donation", async () => {
     messageAuthor: "Jane",
     message: "Thanks!",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -137,7 +137,7 @@ test("Update charge status", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });

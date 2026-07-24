@@ -41,7 +41,7 @@ test("One-time donation using Quickpay", async () => {
   const [donation, charge] = await insertQuickpayDataDonation(db, {
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
       { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
     ],
     amount: 10,
@@ -77,7 +77,7 @@ test("One-time donation using Quickpay", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 90,
     },
     {
@@ -104,7 +104,7 @@ test("Monthly donation using Quickpay", async () => {
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
       { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
     ],
     frequency: DonationFrequency.Monthly,
@@ -140,7 +140,7 @@ test("Monthly donation using Quickpay", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 90,
     },
     {
@@ -215,7 +215,7 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     amount: 10,
     email: "hello@example.com",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 90 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 90 },
       { recipient: DonationRecipient.VitaminModMangelsygdomme, percentage: 10 },
     ],
     frequency: DonationFrequency.Monthly,
@@ -260,7 +260,7 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 90,
     },
     {
@@ -287,7 +287,7 @@ test("Recreate failed recurring donation", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 80 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 80 },
       { recipient: DonationRecipient.VaccinerTilSpædbørn, percentage: 20 },
     ],
   });
@@ -359,7 +359,7 @@ test("Recreate failed recurring donation", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 80,
     },
     {
@@ -369,7 +369,7 @@ test("Recreate failed recurring donation", async () => {
     },
     {
       donation_id: donations[1].id,
-      recipient: DonationRecipient.GivEffektivtsAnbefaling,
+      recipient: DonationRecipient.SmartFordeling,
       percentage: 80,
     },
     {

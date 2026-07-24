@@ -141,7 +141,7 @@ test("Should not include recipient if donation is earmarked using %-split", asyn
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -177,7 +177,7 @@ test("Should not email to a credit card one-time donation that wasn't charged ye
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -195,7 +195,7 @@ test("Should not email to a credit card one-time donation with a failed charge",
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -260,7 +260,7 @@ test("Should not email to a MobilePay one-time donation that wasn't charged yet"
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -278,7 +278,7 @@ test("Should not email to a MobilePay one-time donation with a failed charge", a
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -335,7 +335,7 @@ test("Should not email to a MobilePay recurring donation with a failed charge", 
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -525,7 +525,7 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -557,7 +557,7 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -585,7 +585,7 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -604,7 +604,7 @@ test("Finds failed recurring donations to email", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -683,7 +683,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -696,7 +696,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -732,7 +732,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -764,7 +764,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });
@@ -776,7 +776,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     frequency: DonationFrequency.Monthly,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.GivEffektivtsAnbefaling, percentage: 95 },
+      { recipient: DonationRecipient.SmartFordeling, percentage: 95 },
       { recipient: DonationRecipient.MedicinModMalaria, percentage: 5 },
     ],
   });

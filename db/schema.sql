@@ -1,7 +1,7 @@
 \restrict dbmate
 
--- Dumped from database version 17.2
--- Dumped by pg_dump version 17.10
+-- Dumped from database version 17.10
+-- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -54,8 +54,11 @@ CREATE TYPE giveffektivt.donation_frequency AS ENUM (
 CREATE TYPE giveffektivt.donation_recipient AS ENUM (
     'Giv Effektivts medlemskab',
     'Stor og velkendt effekt',
-    'Giv Effektivts anbefaling',
+    'Smart fordeling',
     'Giv Effektivts arbejde og vækst',
+    'Smart fordeling - global sundhed',
+    'Smart fordeling - dyrevelfærd',
+    'Andet',
     'Myggenet mod malaria',
     'Kontantoverførsler til verdens fattigste',
     'Medicin mod malaria',
@@ -1930,17 +1933,17 @@ CREATE VIEW giveffektivt.crm_export AS
             p.created_at AS registered_at
            FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE (c.status = 'charged'::giveffektivt.charge_status)
+             LEFT JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((c.status = 'charged'::giveffektivt.charge_status) OR (d.method = 'Bank transfer'::giveffektivt.payment_method))
           ORDER BY p.email, p.created_at
         ), names AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.name
            FROM ((giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((c.status = 'charged'::giveffektivt.charge_status) AND (p.name IS NOT NULL))
-          ORDER BY p.email, c.created_at DESC
+             LEFT JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE (((c.status = 'charged'::giveffektivt.charge_status) OR (d.method = 'Bank transfer'::giveffektivt.payment_method)) AND (p.name IS NOT NULL))
+          ORDER BY p.email, COALESCE(c.created_at, d.created_at) DESC
         ), cvrs AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.tin AS cvr
@@ -2123,10 +2126,17 @@ CREATE VIEW giveffektivt.crm_export AS
             n.name,
             c.cvr,
             a.age,
-            d.total_donated,
-            d.donations_count,
+            COALESCE(d.total_donated, (0)::numeric) AS total_donated,
+            COALESCE(d.donations_count, (0)::bigint) AS donations_count,
             l.last_donated_amount,
-            l.last_donated_method,
+            COALESCE(l.last_donated_method,
+                CASE
+                    WHEN (EXISTS ( SELECT 1
+                       FROM (giveffektivt.donor p_1
+                         JOIN giveffektivt.donation d_1 ON ((d_1.donor_id = p_1.id)))
+                      WHERE ((p_1.email = e.email) AND (d_1.method = 'Bank transfer'::giveffektivt.payment_method)))) THEN 'Bank transfer'::giveffektivt.payment_method
+                    ELSE NULL::giveffektivt.payment_method
+                END) AS last_donated_method,
             l.last_donated_frequency,
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
@@ -2212,7 +2222,10 @@ CREATE VIEW giveffektivt.crm_export AS
     expired_membership_at,
     acquisition
    FROM data
-  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR is_past_member OR has_gavebrev));
+  WHERE ((email ~~ '%@%'::text) AND ((total_donated > (0)::numeric) OR is_member OR is_past_member OR has_gavebrev OR (EXISTS ( SELECT 1
+           FROM (giveffektivt.donor p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+          WHERE ((p.email = data.email) AND (d.method = 'Bank transfer'::giveffektivt.payment_method))))));
 
 
 --
@@ -4179,4 +4192,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260116100833'),
     ('20260119133936'),
     ('20260512084723'),
+    ('20260724221542'),
     ('99999999999999');
