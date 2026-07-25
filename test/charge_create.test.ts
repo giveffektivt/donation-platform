@@ -46,8 +46,8 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 84 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
     ],
   });
 
@@ -59,8 +59,8 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     taxDeductible: true,
     tin: "222222-2222",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
     ],
   });
 

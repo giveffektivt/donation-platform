@@ -23,30 +23,33 @@ const PayloadSchema = z
       .array(
         z
           .object({
-            amount: z.coerce.number().positive(),
-            organizations: z.array(
-              z
-                .object({
-                  id: z.number().transform(mapFromNorwegianOrgId),
-                  amount: z.coerce.number().positive(),
-                })
-                .transform(({ id, amount }) => ({ recipient: id, amount })),
-            ),
+            amount: z.coerce.number().int().positive(),
+            organizations: z
+              .array(
+                z
+                  .object({
+                    id: z.number().transform(mapFromNorwegianOrgId),
+                    amount: z.coerce.number().int().positive(),
+                  })
+                  .transform(({ id, amount }) => ({ recipient: id, amount })),
+              )
+              .min(1),
           })
           .refine(
             (area) =>
-              area.organizations.reduce(
-                (sum, organization) => sum + organization.amount,
-                0,
-              ) === area.amount,
+              Math.abs(
+                area.organizations.reduce(
+                  (sum, organization) => sum + organization.amount,
+                  0,
+                ) - area.amount,
+              ) <= 1,
             {
               path: ["organizations"],
               error: "organizations must sum to cause area amount",
             },
-          )
-          .transform((area) => area.organizations),
+          ),
       )
-      .transform((areas) => areas.flat()),
+      .min(1),
     donor: z.object({
       email: z.email().max(500),
       taxDeduction: z.boolean().optional().default(false),
@@ -76,7 +79,7 @@ const PayloadSchema = z
       .optional(),
     method: z.number().transform(mapFromNorwegianPaymentMethods),
     recurring: z.coerce.boolean(),
-    amount: z.coerce.number().min(1).transform(Math.round),
+    amount: z.coerce.number().int().positive(),
   })
   .refine((data) => !data.donor.taxDeduction || !!data.donor.ssn, {
     path: ["ssn"],
@@ -84,31 +87,38 @@ const PayloadSchema = z
   })
   .refine(
     (data) =>
-      data.distributionCauseAreas.reduce(
-        (sum, earmark) => sum + earmark.amount,
-        0,
-      ) === data.amount,
+      Math.abs(
+        data.distributionCauseAreas.reduce(
+          (sum, area) => sum + area.amount,
+          0,
+        ) - data.amount,
+      ) <= 1,
     {
       path: ["distributionCauseAreas"],
       error: "cause areas must sum to donation amount",
     },
   )
-  .transform((data) => ({
-    amount: data.amount,
-    frequency: data.recurring
-      ? DonationFrequency.Monthly
-      : DonationFrequency.Once,
-    taxDeductible: data.donor.taxDeduction,
-    tin: data.donor.ssn,
-    email: data.donor.email,
-    method: data.method,
-    earmarks: data.distributionCauseAreas,
-    subscribeToNewsletter: data.donor.newsletter,
-    fundraiserId: data.fundraiser?.id,
-    publicMessageAuthor: data.fundraiser?.showName,
-    messageAuthor: data.fundraiser?.messageSenderName,
-    message: data.fundraiser?.message,
-  }));
+  .transform((data) => {
+    const earmarks = data.distributionCauseAreas.flatMap(
+      (area) => area.organizations,
+    );
+    return {
+      amount: earmarks.reduce((sum, earmark) => sum + earmark.amount, 0),
+      frequency: data.recurring
+        ? DonationFrequency.Monthly
+        : DonationFrequency.Once,
+      taxDeductible: data.donor.taxDeduction,
+      tin: data.donor.ssn,
+      email: data.donor.email,
+      method: data.method,
+      earmarks,
+      subscribeToNewsletter: data.donor.newsletter,
+      fundraiserId: data.fundraiser?.id,
+      publicMessageAuthor: data.fundraiser?.showName,
+      messageAuthor: data.fundraiser?.messageSenderName,
+      message: data.fundraiser?.message,
+    };
+  });
 
 export async function POST(req: Request) {
   try {

@@ -72,8 +72,8 @@ test("Insert donation using Quickpay", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 117 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6 },
     ],
   });
 
@@ -96,12 +96,12 @@ test("Insert donation using Quickpay", async () => {
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      amount: 116.85,
+      amount: 117,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      amount: 6.15,
+      amount: 6,
     },
   ]);
 });
@@ -116,8 +116,8 @@ test("Insert donation using bank transfer", async () => {
     taxDeductible: true,
     tin: "111111-1111",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 117 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6 },
     ],
   });
 
@@ -140,12 +140,12 @@ test("Insert donation using bank transfer", async () => {
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      amount: 116.85,
+      amount: 117,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      amount: 6.15,
+      amount: 6,
     },
   ]);
 });
@@ -166,8 +166,8 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 117 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6 },
     ],
     fundraiserId: fundraiser.id,
     publicMessageAuthor: false,
@@ -195,12 +195,12 @@ test("Insert donation with fundraiser and message using Quickpay", async () => {
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      amount: 116.85,
+      amount: 117,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      amount: 6.15,
+      amount: 6,
     },
   ]);
 });
@@ -220,8 +220,8 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
     frequency: DonationFrequency.Monthly,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 116.85 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 6.15 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 117 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 6 },
     ],
     fundraiserId: fundraiser.id,
     publicMessageAuthor: true,
@@ -249,12 +249,12 @@ test("Insert donation with fundraiser and message using bank transfer", async ()
     {
       donation_id: donation.id,
       recipient: DonationRecipient.SmartFordeling,
-      amount: 116.85,
+      amount: 117,
     },
     {
       donation_id: donation.id,
       recipient: DonationRecipient.MedicinModMalaria,
-      amount: 6.15,
+      amount: 6,
     },
   ]);
 });

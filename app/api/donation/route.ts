@@ -19,7 +19,7 @@ type Data = {
 
 const PayloadSchema = z
   .object({
-    amount: z.coerce.number().transform(Math.round),
+    amount: z.coerce.number().int(),
     recipient: z.enum(DonationRecipient),
     frequency: z.enum(DonationFrequency),
     taxDeductible: z.boolean(),

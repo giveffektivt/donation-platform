@@ -28,10 +28,19 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-const baseEarmarks = (amount: number) => [
-  { recipient: DonationRecipient.SmartFordeling, amount: amount * 0.95 },
-  { recipient: DonationRecipient.MedicinModMalaria, amount: amount * 0.05 },
-];
+const baseEarmarks = (amount: number) => {
+  const smartDistributionAmount = Math.round(amount * 0.95);
+  return [
+    {
+      recipient: DonationRecipient.SmartFordeling,
+      amount: smartDistributionAmount,
+    },
+    {
+      recipient: DonationRecipient.MedicinModMalaria,
+      amount: amount - smartDistributionAmount,
+    },
+  ];
+};
 
 const registerRecurringWithTin = async (db: PoolClient, email: string, tin: string) =>
   await registerDonationViaQuickpay(db, {

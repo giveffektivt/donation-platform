@@ -47,8 +47,8 @@ test("Find created charges to charge", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: false,
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 83.6 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4.4 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 84 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
     ],
   });
 
@@ -60,8 +60,8 @@ test("Find created charges to charge", async () => {
     taxDeductible: true,
     tin: "222222-2222",
     earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 73.15 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 3.85 },
+      { recipient: DonationRecipient.SmartFordeling, amount: 73 },
+      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
     ],
   });
 

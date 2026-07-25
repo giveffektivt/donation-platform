@@ -30,7 +30,7 @@ const stripNulls = (val: unknown): unknown => {
 const EarmarkSchema = z
   .object({
     id: z.number().int().min(1),
-    amount: z.coerce.number().positive(),
+    amount: z.coerce.number().int().positive(),
   })
   .transform((org) => ({
     recipient: mapFromNorwegianOrgId(org.id),
@@ -45,14 +45,18 @@ const CauseAreaSchema = z
       .refine((id) => [1, 2, 4, 5, 99].includes(id))
       .optional()
       .default(99),
-    amount: z.coerce.number().positive(),
+    amount: z.coerce.number().int().positive(),
     standardSplit: z.boolean().optional(),
     organizations: z.array(EarmarkSchema).optional(),
   })
   .refine(
     (ca) =>
       ca.standardSplit ||
-      ca.organizations?.reduce((sum, org) => sum + org.amount, 0) === ca.amount,
+      ((ca.organizations?.length ?? 0) > 0 &&
+        Math.abs(
+          (ca.organizations?.reduce((sum, org) => sum + org.amount, 0) ?? 0) -
+            ca.amount,
+        ) <= 1),
     {
       path: ["organizations"],
       message: "Organizations must sum to cause area amount",
@@ -80,17 +84,20 @@ const CauseAreaSchema = z
         ]
       : (ca.organizations ?? []);
 
-    return organizations.map((org) => ({
-      recipient: org.recipient,
-      amount: ca.standardSplit ? ca.amount : org.amount,
-    }));
+    return {
+      amount: ca.amount,
+      earmarks: organizations.map((org) => ({
+        recipient: org.recipient,
+        amount: ca.standardSplit ? ca.amount : org.amount,
+      })),
+    };
   });
 
 const UpdateRecurringSchema = z.object({
   distribution: z
     .object({
       taxUnitId: z.number().int().min(1).optional(),
-      causeAreas: z.array(CauseAreaSchema).optional(),
+      causeAreas: z.array(CauseAreaSchema).min(1).optional(),
     })
     .optional(),
   chargeDay: z
@@ -100,7 +107,7 @@ const UpdateRecurringSchema = z.object({
     .max(28)
     .transform((v) => (v === 0 ? 28 : v))
     .optional(),
-  amount: z.number().positive().optional(),
+  amount: z.number().int().positive().optional(),
 });
 
 export async function GET(req: Request) {
@@ -198,12 +205,18 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const newEarmarks = payload.distribution?.causeAreas?.flat() ?? null;
+    const submittedCauseAreas = payload.distribution?.causeAreas ?? null;
+    const newEarmarks =
+      submittedCauseAreas?.flatMap((causeArea) => causeArea.earmarks) ?? null;
 
     if (
-      newEarmarks !== null &&
-      newEarmarks.reduce((sum, earmark) => sum + earmark.amount, 0) !==
-        (payload.amount ?? donation.amount)
+      submittedCauseAreas !== null &&
+      Math.abs(
+        submittedCauseAreas.reduce(
+          (sum, causeArea) => sum + causeArea.amount,
+          0,
+        ) - (payload.amount ?? donation.amount),
+      ) > 1
     ) {
       return Response.json(
         { message: "Cause areas must sum to donation amount" },
@@ -235,9 +248,12 @@ export async function PUT(req: NextRequest) {
       newTin = resolvedTin !== (donation.tin ?? null) ? resolvedTin : null;
     }
 
+    const effectiveAmount =
+      newEarmarks?.reduce((sum, earmark) => sum + earmark.amount, 0) ??
+      payload.amount;
     const newAmount =
-      payload.amount !== undefined && payload.amount !== donation.amount
-        ? payload.amount
+      effectiveAmount !== undefined && effectiveAmount !== donation.amount
+        ? effectiveAmount
         : null;
 
     const earmarksChanged =

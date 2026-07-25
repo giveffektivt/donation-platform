@@ -204,11 +204,17 @@ begin
 
     select json_agg(json_build_object(
         'recipient', recipient,
-        'amount', amount * coalesce(p_amount, v_old_donation.amount) / v_old_donation.amount
+        'amount', round(amount * coalesce(p_amount, v_old_donation.amount) / v_old_donation.amount)
     ))
     from earmark
     where donation_id = p_donation_id
     into v_old_earmarks;
+
+    if p_earmarks is null then
+        select sum((e->>'amount')::numeric)
+        from jsonb_array_elements(v_old_earmarks) e
+        into p_amount;
+    end if;
 
     update donation set cancelled = true where id = p_donation_id;
 
@@ -4201,4 +4207,6 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260119133936'),
     ('20260512084723'),
     ('20260724221542'),
+    ('20260801120000'),
+    ('20260801130000'),
     ('99999999999999');
