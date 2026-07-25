@@ -5,7 +5,6 @@ import {
   getDonationDistributions,
   logError,
   verifyJwtBearerToken,
-  DonationRecipient,
   getDonorIdsByEmail,
   norwegianCauseAreas,
   norwegianOrgs,
@@ -59,18 +58,10 @@ export async function GET(req: NextRequest) {
               (sum, earmark) => sum + earmark.amount,
               0,
             );
-            const smartRecipient =
-              causeArea.id === 99
-                ? DonationRecipient.SmartFordeling
-                : causeArea.id === 1
-                  ? DonationRecipient.SmartFordelingGlobalSundhed
-                  : causeArea.id === 2
-                    ? DonationRecipient.SmartFordelingDyrevelfærd
-                    : null;
             const standardSplit =
-              smartRecipient !== null &&
               causeAreaEarmarks.length === 1 &&
-              causeAreaEarmarks[0].recipient === smartRecipient;
+              mapToNorwegianOrgId(causeAreaEarmarks[0].recipient) ===
+                causeArea.standardOrganizationId;
 
             return {
               id: causeArea.id,

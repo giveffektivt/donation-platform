@@ -9,6 +9,7 @@ import {
   getRecurringDonationsByEmail,
   logError,
   mapFromNorwegianOrgId,
+  norwegianCauseAreas,
   verifyJwtBearerToken,
 } from "src";
 import type { NextRequest } from "next/server";
@@ -63,22 +64,13 @@ const CauseAreaSchema = z
     },
   )
   .transform((ca) => {
-    const overarchingSmartDistribution = ca.organizations?.find(
-      (org) => org.recipient === DonationRecipient.SmartFordeling,
-    );
+    const standardOrganizationId = norwegianCauseAreas.find(
+      (causeArea) => causeArea.id === ca.id,
+    )?.standardOrganizationId;
     const organizations = ca.standardSplit
       ? [
-          overarchingSmartDistribution ?? {
-            recipient:
-              ca.id === 99
-                ? DonationRecipient.SmartFordeling
-                : ca.id === 1
-                  ? DonationRecipient.SmartFordelingGlobalSundhed
-                  : ca.id === 2
-                    ? DonationRecipient.SmartFordelingDyrevelfærd
-                    : ca.id === 4
-                      ? DonationRecipient.GivEffektivtsArbejdeOgVækst
-                      : DonationRecipient.Andet,
+          {
+            recipient: mapFromNorwegianOrgId(standardOrganizationId!),
             amount: ca.amount,
           },
         ]

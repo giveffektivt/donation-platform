@@ -12,15 +12,15 @@ type NorwegianOrg = {
 
 export const norwegianOrgs: NorwegianOrg[] = [
   {
-    id: 1,
+    id: 90,
     name: DonationRecipient.SmartFordeling,
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt.",
     infoUrl: "https://giveffektivt.dk/anbefalinger",
-    causeAreaId: 99,
+    causeAreaId: 90,
   },
   {
-    id: 2,
+    id: 1,
     name: DonationRecipient.SmartFordelingGlobalSundhed,
     widgetDisplayName: DonationRecipient.SmartFordeling,
     description:
@@ -29,14 +29,14 @@ export const norwegianOrgs: NorwegianOrg[] = [
     causeAreaId: 1,
   },
   {
-    id: 3,
+    id: 2,
     name: DonationRecipient.MyggenetModMalaria,
     description: "Myggenet beskytter familier imod malariamyg, mens de sover.",
     infoUrl: "https://giveffektivt.dk/myggenet",
     causeAreaId: 1,
   },
   {
-    id: 4,
+    id: 3,
     name: DonationRecipient.MedicinModMalaria,
     description:
       "Der uddeles forebyggende malariamedicin i perioder, hvor smittetallet er særligt højt.",
@@ -44,7 +44,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     causeAreaId: 1,
   },
   {
-    id: 5,
+    id: 4,
     name: DonationRecipient.VitaminModMangelsygdomme,
     description:
       "A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.",
@@ -52,7 +52,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     causeAreaId: 1,
   },
   {
-    id: 6,
+    id: 5,
     name: DonationRecipient.VaccinerTilSpædbørn,
     description:
       "Forældre får en økonomisk belønning for at få deres børn vaccineret.",
@@ -60,7 +60,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     causeAreaId: 1,
   },
   {
-    id: 7,
+    id: 6,
     name: DonationRecipient.KontantoverførslerTilVerdensFattigste,
     description:
       "Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.",
@@ -68,15 +68,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     causeAreaId: 1,
   },
   {
-    id: 8,
-    name: DonationRecipient.GivEffektivtsArbejdeOgVækst,
-    description:
-      "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 7x mere i donationer til vores anbefalede velgørenhedsformål.",
-    infoUrl: "https://giveffektivt.dk/x-faktor",
-    causeAreaId: 4,
-  },
-  {
-    id: 9,
+    id: 7,
     name: "Ormekure",
     description:
       "Ormekure til skolebørn forbedrer sundhed og øger skolegang og fremtidig indkomst.",
@@ -85,7 +77,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     isActive: false,
   },
   // {
-  //   id: 30,
+  //   id: 20,
   //   name: DonationRecipient.SmartFordelingDyrevelfærd,
   //   widgetDisplayName: DonationRecipient.SmartFordeling,
   //   description:
@@ -93,6 +85,14 @@ export const norwegianOrgs: NorwegianOrg[] = [
   //   infoUrl: "https://giveffektivt.dk/anbefalinger",
   //   causeAreaId: 2,
   // },
+  {
+    id: 40,
+    name: DonationRecipient.GivEffektivtsArbejdeOgVækst,
+    description:
+      "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 7x mere i donationer til vores anbefalede velgørenhedsformål.",
+    infoUrl: "https://giveffektivt.dk/x-faktor",
+    causeAreaId: 4,
+  },
   {
     id: 50,
     name: DonationRecipient.Andet,
@@ -105,10 +105,11 @@ export const norwegianOrgs: NorwegianOrg[] = [
 
 export const norwegianCauseAreas = [
   {
-    id: 99,
+    id: 90,
     name: "Vores anbefaling",
     description: "Vores anbefaling",
     standardPercentageShare: 100,
+    standardOrganizationId: 90,
     isActive: false,
   },
   {
@@ -116,6 +117,7 @@ export const norwegianCauseAreas = [
     name: "Global sundhed",
     description: "Global sundhed",
     standardPercentageShare: 0,
+    standardOrganizationId: 1,
     isActive: true,
   },
   // {
@@ -123,6 +125,7 @@ export const norwegianCauseAreas = [
   //   name: "Dyrevelfærd",
   //   description: "Dyrevelfærd",
   //   standardPercentageShare: 0,
+  //   standardOrganizationId: 20,
   //   isActive: true,
   // },
   {
@@ -130,6 +133,7 @@ export const norwegianCauseAreas = [
     name: "Giv Effektivts arbejde og vækst",
     description: "Giv Effektivts arbejde og vækst",
     standardPercentageShare: 0,
+    standardOrganizationId: 40,
     isActive: true,
   },
   {
@@ -137,6 +141,7 @@ export const norwegianCauseAreas = [
     name: "Andet",
     description: "Andet",
     standardPercentageShare: 0,
+    standardOrganizationId: 50,
     isActive: false,
   },
 ];
