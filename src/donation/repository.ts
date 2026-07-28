@@ -800,7 +800,6 @@ export async function getRecurringDonationsByEmail(
             select 1
             from charge ch2
             where ch2.donation_id = d.id
-              and ch2.status <> 'created'
           )
         ) as is_payment_expired
       from donation d
