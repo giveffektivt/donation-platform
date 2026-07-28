@@ -43,7 +43,9 @@ const CauseAreaSchema = z
     id: z
       .number()
       .int()
-      .refine((id) => [1, 2, 4, 5, 99].includes(id))
+      .refine((id) =>
+        norwegianCauseAreas.some((causeArea) => causeArea.id === id),
+      )
       .optional()
       .default(99),
     amount: z.coerce.number().int().positive(),
