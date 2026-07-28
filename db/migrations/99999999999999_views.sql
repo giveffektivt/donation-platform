@@ -2503,9 +2503,10 @@ with
         from
             donor p
             join donation d on d.donor_id = p.id
-            join charge c on c.donation_id = d.id
+            left join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
+            or d.method = 'Bank transfer'
         order by
             p.email,
             p.created_at
@@ -2517,13 +2518,16 @@ with
         from
             donor p
             join donation d on d.donor_id = p.id
-            join charge c on c.donation_id = d.id
+            left join charge c on c.donation_id = d.id
         where
-            c.status = 'charged'
+            (
+                c.status = 'charged'
+                or d.method = 'Bank transfer'
+            )
             and p.name is not null
         order by
             p.email,
-            c.created_at desc
+            coalesce(c.created_at, d.created_at) desc
     ),
     cvrs as (
         select distinct
@@ -2768,10 +2772,24 @@ with
             n.name,
             c.cvr,
             a.age,
-            d.total_donated,
-            d.donations_count,
+            coalesce(d.total_donated, 0) as total_donated,
+            coalesce(d.donations_count, 0) as donations_count,
             l.last_donated_amount,
-            l.last_donated_method,
+            coalesce(
+                l.last_donated_method,
+                case
+                    when exists (
+                        select
+                            1
+                        from
+                            donor p
+                            join donation d on d.donor_id = p.id
+                        where
+                            p.email = e.email
+                            and d.method = 'Bank transfer'
+                    ) then 'Bank transfer'::payment_method
+                end
+            ) as last_donated_method,
             l.last_donated_frequency,
             l.last_donation_tax_deductible,
             l.last_donation_cancelled,
@@ -2829,6 +2847,16 @@ where
         or is_member
         or is_past_member
         or has_gavebrev
+        or exists (
+            select
+                1
+            from
+                donor p
+                join donation d on d.donor_id = p.id
+            where
+                p.email = data.email
+                and d.method = 'Bank transfer'
+        )
     );
 
 grant
