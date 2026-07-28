@@ -101,13 +101,21 @@ export const norwegianOrgs: NorwegianOrg[] = [
     causeAreaId: 5,
     isActive: false,
   },
+  {
+    id: 99,
+    name: DonationRecipient.GivEffektivtsMedlemskab,
+    description: DonationRecipient.GivEffektivtsMedlemskab,
+    infoUrl: "https://giveffektivt.dk",
+    causeAreaId: 99,
+    isActive: false,
+  },
 ];
 
 export const norwegianCauseAreas = [
   {
     id: 90,
-    name: "Vores anbefaling",
-    description: "Vores anbefaling",
+    name: "Smart fordeling",
+    description: "Smart fordeling",
     standardPercentageShare: 100,
     standardOrganizationId: 90,
     isActive: false,
@@ -144,6 +152,14 @@ export const norwegianCauseAreas = [
     standardOrganizationId: 50,
     isActive: false,
   },
+  {
+    id: 99,
+    name: DonationRecipient.GivEffektivtsMedlemskab,
+    description: DonationRecipient.GivEffektivtsMedlemskab,
+    standardPercentageShare: 0,
+    standardOrganizationId: 99,
+    isActive: false,
+  },
 ];
 
 export const mapFromNorwegianPaymentMethods = (method: number) => {
@@ -172,9 +188,6 @@ export const mapToNorwegianOrgId = (recipient: string): number => {
   if (recipient === "Stor og velkendt effekt") {
     return 1;
   }
-  if (recipient === DonationRecipient.GivEffektivtsMedlemskab) {
-    return 99;
-  }
   if (recipient === "Ormekur") {
     return 98;
   }
@@ -183,6 +196,47 @@ export const mapToNorwegianOrgId = (recipient: string): number => {
     return org.id;
   }
   throw new Error(`Unknown organization ${recipient}`);
+};
+
+export const buildNorwegianCauseAreaDistribution = (
+  earmarks: { recipient: string; amount: number }[],
+  donationAmount: number,
+) => {
+  const causeAreas = norwegianCauseAreas
+    .map((causeArea) => {
+      const causeAreaEarmarks = earmarks.filter((earmark) => {
+        const orgId = mapToNorwegianOrgId(earmark.recipient);
+        return (
+          norwegianOrgs.find((org) => org.id === orgId)?.causeAreaId ===
+          causeArea.id
+        );
+      });
+      const amount = causeAreaEarmarks.reduce(
+        (sum, earmark) => sum + earmark.amount,
+        0,
+      );
+      const standardSplit =
+        causeAreaEarmarks.length === 1 &&
+        mapToNorwegianOrgId(causeAreaEarmarks[0].recipient) ===
+          causeArea.standardOrganizationId;
+
+      return {
+        id: causeArea.id,
+        name: causeArea.name,
+        standardSplit,
+        amount,
+        percentageShare: (amount / donationAmount) * 100,
+        organizations: causeAreaEarmarks.map((earmark) => ({
+          id: mapToNorwegianOrgId(earmark.recipient),
+          name: earmark.recipient,
+          amount: earmark.amount,
+          percentageShare: (earmark.amount / amount) * 100,
+        })),
+      };
+    })
+    .filter((causeArea) => causeArea.amount > 0);
+
+  return causeAreas;
 };
 
 export const enumerateIds = (data: object[]) =>

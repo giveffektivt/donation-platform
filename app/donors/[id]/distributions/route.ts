@@ -1,13 +1,11 @@
 import {
   dbClient,
-  mapToNorwegianOrgId,
+  buildNorwegianCauseAreaDistribution,
   dbRelease,
   getDonationDistributions,
   logError,
   verifyJwtBearerToken,
   getDonorIdsByEmail,
-  norwegianCauseAreas,
-  norwegianOrgs,
 } from "src";
 import type { NextRequest } from "next/server";
 
@@ -45,39 +43,10 @@ export async function GET(req: NextRequest) {
           recipient: string;
           amount: number;
         }[];
-        const causeAreas = norwegianCauseAreas
-          .map((causeArea) => {
-            const causeAreaEarmarks = earmarks.filter((earmark) => {
-              const orgId = mapToNorwegianOrgId(earmark.recipient);
-              return (
-                norwegianOrgs.find((org) => org.id === orgId)?.causeAreaId ===
-                causeArea.id
-              );
-            });
-            const amount = causeAreaEarmarks.reduce(
-              (sum, earmark) => sum + earmark.amount,
-              0,
-            );
-            const standardSplit =
-              causeAreaEarmarks.length === 1 &&
-              mapToNorwegianOrgId(causeAreaEarmarks[0].recipient) ===
-                causeArea.standardOrganizationId;
-
-            return {
-              id: causeArea.id,
-              name: causeArea.name,
-              standardSplit,
-              amount,
-              percentageShare: (amount / d.amount) * 100,
-              organizations: causeAreaEarmarks.map((earmark) => ({
-                id: mapToNorwegianOrgId(earmark.recipient),
-                name: earmark.recipient,
-                amount: earmark.amount,
-                percentageShare: (earmark.amount / amount) * 100,
-              })),
-            };
-          })
-          .filter((causeArea) => causeArea.amount > 0);
+        const causeAreas = buildNorwegianCauseAreaDistribution(
+          earmarks,
+          d.amount,
+        );
 
         return {
           id: d.id,
