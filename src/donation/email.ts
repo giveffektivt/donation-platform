@@ -76,6 +76,22 @@ export async function sendPaymentEmail(
   donation: DonationToEmail,
   bank?: BankTransferInfo,
 ) {
+  // Temporarily cleanup list of recipients until we handle multi-cause multi-org receipts better.
+  const recipients = donation.recipient
+    ?.split(",")
+    .map((recipient) => recipient.trim());
+  const hasSmartFordeling = recipients?.includes(
+    DonationRecipient.SmartFordeling,
+  );
+  const recipient = recipients
+    ?.filter(
+      (recipient) =>
+        recipient !== DonationRecipient.GivEffektivtsArbejdeOgVækst &&
+        (!hasSmartFordeling ||
+          recipient !== DonationRecipient.SmartFordelingGlobalSundhed),
+    )
+    .join(", ");
+
   const days_until_next_year = differenceInDays(
     startOfYear(addYears(new Date(), 1)),
     new Date(),
@@ -91,7 +107,7 @@ export async function sendPaymentEmail(
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           donation_id: donation.id,
-          recipient: donation.recipient,
+          recipient,
 
           amount: donation.amount.toLocaleString("da-DK"),
           frequency: donation.frequency,
