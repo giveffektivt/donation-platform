@@ -30,7 +30,7 @@ const stripNulls = (val: unknown): unknown => {
 
 const EarmarkSchema = z
   .object({
-    id: z.number().int().min(1),
+    id: z.number().int(),
     amount: z.coerce.number().int().positive(),
   })
   .transform((org) => ({

@@ -12,12 +12,12 @@ type NorwegianOrg = {
 
 export const norwegianOrgs: NorwegianOrg[] = [
   {
-    id: 90,
+    id: -1,
     name: DonationRecipient.SmartFordeling,
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt.",
     infoUrl: "https://giveffektivt.dk/anbefalinger",
-    causeAreaId: 90,
+    causeAreaId: -1,
   },
   {
     id: 1,
@@ -113,11 +113,11 @@ export const norwegianOrgs: NorwegianOrg[] = [
 
 export const norwegianCauseAreas = [
   {
-    id: 90,
+    id: -1,
     name: "Smart fordeling",
     description: "Smart fordeling",
     standardPercentageShare: 100,
-    standardOrganizationId: 90,
+    standardOrganizationId: -1,
     isActive: false,
   },
   {
