@@ -56,7 +56,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.VaccinerTilSpædbørn,
     description:
       "Forældre får en økonomisk belønning for at få deres børn vaccineret.",
-    infoUrl: "https://giveffektivt.dk/boernevacciner",
+    infoUrl: "https://giveffektivt.dk/bornevacciner",
     causeAreaId: 1,
   },
   {
@@ -64,7 +64,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.KontantoverførslerTilVerdensFattigste,
     description:
       "Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.",
-    infoUrl: "https://giveffektivt.dk/kontantoverfoersler",
+    infoUrl: "https://giveffektivt.dk/kontantoverforsler",
     causeAreaId: 1,
   },
   {
