@@ -25,7 +25,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     widgetDisplayName: DonationRecipient.SmartFordeling,
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for global sundhed.",
-    infoUrl: "https://giveffektivt.dk/smart-fordeling",
+    infoUrl: "https://giveffektivt.dk/global-sundhed-og-fattigdom",
     causeAreaId: 1,
   },
   {
@@ -45,7 +45,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
   },
   {
     id: 4,
-    name: DonationRecipient.VitaminModMangelsygdomme,
+    name: DonationRecipient.AVitaminModFejlernæring,
     description:
       "A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.",
     infoUrl: "https://giveffektivt.dk/a-vitamin",

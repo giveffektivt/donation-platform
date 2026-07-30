@@ -36,7 +36,7 @@ test("One-time donation using Quickpay", async () => {
     email: "hello@example.com",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 9 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
+      { recipient: DonationRecipient.AVitaminModFejlernæring, amount: 1 },
     ],
     amount: 10,
     frequency: DonationFrequency.Once,
@@ -76,7 +76,7 @@ test("One-time donation using Quickpay", async () => {
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      recipient: DonationRecipient.AVitaminModFejlernæring,
       amount: 1,
     },
   ]);
@@ -99,7 +99,7 @@ test("Monthly donation using Quickpay", async () => {
     email: "hello@example.com",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 9 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
+      { recipient: DonationRecipient.AVitaminModFejlernæring, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
@@ -139,7 +139,7 @@ test("Monthly donation using Quickpay", async () => {
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      recipient: DonationRecipient.AVitaminModFejlernæring,
       amount: 1,
     },
   ]);
@@ -210,7 +210,7 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     email: "hello@example.com",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 9 },
-      { recipient: DonationRecipient.VitaminModMangelsygdomme, amount: 1 },
+      { recipient: DonationRecipient.AVitaminModFejlernæring, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
@@ -259,7 +259,7 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      recipient: DonationRecipient.AVitaminModFejlernæring,
       amount: 1,
     },
   ]);

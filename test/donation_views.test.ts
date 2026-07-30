@@ -54,7 +54,7 @@ test("Finds first successful donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       {
-        recipient: DonationRecipient.VitaminModMangelsygdomme,
+        recipient: DonationRecipient.AVitaminModFejlernæring,
         amount: 77,
       },
     ],
@@ -107,7 +107,7 @@ test("Finds first successful donations to email", async () => {
       id: donation2.id,
       email: "hello@example.com",
       amount: 77,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      recipient: DonationRecipient.AVitaminModFejlernæring,
       frequency: DonationFrequency.Monthly,
       tax_deductible: true,
     },
@@ -298,7 +298,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
     taxDeductible: false,
     earmarks: [
       {
-        recipient: DonationRecipient.VitaminModMangelsygdomme,
+        recipient: DonationRecipient.AVitaminModFejlernæring,
         amount: 77,
       },
     ],
@@ -314,7 +314,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
       id: donation.id,
       email: "hello@example.com",
       amount: 77,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      recipient: DonationRecipient.AVitaminModFejlernæring,
       frequency: DonationFrequency.Monthly,
       tax_deductible: false,
     },
@@ -439,7 +439,7 @@ test("Finds failed recurring donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       {
-        recipient: DonationRecipient.VitaminModMangelsygdomme,
+        recipient: DonationRecipient.AVitaminModFejlernæring,
         amount: 88,
       },
     ],
@@ -640,7 +640,7 @@ test("Finds failed recurring donations to email", async () => {
       donor_email: donors[0].email,
       donation_id: donation2.id,
       amount: donation2.amount,
-      recipient: DonationRecipient.VitaminModMangelsygdomme,
+      recipient: DonationRecipient.AVitaminModFejlernæring,
       frequency: donation2.frequency,
       tax_deductible: donation2.tax_deductible,
       method: donation2.method,

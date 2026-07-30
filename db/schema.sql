@@ -62,7 +62,7 @@ CREATE TYPE giveffektivt.donation_recipient AS ENUM (
     'Myggenet mod malaria',
     'Kontantoverførsler til verdens fattigste',
     'Medicin mod malaria',
-    'Vitamin mod mangelsygdomme',
+    'A-vitamin mod fejlernæring',
     'Ormekur',
     'Vacciner til spædbørn'
 );
@@ -4207,6 +4207,7 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260119133936'),
     ('20260512084723'),
     ('20260724221542'),
+    ('20260730164044'),
     ('20260801120000'),
     ('20260801130000'),
     ('99999999999999');

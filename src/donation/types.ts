@@ -7,7 +7,7 @@ export enum DonationRecipient {
   Andet = "Andet",
   MyggenetModMalaria = "Myggenet mod malaria",
   MedicinModMalaria = "Medicin mod malaria",
-  VitaminModMangelsygdomme = "Vitamin mod mangelsygdomme",
+  AVitaminModFejlernæring = "A-vitamin mod fejlernæring",
   VaccinerTilSpædbørn = "Vacciner til spædbørn",
   KontantoverførslerTilVerdensFattigste = "Kontantoverførsler til verdens fattigste",
   GivEffektivtsArbejdeOgVækst = "Giv Effektivts arbejde og vækst",
