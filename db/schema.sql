@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 17.10
+-- Dumped from database version 17.2
 -- Dumped by pg_dump version 18.4
 
 SET statement_timeout = 0;
@@ -4208,6 +4208,7 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260512084723'),
     ('20260724221542'),
     ('20260730164044'),
+    ('20260730210937'),
     ('20260801120000'),
     ('20260801130000'),
     ('99999999999999');
