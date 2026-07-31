@@ -25,7 +25,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     widgetDisplayName: DonationRecipient.SmartFordeling,
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for global sundhed.",
-    infoUrl: "https://giveffektivt.dk/global-sundhed-og-fattigdom",
+    infoUrl: "https://giveffektivt.dk/smart-fordeling",
     causeAreaId: 1,
   },
   {
