@@ -2301,25 +2301,25 @@ CREATE VIEW giveffektivt.donations_to_email AS
             charge.status
            FROM giveffektivt.charge
           ORDER BY charge.donation_id, charge.created_at DESC
-        ), single_recipient AS (
+        ), earmark_details AS (
          SELECT earmark.donation_id,
-                CASE
-                    WHEN (count(*) = 1) THEN max(earmark.recipient)
-                    ELSE NULL::giveffektivt.donation_recipient
-                END AS recipient
+            jsonb_agg(jsonb_build_object('recipient', earmark.recipient, 'amount', earmark.amount) ORDER BY earmark.recipient) AS earmarks
            FROM giveffektivt.earmark
           GROUP BY earmark.donation_id
         )
  SELECT d.id,
     p.email,
     d.amount,
-    sr.recipient,
+    ed.earmarks,
     d.frequency,
-    d.tax_deductible
+    d.tax_deductible,
+    (NOT (EXISTS ( SELECT 1
+           FROM giveffektivt.charged_memberships_internal m
+          WHERE ((m.donor_id = d.donor_id) AND (m.charged_at >= (now() - '1 year'::interval)))))) AS suggest_membership
    FROM (((giveffektivt.donor p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
      JOIN latest_charge c ON ((c.donation_id = d.id)))
-     LEFT JOIN single_recipient sr ON ((sr.donation_id = d.id)))
+     JOIN earmark_details ed ON ((ed.donation_id = d.id)))
   WHERE ((d.emailed = 'no'::giveffektivt.emailed_status) AND ((c.status = 'charged'::giveffektivt.charge_status) OR ((d.method = 'MobilePay'::giveffektivt.payment_method) AND (d.frequency <> 'once'::giveffektivt.donation_frequency) AND (c.status <> 'error'::giveffektivt.charge_status))));
 
 

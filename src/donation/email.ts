@@ -8,6 +8,7 @@ import {
   EmailedStatus,
   getBankAccount,
   getDonationsToEmail,
+  buildNorwegianCauseAreaDistribution,
   logError,
   setDonationEmailed,
 } from "src";
@@ -30,11 +31,7 @@ export async function sendNewEmails() {
     for (const donation of donationsToEmail) {
       try {
         await setDonationEmailed(db, donation.id, EmailedStatus.Attempted);
-        if (donation.recipient === DonationRecipient.GivEffektivtsMedlemskab) {
-          await sendMembershipEmail(donation);
-        } else {
-          await sendPaymentEmail(donation);
-        }
+        await sendReceiptEmail(donation);
         await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
       } catch (err) {
         logError(`Error sending email for ID "${donation.id}"`, err);
@@ -43,54 +40,46 @@ export async function sendNewEmails() {
   });
 }
 
-export async function sendMembershipEmail(donation: DonationToEmail) {
-  const emailParams = new EmailParams()
-    .setTo([new Recipient(donation.email)])
-    .setTemplateId(process.env.MAILERSEND_TEMPLATE_MEMBERSHIP)
-    .setPersonalization([
-      {
-        email: donation.email,
-        data: {
-          subject_prefix:
-            process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
-          donation_id: donation.id,
-          recipient: donation.recipient,
+export function buildDonationEmailDistribution(
+  donation: Pick<DonationToEmail, "amount" | "earmarks">,
+) {
+  const distribution = buildNorwegianCauseAreaDistribution(
+    donation.earmarks,
+    donation.amount,
+  ).flatMap((causeArea) => {
+    if (causeArea.standardSplit) {
+      return [
+        {
+          name: causeArea.name,
+          amount: `${causeArea.amount.toLocaleString("da-DK")} kr`,
         },
-      },
-    ]);
+      ];
+    }
 
-  const result = await mailerSend.email.send(emailParams);
-  if (result.statusCode !== 202) {
-    throw new Error(`Failed to send email: ${JSON.stringify(result)}`);
-  }
+    return [
+      { name: causeArea.name, amount: "" },
+      ...causeArea.organizations.map((organization) => ({
+        name: `↳ ${organization.name}`,
+        amount: `${organization.amount.toLocaleString("da-DK")} kr`,
+      })),
+    ];
+  });
 
-  if (result.body) {
-    logError(
-      `Email for membership ID ${donation.id} was probably sent, but with possible errors or warnings`,
-      result.body,
-    );
-  }
+  return [
+    ...distribution,
+    { name: "Sum", amount: `${donation.amount.toLocaleString("da-DK")} kr` },
+  ];
 }
 
-export async function sendPaymentEmail(
+export async function sendReceiptEmail(
   donation: DonationToEmail,
   bank?: BankTransferInfo,
 ) {
-  // Temporarily cleanup list of recipients until we handle multi-cause multi-org receipts better.
-  const recipients = donation.recipient
-    ?.split(",")
-    .map((recipient) => recipient.trim());
-  const hasSmartFordeling = recipients?.includes(
-    DonationRecipient.SmartFordeling,
-  );
-  const recipient = recipients
-    ?.filter(
-      (recipient) =>
-        recipient !== DonationRecipient.GivEffektivtsArbejdeOgVækst &&
-        (!hasSmartFordeling ||
-          recipient !== DonationRecipient.SmartFordelingGlobalSundhed),
-    )
-    .join(", ");
+  const is_membership =
+    donation.earmarks.length === 1 &&
+    donation.earmarks[0].recipient ===
+      DonationRecipient.GivEffektivtsMedlemskab;
+  const distribution = buildDonationEmailDistribution(donation);
 
   const days_until_next_year = differenceInDays(
     startOfYear(addYears(new Date(), 1)),
@@ -99,7 +88,7 @@ export async function sendPaymentEmail(
 
   const emailParams = new EmailParams()
     .setTo([new Recipient(donation.email)])
-    .setTemplateId(process.env.MAILERSEND_TEMPLATE_DONATION)
+    .setTemplateId(process.env.MAILERSEND_TEMPLATE_RECEIPT)
     .setPersonalization([
       {
         email: donation.email,
@@ -107,7 +96,9 @@ export async function sendPaymentEmail(
           subject_prefix:
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           donation_id: donation.id,
-          recipient,
+          is_membership,
+          distribution,
+          suggest_membership: donation.suggest_membership,
 
           amount: donation.amount.toLocaleString("da-DK"),
           frequency: donation.frequency,
@@ -144,7 +135,7 @@ export async function sendPaymentEmail(
 
   if (result.body) {
     logError(
-      `Email for donation ID ${donation.id} was probably sent, but with possible errors or warnings`,
+      `Email for receipt ID ${donation.id} was probably sent, but with possible errors or warnings`,
       result.body,
     );
   }

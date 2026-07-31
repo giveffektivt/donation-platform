@@ -11,8 +11,9 @@ import {
   logError,
   type NewDonation,
   registerDonationViaBankTransfer,
-  sendPaymentEmail,
+  sendReceiptEmail,
   setDonationEmailed,
+  shouldSuggestMembership,
 } from "src";
 
 export async function processBankTransferDonation(
@@ -44,21 +45,21 @@ async function sendEmails(
     msg: donation.gateway_metadata.bank_msg,
   };
 
-  // Donation email
-  const donationToEmail: DonationToEmail = {
-    id: donation.id,
-    email: email,
-    amount: donation.amount,
-    recipient: earmarks?.length === 1 ? earmarks[0].recipient : undefined,
-    frequency: donation.frequency,
-    tax_deductible: donation.tax_deductible,
-  };
-
   let db = null;
   try {
     db = await dbClient();
+    const donationToEmail: DonationToEmail = {
+      id: donation.id,
+      email: email,
+      amount: donation.amount,
+      earmarks,
+      frequency: donation.frequency,
+      tax_deductible: donation.tax_deductible,
+      suggest_membership: await shouldSuggestMembership(db, donation.donor_id),
+    };
+
     await setDonationEmailed(db, donationToEmail.id, EmailedStatus.Attempted);
-    await sendPaymentEmail(donationToEmail, bankTransferInfo);
+    await sendReceiptEmail(donationToEmail, bankTransferInfo);
     await setDonationEmailed(db, donationToEmail.id, EmailedStatus.Yes);
   } catch (err) {
     logError(`Error sending payment email for ID "${donation.id}":`, err);

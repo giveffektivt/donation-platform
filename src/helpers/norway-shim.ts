@@ -204,13 +204,18 @@ export const buildNorwegianCauseAreaDistribution = (
 ) => {
   const causeAreas = norwegianCauseAreas
     .map((causeArea) => {
-      const causeAreaEarmarks = earmarks.filter((earmark) => {
-        const orgId = mapToNorwegianOrgId(earmark.recipient);
-        return (
-          norwegianOrgs.find((org) => org.id === orgId)?.causeAreaId ===
-          causeArea.id
+      const causeAreaEarmarks = earmarks
+        .filter((earmark) => {
+          const orgId = mapToNorwegianOrgId(earmark.recipient);
+          return (
+            norwegianOrgs.find((org) => org.id === orgId)?.causeAreaId ===
+            causeArea.id
+          );
+        })
+        .sort(
+          (a, b) =>
+            mapToNorwegianOrgId(a.recipient) - mapToNorwegianOrgId(b.recipient),
         );
-      });
       const amount = causeAreaEarmarks.reduce(
         (sum, earmark) => sum + earmark.amount,
         0,

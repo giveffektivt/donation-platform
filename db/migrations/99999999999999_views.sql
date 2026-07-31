@@ -432,13 +432,17 @@ with
             donation_id,
             created_at desc
     ),
-    single_recipient as (
+    earmark_details as (
         select
             donation_id,
-            case
-                when count(*) = 1 then max(recipient)
-                else null
-            end as recipient
+            jsonb_agg(
+                jsonb_build_object(
+                    'recipient', recipient,
+                    'amount', amount
+                )
+                order by
+                    recipient
+            ) as earmarks
         from
             earmark
         group by
@@ -448,14 +452,23 @@ select
     d.id,
     p.email,
     d.amount,
-    sr.recipient,
+    ed.earmarks,
     d.frequency,
-    d.tax_deductible
+    d.tax_deductible,
+    not exists (
+        select
+            1
+        from
+            charged_memberships_internal m
+        where
+            m.donor_id = d.donor_id
+            and m.charged_at >= now() - interval '1 year'
+    ) as suggest_membership
 from
     donor p
     join donation d on d.donor_id = p.id
     join latest_charge c on c.donation_id = d.id
-    left join single_recipient sr on sr.donation_id = d.id
+    join earmark_details ed on ed.donation_id = d.id
 where
     d.emailed = 'no'
     and (

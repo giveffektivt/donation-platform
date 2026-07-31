@@ -24,6 +24,23 @@ export async function getDonationsToEmail(
   ).rows;
 }
 
+export async function shouldSuggestMembership(
+  client: PoolClient,
+  donor_id: string,
+): Promise<boolean> {
+  return (
+    await client.query(
+      `select not exists (
+         select 1
+         from charged_memberships
+         where donor_id = $1
+           and charged_at >= now() - interval '1 year'
+       ) as suggest_membership`,
+      [donor_id],
+    )
+  ).rows[0].suggest_membership;
+}
+
 export async function setDonationEmailed(
   client: PoolClient,
   donation_id: string,

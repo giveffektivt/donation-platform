@@ -77,9 +77,10 @@ export type DonationToEmail = {
   id: string;
   email: string;
   amount: number;
-  recipient?: DonationRecipient;
+  earmarks: { recipient: DonationRecipient; amount: number }[];
   frequency: DonationFrequency;
   tax_deductible: boolean;
+  suggest_membership: boolean;
 };
 
 export type FailedRecurringDonation = {

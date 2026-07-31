@@ -99,25 +99,43 @@ test("Finds first successful donations to email", async () => {
       id: donation1.id,
       email: "hello@example.com",
       amount: 50,
-      recipient: DonationRecipient.GivEffektivtsMedlemskab,
+      earmarks: [
+        {
+          recipient: DonationRecipient.GivEffektivtsMedlemskab,
+          amount: 50,
+        },
+      ],
       frequency: DonationFrequency.Yearly,
       tax_deductible: false,
+      suggest_membership: false,
     },
     {
       id: donation2.id,
       email: "hello@example.com",
       amount: 77,
-      recipient: DonationRecipient.AVitaminModFejlernæring,
+      earmarks: [
+        {
+          recipient: DonationRecipient.AVitaminModFejlernæring,
+          amount: 77,
+        },
+      ],
       frequency: DonationFrequency.Monthly,
       tax_deductible: true,
+      suggest_membership: false,
     },
     {
       id: donation3.id,
       email: "world@example.com",
       amount: 50,
-      recipient: DonationRecipient.GivEffektivtsMedlemskab,
+      earmarks: [
+        {
+          recipient: DonationRecipient.GivEffektivtsMedlemskab,
+          amount: 50,
+        },
+      ],
       frequency: DonationFrequency.Yearly,
       tax_deductible: false,
+      suggest_membership: false,
     },
   ];
 
@@ -127,7 +145,7 @@ test("Finds first successful donations to email", async () => {
   expect(toEmail).toEqual(expected);
 });
 
-test("Should not include recipient if donation is earmarked using %-split", async () => {
+test("Should include all earmarks for a split donation", async () => {
   const db = await client;
 
   const donation = await registerDonationViaQuickpay(db, {
@@ -154,9 +172,13 @@ test("Should not include recipient if donation is earmarked using %-split", asyn
       id: donation.id,
       email: "world@example.com",
       amount: 77,
-      recipient: null,
+      earmarks: [
+        { recipient: DonationRecipient.SmartFordeling, amount: 73 },
+        { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      ],
       frequency: DonationFrequency.Monthly,
       tax_deductible: false,
+      suggest_membership: true,
     },
   ];
 
@@ -314,9 +336,15 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
       id: donation.id,
       email: "hello@example.com",
       amount: 77,
-      recipient: DonationRecipient.AVitaminModFejlernæring,
+      earmarks: [
+        {
+          recipient: DonationRecipient.AVitaminModFejlernæring,
+          amount: 77,
+        },
+      ],
       frequency: DonationFrequency.Monthly,
       tax_deductible: false,
+      suggest_membership: true,
     },
   ]);
 });
