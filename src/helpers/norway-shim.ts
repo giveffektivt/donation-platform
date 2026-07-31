@@ -16,7 +16,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.SmartFordeling,
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt.",
-    infoUrl: "https://giveffektivt.dk/smart-fordeling",
+    infoUrl: "/smart-fordeling",
     causeAreaId: -1,
   },
   {
@@ -25,14 +25,14 @@ export const norwegianOrgs: NorwegianOrg[] = [
     widgetDisplayName: DonationRecipient.SmartFordeling,
     description:
       "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for global sundhed.",
-    infoUrl: "https://giveffektivt.dk/smart-fordeling",
+    infoUrl: "/smart-fordeling",
     causeAreaId: 1,
   },
   {
     id: 2,
     name: DonationRecipient.MyggenetModMalaria,
     description: "Myggenet beskytter familier imod malariamyg, mens de sover.",
-    infoUrl: "https://giveffektivt.dk/myggenet",
+    infoUrl: "/myggenet",
     causeAreaId: 1,
   },
   {
@@ -40,7 +40,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.MedicinModMalaria,
     description:
       "Der uddeles forebyggende malariamedicin i perioder, hvor smittetallet er særligt højt.",
-    infoUrl: "https://giveffektivt.dk/malariamedicin",
+    infoUrl: "/malariamedicin",
     causeAreaId: 1,
   },
   {
@@ -48,7 +48,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.AVitaminModFejlernæring,
     description:
       "A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.",
-    infoUrl: "https://giveffektivt.dk/a-vitamin",
+    infoUrl: "/a-vitamin",
     causeAreaId: 1,
   },
   {
@@ -56,7 +56,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.VaccinerTilSpædbørn,
     description:
       "Forældre får en økonomisk belønning for at få deres børn vaccineret.",
-    infoUrl: "https://giveffektivt.dk/bornevacciner",
+    infoUrl: "/bornevacciner",
     causeAreaId: 1,
   },
   {
@@ -64,7 +64,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.KontantoverførslerTilVerdensFattigste,
     description:
       "Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.",
-    infoUrl: "https://giveffektivt.dk/kontantoverforsler",
+    infoUrl: "/kontantoverforsler",
     causeAreaId: 1,
   },
   {
@@ -72,7 +72,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: "Ormekure",
     description:
       "Ormekure til skolebørn forbedrer sundhed og øger skolegang og fremtidig indkomst.",
-    infoUrl: "https://giveffektivt.dk",
+    infoUrl: "/",
     causeAreaId: 1,
     isActive: false,
   },
@@ -82,7 +82,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
   //   widgetDisplayName: DonationRecipient.SmartFordeling,
   //   description:
   //     "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for dyrevelfærd.",
-  //   infoUrl: "https://giveffektivt.dk/smart-fordeling",
+  //   infoUrl: "/smart-fordeling",
   //   causeAreaId: 2,
   // },
   {
@@ -90,14 +90,14 @@ export const norwegianOrgs: NorwegianOrg[] = [
     name: DonationRecipient.GivEffektivtsArbejdeOgVækst,
     description:
       "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 7x mere i donationer til vores anbefalede velgørenhedsformål.",
-    infoUrl: "https://giveffektivt.dk/x-faktor",
+    infoUrl: "/x-faktor",
     causeAreaId: 4,
   },
   {
     id: 50,
     name: DonationRecipient.Andet,
     description: "Donationer knyttet til særlige aftaler.",
-    infoUrl: "https://giveffektivt.dk",
+    infoUrl: "/",
     causeAreaId: 5,
     isActive: false,
   },
@@ -105,7 +105,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
     id: 99,
     name: DonationRecipient.GivEffektivtsMedlemskab,
     description: DonationRecipient.GivEffektivtsMedlemskab,
-    infoUrl: "https://giveffektivt.dk",
+    infoUrl: "/",
     causeAreaId: 99,
     isActive: false,
   },
