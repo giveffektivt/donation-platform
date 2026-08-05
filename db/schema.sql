@@ -1876,52 +1876,57 @@ CREATE VIEW giveffektivt.donor_impact_report AS
 --
 
 CREATE VIEW giveffektivt.ignored_renewals AS
- WITH membership_ids AS (
-         SELECT DISTINCT earmark.donation_id AS id
-           FROM giveffektivt.earmark
-          WHERE (earmark.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)
-        ), last_charge AS (
-         SELECT DISTINCT ON (p.id) p.id,
+ WITH recurring_donations AS (
+         SELECT d.id AS donation_id,
+            d.donor_id,
             p.name,
             p.email,
             d.amount,
-            (m.id IS NOT NULL) AS is_membership,
+            d.cancelled,
+            d.created_at,
+            (EXISTS ( SELECT 1
+                   FROM giveffektivt.earmark e
+                  WHERE ((e.donation_id = d.id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))) AS is_membership
+           FROM (giveffektivt.donor p
+             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
+          WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
+        ), last_charge AS (
+         SELECT DISTINCT ON (d.donor_id, d.is_membership) d.donor_id,
+            d.name,
+            d.email,
+            d.amount,
+            d.is_membership,
             c.status,
             c.created_at
-           FROM (((giveffektivt.donor p
-             JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-             LEFT JOIN membership_ids m ON ((m.id = d.id)))
-          WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
-          ORDER BY p.id, c.created_at DESC
+           FROM (recurring_donations d
+             JOIN giveffektivt.charge c ON ((d.donation_id = c.donation_id)))
+          ORDER BY d.donor_id, d.is_membership, c.created_at DESC, c.id DESC
         ), never_activated AS (
-         SELECT DISTINCT ON (p.id) p.id,
-            d.id AS donation_id,
+         SELECT DISTINCT ON (d.donor_id, d.is_membership) d.donor_id,
+            d.is_membership,
+            d.donation_id,
             d.created_at
-           FROM ((giveffektivt.donor p
-             LEFT JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-             LEFT JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-          WHERE ((c.id IS NULL) AND (d.frequency <> 'once'::giveffektivt.donation_frequency))
+           FROM recurring_donations d
+          WHERE ((NOT d.cancelled) AND (NOT (EXISTS ( SELECT 1
+                   FROM giveffektivt.charge c
+                  WHERE (c.donation_id = d.donation_id)))))
+          ORDER BY d.donor_id, d.is_membership, d.created_at DESC, d.donation_id DESC
         ), last_payment_by_email AS (
-         SELECT DISTINCT ON (unnamed_subquery.email, unnamed_subquery.is_membership) unnamed_subquery.email,
-            unnamed_subquery.is_membership,
-            unnamed_subquery.created_at
-           FROM ( SELECT p.email,
-                    (m.id IS NOT NULL) AS is_membership,
-                    c.created_at
-                   FROM (((giveffektivt.donor p
-                     JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
-                     JOIN giveffektivt.charge c ON ((d.id = c.donation_id)))
-                     LEFT JOIN membership_ids m ON ((m.id = d.id)))
-                  WHERE (c.status = 'charged'::giveffektivt.charge_status)) unnamed_subquery
-          ORDER BY unnamed_subquery.email, unnamed_subquery.is_membership, unnamed_subquery.created_at DESC
+         SELECT DISTINCT ON (d.email, d.is_membership) d.email,
+            d.is_membership,
+            c.created_at
+           FROM (recurring_donations d
+             JOIN giveffektivt.charge c ON ((d.donation_id = c.donation_id)))
+          WHERE (c.status = 'charged'::giveffektivt.charge_status)
+          ORDER BY d.email, d.is_membership, c.created_at DESC, c.id DESC
         ), email_to_name AS (
-         SELECT DISTINCT ON (p.email) p.name,
-            p.email
-           FROM giveffektivt.donor p
-          WHERE (p.name IS NOT NULL)
+         SELECT donor.email,
+            max(donor.name) AS name
+           FROM giveffektivt.donor
+          WHERE (donor.name IS NOT NULL)
+          GROUP BY donor.email
         )
- SELECT lc.id AS donor_id,
+ SELECT lc.donor_id,
     COALESCE(lc.name, en.name) AS name,
     lc.email,
     lc.amount,
@@ -1930,10 +1935,10 @@ CREATE VIEW giveffektivt.ignored_renewals AS
     na.created_at AS expired_at,
     ((now())::date - (na.created_at)::date) AS days_ago
    FROM (((last_charge lc
-     JOIN never_activated na ON ((lc.id = na.id)))
-     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND (lp.is_membership = lp.is_membership))))
+     JOIN never_activated na ON (((lc.donor_id = na.donor_id) AND (lc.is_membership = na.is_membership))))
+     LEFT JOIN last_payment_by_email lp ON (((lc.email = lp.email) AND (lc.is_membership = lp.is_membership))))
      LEFT JOIN email_to_name en ON ((lc.email = en.email)))
-  WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
+  WHERE ((lc.status = 'error'::giveffektivt.charge_status) AND (na.created_at >= lc.created_at) AND ((lp.created_at IS NULL) OR (lp.created_at < lc.created_at)))
   ORDER BY na.created_at;
 
 
@@ -2397,6 +2402,9 @@ CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_renew AS
  WITH latest_charges AS (
          SELECT c.donation_id AS id,
             c.status,
+            (EXISTS ( SELECT 1
+                   FROM giveffektivt.earmark e
+                  WHERE ((e.donation_id = d.id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))) AS is_membership,
             row_number() OVER (PARTITION BY c.donation_id ORDER BY c.created_at DESC, c.id DESC) AS rn
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
@@ -2404,11 +2412,18 @@ CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_renew AS
         )
  SELECT id
    FROM latest_charges
-  WHERE (rn <= 6)
-  GROUP BY id
- HAVING ((count(*) = 6) AND bool_and((status = 'error'::giveffektivt.charge_status)))
-  ORDER BY id
- LIMIT 2;
+  WHERE (rn <=
+        CASE
+            WHEN is_membership THEN 6
+            ELSE 6
+        END)
+  GROUP BY id, is_membership
+ HAVING ((count(*) =
+        CASE
+            WHEN is_membership THEN 6
+            ELSE 6
+        END) AND bool_and((status = 'error'::giveffektivt.charge_status)))
+  ORDER BY id;
 
 
 --

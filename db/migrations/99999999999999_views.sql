@@ -436,10 +436,7 @@ with
         select
             donation_id,
             jsonb_agg(
-                jsonb_build_object(
-                    'recipient', recipient,
-                    'amount', amount
-                )
+                jsonb_build_object('recipient', recipient, 'amount', amount)
                 order by
                     recipient
             ) as earmarks
@@ -634,6 +631,15 @@ with
         select
             c.donation_id as id,
             c.status,
+            exists (
+                select
+                    1
+                from
+                    earmark e
+                where
+                    e.donation_id = d.id
+                    and e.recipient = 'Giv Effektivts medlemskab'
+            ) as is_membership,
             row_number() over (
                 partition by
                     c.donation_id
@@ -653,16 +659,21 @@ select
 from
     latest_charges
 where
-    rn <= 6
+    rn <= case
+        when is_membership then 6 -- TODO April 2027 => change to 3
+        else 6
+    end
 group by
-    id
+    id,
+    is_membership
 having
-    count(*) = 6
+    count(*) = case
+        when is_membership then 6 -- TODO April 2027 => change to 3
+        else 6
+    end
     and bool_and(status = 'error')
 order by
-    id
-limit
-    2;
+    id;
 
 grant
 select
@@ -1275,80 +1286,101 @@ select
 --------------------------------------
 create view ignored_renewals as
 with
-    membership_ids as (
-        select distinct
-            donation_id as id
-        from
-            earmark
-        where
-            recipient = 'Giv Effektivts medlemskab'
-    ),
-    last_charge as (
-        select distinct
-            on (p.id) p.id,
+    recurring_donations as (
+        select
+            d.id as donation_id,
+            d.donor_id,
             p.name,
             p.email,
             d.amount,
-            m.id is not null as is_membership,
-            c.status,
-            c.created_at
+            d.cancelled,
+            d.created_at,
+            exists (
+                select
+                    1
+                from
+                    earmark e
+                where
+                    e.donation_id = d.id
+                    and e.recipient = 'Giv Effektivts medlemskab'
+            ) as is_membership
         from
             donor p
             join donation d on p.id = d.donor_id
-            join charge c on d.id = c.donation_id
-            left join membership_ids m on m.id = d.id
         where
             d.frequency != 'once'
+    ),
+    last_charge as (
+        select distinct
+            on (d.donor_id, d.is_membership) d.donor_id,
+            d.name,
+            d.email,
+            d.amount,
+            d.is_membership,
+            c.status,
+            c.created_at
+        from
+            recurring_donations d
+            join charge c on d.donation_id = c.donation_id
         order by
-            p.id,
-            c.created_at desc
+            d.donor_id,
+            d.is_membership,
+            c.created_at desc,
+            c.id desc
     ),
     never_activated as (
         select distinct
-            on (p.id) p.id,
-            d.id as donation_id,
+            on (d.donor_id, d.is_membership) d.donor_id,
+            d.is_membership,
+            d.donation_id,
             d.created_at
         from
-            donor p
-            left join donation d on p.id = d.donor_id
-            left join charge c on d.id = c.donation_id
+            recurring_donations d
         where
-            c.id is null
-            and d.frequency != 'once'
+            not d.cancelled
+            and not exists (
+                select
+                    1
+                from
+                    charge c
+                where
+                    c.donation_id = d.donation_id
+            )
+        order by
+            d.donor_id,
+            d.is_membership,
+            d.created_at desc,
+            d.donation_id desc
     ),
     last_payment_by_email as (
         select distinct
-            on (email, is_membership) *
+            on (d.email, d.is_membership) d.email,
+            d.is_membership,
+            c.created_at
         from
-            (
-                select
-                    p.email,
-                    m.id is not null as is_membership,
-                    c.created_at
-                from
-                    donor p
-                    join donation d on p.id = d.donor_id
-                    join charge c on d.id = c.donation_id
-                    left join membership_ids m on m.id = d.id
-                where
-                    c.status = 'charged'
-            )
+            recurring_donations d
+            join charge c on d.donation_id = c.donation_id
+        where
+            c.status = 'charged'
         order by
-            email,
-            is_membership,
-            created_at desc
+            d.email,
+            d.is_membership,
+            c.created_at desc,
+            c.id desc
     ),
     email_to_name as (
-        select distinct
-            on (email) name,
-            email
+        select
+            email,
+            max(name) as name
         from
-            donor p
+            donor
         where
             name is not null
+        group by
+            email
     )
 select
-    lc.id as donor_id,
+    lc.donor_id,
     coalesce(lc.name, en.name) as name,
     lc.email,
     lc.amount,
@@ -1358,12 +1390,14 @@ select
     now()::date - na.created_at::date as days_ago
 from
     last_charge lc
-    join never_activated na on lc.id = na.id
+    join never_activated na on lc.donor_id = na.donor_id
+    and lc.is_membership = na.is_membership
     left join last_payment_by_email lp on lc.email = lp.email
-    and lp.is_membership = lp.is_membership
+    and lc.is_membership = lp.is_membership
     left join email_to_name en on lc.email = en.email
 where
     lc.status = 'error'
+    and na.created_at >= lc.created_at
     and (
         lp.created_at is null
         or lp.created_at < lc.created_at
