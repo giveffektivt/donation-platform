@@ -574,6 +574,7 @@ export async function getDonorsDetailedByEmail(
           donation_id,
           amount,
           charged_at,
+          tax_deductible,
           extract(year from charged_at) as donation_year
         from charged_donations
         where email = $1
@@ -630,10 +631,16 @@ export async function getDonorsDetailedByEmail(
           dl.donor_id,
           dd.donation_year as year,
           sum(dd.amount) as sum_donations,
-          coalesce(
-            sb.l_total + least(sb.a_total, coalesce((select value from max_tax_deduction where year = dd.donation_year limit 1), 0)),
-            0
-          ) as deduction
+          case
+            when dd.donation_year = extract(year from now()) then least(
+              coalesce(sum(dd.amount) filter (where dd.tax_deductible), 0),
+              coalesce((select value from max_tax_deduction where year = dd.donation_year limit 1), 0)
+            )
+            else coalesce(
+              sb.l_total + least(sb.a_total, coalesce((select value from max_tax_deduction where year = dd.donation_year limit 1), 0)),
+              0
+            )
+          end as deduction
         from donor_list dl
         join donor_donations dd on dd.donor_id = dl.donor_id
         left join skat_by_year sb on
