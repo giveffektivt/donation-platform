@@ -2537,7 +2537,8 @@ CREATE VIEW giveffektivt.kpi AS
           ORDER BY ops_budget.created_at DESC
          LIMIT 1
         ), dkk_pending_transfer AS (
-         SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer
+         SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer,
+            floor(EXTRACT(epoch FROM (now() - min(transfer_pending.charged_at)))) AS oldest_pending_donation_age
            FROM giveffektivt.transfer_pending
         ), dkk_last_30_days AS (
          SELECT round(sum(charged_donations_internal.amount)) AS dkk_last_30_days
@@ -2605,6 +2606,7 @@ CREATE VIEW giveffektivt.kpi AS
  SELECT dkk_total.dkk_total,
     dkk_total_ops.dkk_total_ops,
     dkk_pending_transfer.dkk_pending_transfer,
+    dkk_pending_transfer.oldest_pending_donation_age,
     dkk_last_30_days.dkk_last_30_days,
     dkk_recurring_next_year.dkk_recurring_next_year,
     members_confirmed.members_confirmed,

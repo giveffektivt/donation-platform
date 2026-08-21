@@ -2157,7 +2157,8 @@ with
     ),
     dkk_pending_transfer as (
         select
-            coalesce(round(sum(amount))::numeric, 0) as dkk_pending_transfer
+            coalesce(round(sum(amount))::numeric, 0) as dkk_pending_transfer,
+            floor(extract(epoch from (now() - min(charged_at)))) as oldest_pending_donation_age
         from
             transfer_pending
     ),
