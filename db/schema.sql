@@ -1,7 +1,7 @@
 \restrict dbmate
 
 -- Dumped from database version 17.2
--- Dumped by pg_dump version 18.4
+-- Dumped by pg_dump version 18.6
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -165,7 +165,8 @@ CREATE TABLE giveffektivt.donation (
     fundraiser_id uuid,
     message text,
     public_message_author boolean DEFAULT false NOT NULL,
-    message_author text
+    message_author text,
+    referral_code text
 );
 
 
@@ -702,10 +703,10 @@ $$;
 
 
 --
--- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, jsonb, text, text, text, uuid, boolean, text, text, text, text, text, text, date, giveffektivt.emailed_status); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: register_donation(numeric, giveffektivt.donation_frequency, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, jsonb, text, text, text, uuid, boolean, text, text, text, text, text, text, date, giveffektivt.emailed_status, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_fundraiser_id uuid DEFAULT NULL::uuid, p_public_message_author boolean DEFAULT NULL::boolean, p_message_author text DEFAULT NULL::text, p_message text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date, p_emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status) RETURNS giveffektivt.donation
+CREATE FUNCTION giveffektivt.register_donation(p_amount numeric, p_frequency giveffektivt.donation_frequency, p_gateway giveffektivt.payment_gateway, p_method giveffektivt.payment_method, p_tax_deductible boolean, p_earmarks jsonb, p_email text, p_tin text DEFAULT NULL::text, p_name text DEFAULT NULL::text, p_fundraiser_id uuid DEFAULT NULL::uuid, p_public_message_author boolean DEFAULT NULL::boolean, p_message_author text DEFAULT NULL::text, p_message text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_postcode text DEFAULT NULL::text, p_city text DEFAULT NULL::text, p_country text DEFAULT NULL::text, p_birthday date DEFAULT NULL::date, p_emailed giveffektivt.emailed_status DEFAULT 'no'::giveffektivt.emailed_status, p_referral_code text DEFAULT NULL::text) RETURNS giveffektivt.donation
     LANGUAGE plpgsql
     AS $$
 declare
@@ -784,7 +785,7 @@ begin
         birthday = coalesce(excluded.birthday, donor.birthday)
     returning * into v_donor;
 
-    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, public_message_author, message_author, message, gateway_metadata, emailed)
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, public_message_author, message_author, message, gateway_metadata, emailed, referral_code)
     values (
         v_donor.id,
         p_amount,
@@ -797,7 +798,8 @@ begin
         p_message_author,
         p_message,
         v_gateway_metadata,
-        p_emailed
+        p_emailed,
+        p_referral_code
     )
     returning * into v_donation;
 
@@ -1963,6 +1965,14 @@ CREATE VIEW giveffektivt.crm_export AS
              LEFT JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
           WHERE (((c.status = 'charged'::giveffektivt.charge_status) OR (d.method = 'Bank transfer'::giveffektivt.payment_method)) AND (p.name IS NOT NULL))
           ORDER BY p.email, COALESCE(c.created_at, d.created_at) DESC
+        ), referral_codes AS (
+         SELECT DISTINCT ON (p.email) p.email,
+            d.referral_code
+           FROM ((giveffektivt.donor p
+             JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
+             LEFT JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
+          WHERE ((d.referral_code IS NOT NULL) AND ((c.status = 'charged'::giveffektivt.charge_status) OR (d.method = 'Bank transfer'::giveffektivt.payment_method)))
+          ORDER BY p.email, COALESCE(c.created_at, d.created_at) DESC
         ), cvrs AS (
          SELECT DISTINCT ON (p.email) p.email,
             p.tin AS cvr
@@ -2143,6 +2153,7 @@ CREATE VIEW giveffektivt.crm_export AS
          SELECT e.email,
             e.registered_at,
             n.name,
+            rc.referral_code,
             c.cvr,
             a.age,
             COALESCE(d.total_donated, (0)::numeric) AS total_donated,
@@ -2186,8 +2197,9 @@ CREATE VIEW giveffektivt.crm_export AS
             r.expired_membership_id,
             r.expired_membership_at,
             q.acquisition
-           FROM (((((((((((((emails e
+           FROM ((((((((((((((emails e
              LEFT JOIN names n ON ((n.email = e.email)))
+             LEFT JOIN referral_codes rc ON ((rc.email = e.email)))
              LEFT JOIN ages a ON ((a.email = e.email)))
              LEFT JOIN donations d ON ((d.email = e.email)))
              LEFT JOIN tax_deductible_donations t ON ((t.email = e.email)))
@@ -2204,6 +2216,7 @@ CREATE VIEW giveffektivt.crm_export AS
  SELECT email,
     registered_at,
     name,
+    referral_code,
     cvr,
     age,
     total_donated,
@@ -2318,6 +2331,7 @@ CREATE VIEW giveffektivt.donations_to_email AS
     ed.earmarks,
     d.frequency,
     d.tax_deductible,
+    d.referral_code,
     (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.charged_memberships_internal m
           WHERE ((m.donor_id = d.donor_id) AND (m.charged_at >= (now() - '1 year'::interval)))))) AS suggest_membership
@@ -4228,4 +4242,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260730210937'),
     ('20260801120000'),
     ('20260801130000'),
+    ('20260901165953'),
     ('99999999999999');

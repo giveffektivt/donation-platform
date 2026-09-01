@@ -80,6 +80,10 @@ const PayloadSchema = z
     method: z.number().transform(mapFromNorwegianPaymentMethods),
     recurring: z.coerce.boolean(),
     amount: z.coerce.number().int().positive(),
+    referralCode: z.preprocess(
+      (val) => (typeof val === "string" ? val.trim() || undefined : val),
+      z.string().max(500).optional(),
+    ),
   })
   .refine((data) => !data.donor.taxDeduction || !!data.donor.ssn, {
     path: ["ssn"],
@@ -117,6 +121,7 @@ const PayloadSchema = z
       publicMessageAuthor: data.fundraiser?.showName,
       messageAuthor: data.fundraiser?.messageSenderName,
       message: data.fundraiser?.message,
+      referralCode: data.referralCode,
     };
   });
 

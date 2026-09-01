@@ -51,6 +51,7 @@ export type Donation = {
   tax_deductible: boolean;
   fundraiser_id: string;
   message: string;
+  referral_code: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -81,6 +82,7 @@ export type DonationToEmail = {
   frequency: DonationFrequency;
   tax_deductible: boolean;
   suggest_membership: boolean;
+  referral_code: string | null;
 };
 
 export type FailedRecurringDonation = {

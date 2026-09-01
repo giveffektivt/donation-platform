@@ -52,6 +52,7 @@ test("Finds first successful donations to email", async () => {
     method: PaymentMethod.CreditCard,
     taxDeductible: true,
     tin: "111111-1111",
+    referralCode: "match-2026",
     earmarks: [
       {
         recipient: DonationRecipient.AVitaminModFejlernæring,
@@ -108,6 +109,7 @@ test("Finds first successful donations to email", async () => {
       frequency: DonationFrequency.Yearly,
       tax_deductible: false,
       suggest_membership: false,
+      referral_code: null,
     },
     {
       id: donation2.id,
@@ -122,6 +124,7 @@ test("Finds first successful donations to email", async () => {
       frequency: DonationFrequency.Monthly,
       tax_deductible: true,
       suggest_membership: false,
+      referral_code: "match-2026",
     },
     {
       id: donation3.id,
@@ -136,6 +139,7 @@ test("Finds first successful donations to email", async () => {
       frequency: DonationFrequency.Yearly,
       tax_deductible: false,
       suggest_membership: false,
+      referral_code: null,
     },
   ];
 
@@ -179,6 +183,7 @@ test("Should include all earmarks for a split donation", async () => {
       frequency: DonationFrequency.Monthly,
       tax_deductible: false,
       suggest_membership: true,
+      referral_code: null,
     },
   ];
 
@@ -345,6 +350,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
       frequency: DonationFrequency.Monthly,
       tax_deductible: false,
       suggest_membership: true,
+      referral_code: null,
     },
   ]);
 });

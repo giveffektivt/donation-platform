@@ -105,6 +105,7 @@ export async function sendReceiptEmail(
           tax_deductible: donation.tax_deductible,
           bank_account: getBankAccount(),
           bank_msg: bank?.msg ?? null,
+          referral_code: donation.referral_code,
           days_until_next_year,
         },
       },

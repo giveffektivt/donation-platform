@@ -99,6 +99,7 @@ export async function registerDonationViaQuickpay(
     publicMessageAuthor?: boolean;
     messageAuthor?: string;
     message?: string;
+    referralCode?: string;
     earmarks: { recipient: DonationRecipient; amount: number }[];
     email: string;
     tin?: string;
@@ -118,7 +119,8 @@ export async function registerDonationViaQuickpay(
         p_message => $9,
         p_earmarks => $10,
         p_email => $11,
-        p_tin => $12
+        p_tin => $12,
+        p_referral_code => $13
       )`,
       [
         data.amount,
@@ -133,6 +135,7 @@ export async function registerDonationViaQuickpay(
         JSON.stringify(data.earmarks),
         data.email,
         data.tin,
+        data.referralCode,
       ],
     )
   ).rows[0];
@@ -204,6 +207,7 @@ export async function registerDonationViaBankTransfer(
     publicMessageAuthor?: boolean;
     messageAuthor?: string;
     message?: string;
+    referralCode?: string;
     earmarks: { recipient: DonationRecipient; amount: number }[];
     email: string;
     tin?: string;
@@ -223,7 +227,8 @@ export async function registerDonationViaBankTransfer(
         p_message => $9,
         p_earmarks => $10,
         p_email => $11,
-        p_tin => $12
+        p_tin => $12,
+        p_referral_code => $13
       )`,
       [
         data.amount,
@@ -238,6 +243,7 @@ export async function registerDonationViaBankTransfer(
         JSON.stringify(data.earmarks),
         data.email,
         data.tin,
+        data.referralCode,
       ],
     )
   ).rows[0];

@@ -56,6 +56,7 @@ async function sendEmails(
       frequency: donation.frequency,
       tax_deductible: donation.tax_deductible,
       suggest_membership: await shouldSuggestMembership(db, donation.donor_id),
+      referral_code: donation.referral_code,
     };
 
     await setDonationEmailed(db, donationToEmail.id, EmailedStatus.Attempted);

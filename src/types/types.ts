@@ -15,6 +15,7 @@ export type NewDonation = {
   publicMessageAuthor?: boolean;
   messageAuthor?: string;
   message?: string;
+  referralCode?: string;
 };
 
 export type NewMembership = {

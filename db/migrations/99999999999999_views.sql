@@ -452,6 +452,7 @@ select
     ed.earmarks,
     d.frequency,
     d.tax_deductible,
+    d.referral_code,
     not exists (
         select
             1
@@ -2577,6 +2578,24 @@ with
             p.email,
             coalesce(c.created_at, d.created_at) desc
     ),
+    referral_codes as (
+        select distinct
+            on (p.email) p.email,
+            d.referral_code
+        from
+            donor p
+            join donation d on d.donor_id = p.id
+            left join charge c on c.donation_id = d.id
+        where
+            d.referral_code is not null
+            and (
+                c.status = 'charged'
+                or d.method = 'Bank transfer'
+            )
+        order by
+            p.email,
+            coalesce(c.created_at, d.created_at) desc
+    ),
     cvrs as (
         select distinct
             on (p.email) p.email,
@@ -2818,6 +2837,7 @@ with
             e.email,
             e.registered_at,
             n.name,
+            rc.referral_code,
             c.cvr,
             a.age,
             coalesce(d.total_donated, 0) as total_donated,
@@ -2871,6 +2891,7 @@ with
         from
             emails e
             left join names n on n.email = e.email
+            left join referral_codes rc on rc.email = e.email
             left join ages a on a.email = e.email
             left join donations d on d.email = e.email
             left join tax_deductible_donations t on t.email = e.email
@@ -3258,7 +3279,8 @@ create function register_donation (
     p_city text default null,
     p_country text default null,
     p_birthday date default null,
-    p_emailed emailed_status default 'no'
+    p_emailed emailed_status default 'no',
+    p_referral_code text default null
 ) returns donation language plpgsql as $$
 declare
     v_donor donor%rowtype;
@@ -3336,7 +3358,7 @@ begin
         birthday = coalesce(excluded.birthday, donor.birthday)
     returning * into v_donor;
 
-    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, public_message_author, message_author, message, gateway_metadata, emailed)
+    insert into donation (donor_id, amount, frequency, gateway, method, tax_deductible, fundraiser_id, public_message_author, message_author, message, gateway_metadata, emailed, referral_code)
     values (
         v_donor.id,
         p_amount,
@@ -3349,7 +3371,8 @@ begin
         p_message_author,
         p_message,
         v_gateway_metadata,
-        p_emailed
+        p_emailed,
+        p_referral_code
     )
     returning * into v_donation;
 
@@ -3381,7 +3404,8 @@ execute on function register_donation (
     p_city text,
     p_country text,
     p_birthday date,
-    p_emailed emailed_status
+    p_emailed emailed_status,
+    p_referral_code text
 ) to writer;
 
 --------------------------------------

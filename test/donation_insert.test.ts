@@ -71,6 +71,7 @@ test("Insert donation using Quickpay", async () => {
     method: PaymentMethod.MobilePay,
     taxDeductible: true,
     tin: "111111-1111",
+    referralCode: "match-2026",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 117 },
       { recipient: DonationRecipient.MedicinModMalaria, amount: 6 },
@@ -87,6 +88,7 @@ test("Insert donation using Quickpay", async () => {
     tax_deductible: true,
     gateway: PaymentGateway.Quickpay,
     fundraiser_id: null,
+    referral_code: "match-2026",
   };
   expect(donation).toMatchObject(expected);
   expect(await findAllDonations(db)).toMatchObject([expected]);
@@ -115,6 +117,7 @@ test("Insert donation using bank transfer", async () => {
     frequency: DonationFrequency.Monthly,
     taxDeductible: true,
     tin: "111111-1111",
+    referralCode: "bank-campaign",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 117 },
       { recipient: DonationRecipient.MedicinModMalaria, amount: 6 },
@@ -131,6 +134,7 @@ test("Insert donation using bank transfer", async () => {
     tax_deductible: true,
     gateway: PaymentGateway.BankTransfer,
     fundraiser_id: null,
+    referral_code: "bank-campaign",
   };
   expect(donation).toMatchObject(expected);
   expect(await findAllDonations(db)).toMatchObject([expected]);
