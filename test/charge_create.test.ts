@@ -1,4 +1,10 @@
-import { addMonths, setDate, subMonths, subYears } from "date-fns";
+import {
+  addMonths,
+  setDate,
+  startOfDay,
+  subMonths,
+  subYears,
+} from "date-fns";
 import {
   ChargeStatus,
   DonationFrequency,
@@ -74,7 +80,7 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     country: "Denmark",
   });
 
-  const now = setDate(new Date(), 1);
+  const now = startOfDay(setDate(new Date(), 1));
 
   // ...each successfully charged in the past
   await insertChargeWithCreatedAt(db, {
