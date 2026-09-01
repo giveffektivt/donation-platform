@@ -35,7 +35,7 @@ test("Update donation to mark it as emailed", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -57,7 +57,7 @@ test("Cancel donation by its Quickpay order ID", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -80,7 +80,7 @@ test("Update donation payment method by its Quickpay order ID", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 

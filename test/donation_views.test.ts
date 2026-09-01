@@ -55,7 +55,7 @@ test("Finds first successful donations to email", async () => {
     referralCode: "match-2026",
     earmarks: [
       {
-        recipient: DonationRecipient.AVitaminModFejlernæring,
+        recipient: DonationRecipient.AVitamin,
         amount: 77,
       },
     ],
@@ -102,7 +102,7 @@ test("Finds first successful donations to email", async () => {
       amount: 50,
       earmarks: [
         {
-          recipient: DonationRecipient.GivEffektivtsMedlemskab,
+          recipient: DonationRecipient.Medlemskab,
           amount: 50,
         },
       ],
@@ -117,7 +117,7 @@ test("Finds first successful donations to email", async () => {
       amount: 77,
       earmarks: [
         {
-          recipient: DonationRecipient.AVitaminModFejlernæring,
+          recipient: DonationRecipient.AVitamin,
           amount: 77,
         },
       ],
@@ -132,7 +132,7 @@ test("Finds first successful donations to email", async () => {
       amount: 50,
       earmarks: [
         {
-          recipient: DonationRecipient.GivEffektivtsMedlemskab,
+          recipient: DonationRecipient.Medlemskab,
           amount: 50,
         },
       ],
@@ -160,7 +160,7 @@ test("Should include all earmarks for a split donation", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -178,7 +178,7 @@ test("Should include all earmarks for a split donation", async () => {
       amount: 77,
       earmarks: [
         { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-        { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+        { recipient: DonationRecipient.Malariamedicin, amount: 4 },
       ],
       frequency: DonationFrequency.Monthly,
       tax_deductible: false,
@@ -201,7 +201,7 @@ test("Should not email to a credit card one-time donation that wasn't charged ye
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -219,7 +219,7 @@ test("Should not email to a credit card one-time donation with a failed charge",
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -284,7 +284,7 @@ test("Should not email to a MobilePay one-time donation that wasn't charged yet"
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -302,7 +302,7 @@ test("Should not email to a MobilePay one-time donation with a failed charge", a
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -325,7 +325,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
     taxDeductible: false,
     earmarks: [
       {
-        recipient: DonationRecipient.AVitaminModFejlernæring,
+        recipient: DonationRecipient.AVitamin,
         amount: 77,
       },
     ],
@@ -343,7 +343,7 @@ test("Should email to a MobilePay recurring donation even if it wasn't charged y
       amount: 77,
       earmarks: [
         {
-          recipient: DonationRecipient.AVitaminModFejlernæring,
+          recipient: DonationRecipient.AVitamin,
           amount: 77,
         },
       ],
@@ -366,7 +366,7 @@ test("Should not email to a MobilePay recurring donation with a failed charge", 
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -473,7 +473,7 @@ test("Finds failed recurring donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       {
-        recipient: DonationRecipient.AVitaminModFejlernæring,
+        recipient: DonationRecipient.AVitamin,
         amount: 88,
       },
     ],
@@ -556,7 +556,7 @@ test("Finds failed recurring donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -588,7 +588,7 @@ test("Finds failed recurring donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -616,7 +616,7 @@ test("Finds failed recurring donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -635,7 +635,7 @@ test("Finds failed recurring donations to email", async () => {
     tin: "111111-1111",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -663,7 +663,7 @@ test("Finds failed recurring donations to email", async () => {
       donor_email: donors[0].email,
       donation_id: donation1.id,
       amount: donation1.amount,
-      recipient: DonationRecipient.GivEffektivtsMedlemskab,
+      recipient: DonationRecipient.Medlemskab,
       frequency: donation1.frequency,
       tax_deductible: donation1.tax_deductible,
       method: donation1.method,
@@ -674,7 +674,7 @@ test("Finds failed recurring donations to email", async () => {
       donor_email: donors[0].email,
       donation_id: donation2.id,
       amount: donation2.amount,
-      recipient: DonationRecipient.AVitaminModFejlernæring,
+      recipient: DonationRecipient.AVitamin,
       frequency: donation2.frequency,
       tax_deductible: donation2.tax_deductible,
       method: donation2.method,
@@ -714,7 +714,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -727,7 +727,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -763,7 +763,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -795,7 +795,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -807,7 +807,7 @@ test("Finds donations that can get a link to renew payment", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 

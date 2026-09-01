@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 17.2
+-- Dumped from database version 17.10
 -- Dumped by pg_dump version 18.6
 
 SET statement_timeout = 0;
@@ -52,19 +52,21 @@ CREATE TYPE giveffektivt.donation_frequency AS ENUM (
 --
 
 CREATE TYPE giveffektivt.donation_recipient AS ENUM (
-    'Giv Effektivts medlemskab',
-    'Stor og velkendt effekt',
-    'Smart fordeling',
-    'Giv Effektivts arbejde og vækst',
-    'Smart fordeling - global sundhed',
-    'Smart fordeling - dyrevelfærd',
-    'Andet',
-    'Myggenet mod malaria',
-    'Kontantoverførsler til verdens fattigste',
-    'Medicin mod malaria',
-    'A-vitamin mod fejlernæring',
-    'Ormekur',
-    'Vacciner til spædbørn'
+    'medlemskab',
+    'stor-velkendt-effekt',
+    'smart-fordeling',
+    'drift',
+    'smart-fordeling-global',
+    'smart-fordeling-dyr',
+    'dyrevelfærd',
+    'fødevareomstilling',
+    'andet',
+    'myggenet',
+    'kontantoverførsler',
+    'malariamedicin',
+    'a-vitamin',
+    'ormekur',
+    'spædbørnsvacciner'
 );
 
 
@@ -332,7 +334,7 @@ begin
             select 1
             from earmark e
             where e.donation_id = v_donation.id
-              and e.recipient = 'Giv Effektivts medlemskab'
+              and e.recipient = 'medlemskab'
         )
         and (
             not v_donation.cancelled
@@ -728,7 +730,7 @@ begin
 
     select exists(
         select 1 from jsonb_array_elements(p_earmarks) e
-        where e->>'recipient' = 'Giv Effektivts medlemskab'
+        where e->>'recipient' = 'medlemskab'
     ) into v_membership_present;
 
     if jsonb_array_length(p_earmarks) > 1 and v_membership_present then
@@ -978,7 +980,7 @@ CREATE VIEW giveffektivt.charged_donations_internal AS
    FROM giveffektivt.donations_overview_internal d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
-          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient))))));
 
 
 --
@@ -1054,7 +1056,7 @@ CREATE VIEW giveffektivt.charged_memberships_internal AS
    FROM giveffektivt.donations_overview_internal d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
-          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))));
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient)))));
 
 
 --
@@ -1650,7 +1652,7 @@ CREATE VIEW giveffektivt.charged_donations AS
    FROM giveffektivt.donations_overview d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
-          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient))))));
 
 
 --
@@ -1709,7 +1711,7 @@ CREATE VIEW giveffektivt.charged_memberships AS
    FROM giveffektivt.donations_overview d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
-          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))));
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient)))));
 
 
 --
@@ -1741,7 +1743,7 @@ CREATE VIEW giveffektivt.charged_or_created_donations AS
    FROM giveffektivt.donations_overview_internal d
   WHERE ((status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
-          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient))))));
+          WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient))))));
 
 
 --
@@ -1888,7 +1890,7 @@ CREATE VIEW giveffektivt.ignored_renewals AS
             d.created_at,
             (EXISTS ( SELECT 1
                    FROM giveffektivt.earmark e
-                  WHERE ((e.donation_id = d.id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))) AS is_membership
+                  WHERE ((e.donation_id = d.id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient)))) AS is_membership
            FROM (giveffektivt.donor p
              JOIN giveffektivt.donation d ON ((p.id = d.donor_id)))
           WHERE (d.frequency <> 'once'::giveffektivt.donation_frequency)
@@ -2047,8 +2049,8 @@ CREATE VIEW giveffektivt.crm_export AS
           ORDER BY charged_donations_internal.email, charged_donations_internal.charged_at DESC
         ), first_donations AS (
          SELECT d.email,
-            min(d.charged_at) FILTER (WHERE (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
-            min(d.charged_at) FILTER (WHERE (e.recipient <> 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
+            min(d.charged_at) FILTER (WHERE (e.recipient = 'medlemskab'::giveffektivt.donation_recipient)) AS first_membership_at,
+            min(d.charged_at) FILTER (WHERE (e.recipient <> 'medlemskab'::giveffektivt.donation_recipient)) AS first_donation_at,
             min(d.charged_at) FILTER (WHERE (d.frequency = 'monthly'::giveffektivt.donation_frequency)) AS first_monthly_donation_at
            FROM (giveffektivt.donations_overview_internal d
              JOIN giveffektivt.earmark e ON ((d.donation_id = e.donation_id)))
@@ -2418,7 +2420,7 @@ CREATE VIEW giveffektivt.failed_recurring_donations_to_auto_renew AS
             c.status,
             (EXISTS ( SELECT 1
                    FROM giveffektivt.earmark e
-                  WHERE ((e.donation_id = d.id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))) AS is_membership,
+                  WHERE ((e.donation_id = d.id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient)))) AS is_membership,
             row_number() OVER (PARTITION BY c.donation_id ORDER BY c.created_at DESC, c.id DESC) AS rn
            FROM (giveffektivt.donation d
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
@@ -2533,7 +2535,7 @@ CREATE VIEW giveffektivt.transfer_pending AS
     amount,
     earmark
    FROM giveffektivt.charged_donations_by_transfer_internal cdt
-  WHERE ((earmark <> 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
+  WHERE ((earmark <> 'drift'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
   ORDER BY charged_at;
 
 
@@ -2659,7 +2661,7 @@ CREATE VIEW giveffektivt.pending_distribution AS
     round(sum(amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
    FROM giveffektivt.charged_donations_by_transfer_internal cdt
-  WHERE ((earmark <> 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
+  WHERE ((earmark <> 'drift'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
   GROUP BY earmark
   ORDER BY (round(sum(amount))) DESC;
 
@@ -2749,7 +2751,7 @@ UNION ALL
     round(sum(charged_donations_by_transfer_internal.amount)) AS unit_impact,
     'Giv Effektivt'::text AS recipient
    FROM giveffektivt.charged_donations_by_transfer_internal
-  WHERE (charged_donations_by_transfer_internal.earmark = 'Giv Effektivts arbejde og vækst'::giveffektivt.donation_recipient)
+  WHERE (charged_donations_by_transfer_internal.earmark = 'drift'::giveffektivt.donation_recipient)
   GROUP BY charged_donations_by_transfer_internal.earmark, ((date_trunc('month'::text, charged_donations_by_transfer_internal.charged_at))::date)::text
   ORDER BY 3, 1 DESC;
 
@@ -2811,7 +2813,7 @@ CREATE VIEW giveffektivt.schedule_memberships_charges AS
            FROM giveffektivt.donations_overview d
           WHERE ((NOT d.cancelled) AND (EXISTS ( SELECT 1
                    FROM giveffektivt.earmark e
-                  WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'Giv Effektivts medlemskab'::giveffektivt.donation_recipient)))))
+                  WHERE ((e.donation_id = d.donation_id) AND (e.recipient = 'medlemskab'::giveffektivt.donation_recipient)))))
           ORDER BY d.donation_id, d.charged_at DESC, d.charge_id) m
   WHERE (status = 'charged'::giveffektivt.charge_status)
   ORDER BY charged_at;
@@ -4243,4 +4245,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260801120000'),
     ('20260801130000'),
     ('20260901165953'),
+    ('20260901173341'),
     ('99999999999999');

@@ -48,7 +48,7 @@ test("Find created charges to charge", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -61,7 +61,7 @@ test("Find created charges to charge", async () => {
     tin: "222222-2222",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -161,7 +161,7 @@ test("Donation that has no charges should not be charged", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -180,7 +180,7 @@ test("Donation that is cancelled should not be charged", async () => {
 
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -205,7 +205,7 @@ test("Bank transfer donation should not be charged", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -229,7 +229,7 @@ test("Old charges in created status should *still* be charged again (until we se
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -267,7 +267,7 @@ test("Charges with error status should not be charged again", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -291,7 +291,7 @@ test("Charges with created_at in the future should not be charged yet", async ()
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -315,7 +315,7 @@ test("Retry charge should be charged even if original charge failed", async () =
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 

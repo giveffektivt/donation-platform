@@ -1457,7 +1457,7 @@ const donate = async (db: PoolClient, { tin, amount, tax_deductible = true, year
     taxDeductible: tax_deductible,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: amount * 0.95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: amount * 0.05 },
+      { recipient: DonationRecipient.Malariamedicin, amount: amount * 0.05 },
     ],
   });
 

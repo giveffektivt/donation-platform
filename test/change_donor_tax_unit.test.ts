@@ -36,7 +36,7 @@ const baseEarmarks = (amount: number) => {
       amount: smartDistributionAmount,
     },
     {
-      recipient: DonationRecipient.MedicinModMalaria,
+      recipient: DonationRecipient.Malariamedicin,
       amount: amount - smartDistributionAmount,
     },
   ];
@@ -546,7 +546,7 @@ test("Change donor tax unit: old but recent monthly donation", async () => {
   ).toEqual(
     expect.arrayContaining([
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ]),
   );
 
@@ -635,7 +635,7 @@ test("Change donor tax unit: old but recent monthly donation, merge donor rows",
   ).toEqual(
     expect.arrayContaining([
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ]),
   );
 
@@ -726,7 +726,7 @@ test("Change donor tax unit: old but recent cancelled monthly donation, merge do
   ).toEqual(
     expect.arrayContaining([
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ]),
   );
 

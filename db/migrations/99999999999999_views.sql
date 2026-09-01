@@ -159,7 +159,7 @@ where
             earmark e
         where
             e.donation_id = d.donation_id
-            and e.recipient = 'Giv Effektivts medlemskab'
+            and e.recipient = 'medlemskab'
     );
 
 create view charged_donations as
@@ -176,7 +176,7 @@ where
             earmark e
         where
             e.donation_id = d.donation_id
-            and e.recipient = 'Giv Effektivts medlemskab'
+            and e.recipient = 'medlemskab'
     );
 
 grant
@@ -198,7 +198,7 @@ where
             earmark e
         where
             e.donation_id = d.donation_id
-            and e.recipient = 'Giv Effektivts medlemskab'
+            and e.recipient = 'medlemskab'
     );
 
 --------------------------------------
@@ -216,7 +216,7 @@ where
             earmark e
         where
             e.donation_id = d.donation_id
-            and e.recipient = 'Giv Effektivts medlemskab'
+            and e.recipient = 'medlemskab'
     );
 
 create view charged_memberships as
@@ -233,7 +233,7 @@ where
             earmark e
         where
             e.donation_id = d.donation_id
-            and e.recipient = 'Giv Effektivts medlemskab'
+            and e.recipient = 'medlemskab'
     );
 
 grant
@@ -639,7 +639,7 @@ with
                     earmark e
                 where
                     e.donation_id = d.id
-                    and e.recipient = 'Giv Effektivts medlemskab'
+                    and e.recipient = 'medlemskab'
             ) as is_membership,
             row_number() over (
                 partition by
@@ -1303,7 +1303,7 @@ with
                     earmark e
                 where
                     e.donation_id = d.id
-                    and e.recipient = 'Giv Effektivts medlemskab'
+                    and e.recipient = 'medlemskab'
             ) as is_membership
         from
             donor p
@@ -1484,7 +1484,7 @@ select
 from
     charged_donations_by_transfer_internal
 where
-    earmark = 'Giv Effektivts arbejde og vækst'
+    earmark = 'drift'
 group by
     earmark,
     transferred_at
@@ -1523,7 +1523,7 @@ select
 from
     charged_donations_by_transfer_internal cdt
 where
-    earmark != 'Giv Effektivts arbejde og vækst'
+    earmark != 'drift'
     and transfer_id is null
 group by
     earmark
@@ -2128,7 +2128,7 @@ select
 from
     charged_donations_by_transfer_internal cdt
 where
-    earmark != 'Giv Effektivts arbejde og vækst'
+    earmark != 'drift'
     and transfer_id is null
 order by
     charged_at;
@@ -2405,7 +2405,7 @@ from
                     earmark e
                 where
                     e.donation_id = d.donation_id
-                    and e.recipient = 'Giv Effektivts medlemskab'
+                    and e.recipient = 'medlemskab'
             )
         order by
             donation_id,
@@ -2733,11 +2733,11 @@ with
             email,
             min(charged_at) filter (
                 where
-                    e.recipient = 'Giv Effektivts medlemskab'
+                    e.recipient = 'medlemskab'
             ) as first_membership_at,
             min(charged_at) filter (
                 where
-                    e.recipient != 'Giv Effektivts medlemskab'
+                    e.recipient != 'medlemskab'
             ) as first_donation_at,
             min(charged_at) filter (
                 where
@@ -3301,7 +3301,7 @@ begin
 
     select exists(
         select 1 from jsonb_array_elements(p_earmarks) e
-        where e->>'recipient' = 'Giv Effektivts medlemskab'
+        where e->>'recipient' = 'medlemskab'
     ) into v_membership_present;
 
     if jsonb_array_length(p_earmarks) > 1 and v_membership_present then
@@ -3543,7 +3543,7 @@ begin
             select 1
             from earmark e
             where e.donation_id = v_donation.id
-              and e.recipient = 'Giv Effektivts medlemskab'
+              and e.recipient = 'medlemskab'
         )
         and (
             not v_donation.cancelled

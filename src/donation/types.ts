@@ -1,16 +1,19 @@
 export enum DonationRecipient {
-  GivEffektivtsMedlemskab = "Giv Effektivts medlemskab",
-
-  SmartFordeling = "Smart fordeling",
-  SmartFordelingGlobalSundhed = "Smart fordeling - global sundhed",
-  SmartFordelingDyrevelfærd = "Smart fordeling - dyrevelfærd",
-  Andet = "Andet",
-  MyggenetModMalaria = "Myggenet mod malaria",
-  MedicinModMalaria = "Medicin mod malaria",
-  AVitaminModFejlernæring = "A-vitamin mod fejlernæring",
-  VaccinerTilSpædbørn = "Vacciner til spædbørn",
-  KontantoverførslerTilVerdensFattigste = "Kontantoverførsler til verdens fattigste",
-  GivEffektivtsArbejdeOgVækst = "Giv Effektivts arbejde og vækst",
+  Medlemskab = "medlemskab",
+  StorVelkendtEffekt = "stor-velkendt-effekt",
+  SmartFordeling = "smart-fordeling",
+  Drift = "drift",
+  SmartFordelingGlobal = "smart-fordeling-global",
+  SmartFordelingDyr = "smart-fordeling-dyr",
+  Dyrevelfærd = "dyrevelfærd",
+  Fødevareomstilling = "fødevareomstilling",
+  Andet = "andet",
+  Myggenet = "myggenet",
+  Kontantoverførsler = "kontantoverførsler",
+  Malariamedicin = "malariamedicin",
+  AVitamin = "a-vitamin",
+  Ormekur = "ormekur",
+  Spædbørnsvacciner = "spædbørnsvacciner",
 }
 
 export enum DonationFrequency {

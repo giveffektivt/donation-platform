@@ -72,8 +72,8 @@ function buildOverview(data: TransferredDistribution[]): OutputStructure[] {
     const currentUnit = unitMap[item.unit];
     const cat = [
       DonationRecipient.SmartFordeling,
-      DonationRecipient.SmartFordelingGlobalSundhed,
-      DonationRecipient.SmartFordelingDyrevelfærd,
+      DonationRecipient.SmartFordelingGlobal,
+      DonationRecipient.SmartFordelingDyr,
     ].includes(item.earmark as DonationRecipient)
       ? "smartDistribution"
       : "direct";

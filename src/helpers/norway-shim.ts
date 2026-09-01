@@ -1,8 +1,9 @@
+import { getDonationRecipientLabel } from "src/donation/recipients";
 import { DonationRecipient, PaymentMethod } from "src/donation/types";
 
 type NorwegianOrg = {
   id: number;
-  name: string;
+  name: DonationRecipient;
   widgetDisplayName?: string;
   description: string;
   infoUrl: string;
@@ -21,23 +22,23 @@ export const norwegianOrgs: NorwegianOrg[] = [
   },
   {
     id: 1,
-    name: DonationRecipient.SmartFordelingGlobalSundhed,
+    name: DonationRecipient.SmartFordelingGlobal,
     widgetDisplayName: DonationRecipient.SmartFordeling,
     description:
-      "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for global sundhed.",
+      "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for global sundhed og fattigdom.",
     infoUrl: "/smart-fordeling",
     causeAreaId: 1,
   },
   {
     id: 2,
-    name: DonationRecipient.MyggenetModMalaria,
+    name: DonationRecipient.Myggenet,
     description: "Myggenet beskytter familier imod malariamyg, mens de sover.",
     infoUrl: "/myggenet",
     causeAreaId: 1,
   },
   {
     id: 3,
-    name: DonationRecipient.MedicinModMalaria,
+    name: DonationRecipient.Malariamedicin,
     description:
       "Der uddeles forebyggende malariamedicin i perioder, hvor smittetallet er særligt højt.",
     infoUrl: "/malariamedicin",
@@ -45,7 +46,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
   },
   {
     id: 4,
-    name: DonationRecipient.AVitaminModFejlernæring,
+    name: DonationRecipient.AVitamin,
     description:
       "A-vitamin til børn under 5 år reducerer børnedødelighed i 21 lande.",
     infoUrl: "/a-vitamin",
@@ -53,7 +54,7 @@ export const norwegianOrgs: NorwegianOrg[] = [
   },
   {
     id: 5,
-    name: DonationRecipient.VaccinerTilSpædbørn,
+    name: DonationRecipient.Spædbørnsvacciner,
     description:
       "Forældre får en økonomisk belønning for at få deres børn vaccineret.",
     infoUrl: "/bornevacciner",
@@ -61,33 +62,48 @@ export const norwegianOrgs: NorwegianOrg[] = [
   },
   {
     id: 6,
-    name: DonationRecipient.KontantoverførslerTilVerdensFattigste,
+    name: DonationRecipient.Kontantoverførsler,
     description:
       "Kontantoverførsler gives direkte til fattige familier, så de selv kan prioritere deres behov.",
     infoUrl: "/kontantoverforsler",
     causeAreaId: 1,
   },
   {
-    id: 7,
-    name: "Ormekure",
+    id: 98,
+    name: DonationRecipient.Ormekur,
     description:
       "Ormekure til skolebørn forbedrer sundhed og øger skolegang og fremtidig indkomst.",
     infoUrl: "/",
     causeAreaId: 1,
     isActive: false,
   },
-  // {
-  //   id: 20,
-  //   name: DonationRecipient.SmartFordelingDyrevelfærd,
-  //   widgetDisplayName: DonationRecipient.SmartFordeling,
-  //   description:
-  //     "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for dyrevelfærd.",
-  //   infoUrl: "/smart-fordeling",
-  //   causeAreaId: 2,
-  // },
+  {
+    id: 20,
+    name: DonationRecipient.SmartFordelingDyr,
+    widgetDisplayName: DonationRecipient.SmartFordeling,
+    description:
+      "Din donation fordeles efter Giv Effektivts anbefalinger for at skabe den størst mulige effekt inden for dyrevelfærd og fødevareomstilling.",
+    infoUrl: "/smart-fordeling",
+    causeAreaId: 2,
+  },
+  {
+    id: 21,
+    name: DonationRecipient.Dyrevelfærd,
+    description: "Dyrevelfærd, der forbedrer vilkårene i kødindustrien.",
+    infoUrl: "/dyrevelfaerd-og-fodevareomstilling",
+    causeAreaId: 2,
+  },
+  {
+    id: 22,
+    name: DonationRecipient.Fødevareomstilling,
+    description:
+      "Fødevareomstilling, der mindsker efterspørgslen på animalske produkter.",
+    infoUrl: "/dyrevelfaerd-og-fodevareomstilling",
+    causeAreaId: 2,
+  },
   {
     id: 40,
-    name: DonationRecipient.GivEffektivtsArbejdeOgVækst,
+    name: DonationRecipient.Drift,
     description:
       "Din støtte til Giv Effektivts arbejde bidrager til vores drift og sikrer ca. 7x mere i donationer til vores anbefalede velgørenhedsformål.",
     infoUrl: "/x-faktor",
@@ -103,8 +119,10 @@ export const norwegianOrgs: NorwegianOrg[] = [
   },
   {
     id: 99,
-    name: DonationRecipient.GivEffektivtsMedlemskab,
-    description: DonationRecipient.GivEffektivtsMedlemskab,
+    name: DonationRecipient.Medlemskab,
+    description: getDonationRecipientLabel(
+      DonationRecipient.Medlemskab,
+    ),
     infoUrl: "/",
     causeAreaId: 99,
     isActive: false,
@@ -122,20 +140,20 @@ export const norwegianCauseAreas = [
   },
   {
     id: 1,
-    name: "Global sundhed",
-    description: "Global sundhed",
+    name: "Global sundhed og fattigdom",
+    description: "Global sundhed og fattigdom",
     standardPercentageShare: 0,
     standardOrganizationId: 1,
     isActive: true,
   },
-  // {
-  //   id: 2,
-  //   name: "Dyrevelfærd",
-  //   description: "Dyrevelfærd",
-  //   standardPercentageShare: 0,
-  //   standardOrganizationId: 20,
-  //   isActive: true,
-  // },
+  {
+    id: 2,
+    name: "Dyrevelfærd og fødevareomstilling",
+    description: "Dyrevelfærd og fødevareomstilling",
+    standardPercentageShare: 0,
+    standardOrganizationId: 20,
+    isActive: true,
+  },
   {
     id: 4,
     name: "Giv Effektivts arbejde og vækst",
@@ -154,8 +172,10 @@ export const norwegianCauseAreas = [
   },
   {
     id: 99,
-    name: DonationRecipient.GivEffektivtsMedlemskab,
-    description: DonationRecipient.GivEffektivtsMedlemskab,
+    name: getDonationRecipientLabel(DonationRecipient.Medlemskab),
+    description: getDonationRecipientLabel(
+      DonationRecipient.Medlemskab,
+    ),
     standardPercentageShare: 0,
     standardOrganizationId: 99,
     isActive: false,
@@ -181,15 +201,12 @@ export const mapFromNorwegianOrgId = (id: number): DonationRecipient => {
   if (!org) {
     throw new Error(`Unknown organization id ${id}`);
   }
-  return org.name as DonationRecipient;
+  return org.name;
 };
 
 export const mapToNorwegianOrgId = (recipient: string): number => {
-  if (recipient === "Stor og velkendt effekt") {
+  if (recipient === DonationRecipient.StorVelkendtEffekt) {
     return 1;
-  }
-  if (recipient === "Ormekur") {
-    return 98;
   }
   const org = norwegianOrgs.find((candidate) => candidate.name === recipient);
   if (org) {
@@ -233,7 +250,7 @@ export const buildNorwegianCauseAreaDistribution = (
         percentageShare: (amount / donationAmount) * 100,
         organizations: causeAreaEarmarks.map((earmark) => ({
           id: mapToNorwegianOrgId(earmark.recipient),
-          name: earmark.recipient,
+          name: getDonationRecipientLabel(earmark.recipient),
           amount: earmark.amount,
           percentageShare: (earmark.amount / amount) * 100,
         })),
@@ -265,11 +282,13 @@ export const toTaxUnit = (donor: any, idx: number) => ({
 export const buildOrganizations = (orgs: NorwegianOrg[]) =>
   orgs.map((org, idx) => ({
     id: org.id,
-    name: org.name,
-    widgetDisplayName: org.widgetDisplayName ?? org.name,
+    name: getDonationRecipientLabel(org.name),
+    widgetDisplayName: getDonationRecipientLabel(
+      org.widgetDisplayName ?? org.name,
+    ),
     widgetContext: null,
     shortDescription: org.description,
-    longDescription: org.name,
+    longDescription: getDonationRecipientLabel(org.name),
     standardShare: idx === 0 ? 100 : 0,
     informationUrl: org.infoUrl,
     isActive: org.isActive ?? true,

@@ -190,7 +190,7 @@ export async function PUT(req: NextRequest) {
 
     if (
       currentEarmarks.some(
-        (e) => e.recipient === DonationRecipient.GivEffektivtsMedlemskab,
+        (e) => e.recipient === DonationRecipient.Medlemskab,
       )
     ) {
       return Response.json(
@@ -221,7 +221,7 @@ export async function PUT(req: NextRequest) {
     if (
       newEarmarks !== null &&
       newEarmarks.some(
-        (e) => e.recipient === DonationRecipient.GivEffektivtsMedlemskab,
+        (e) => e.recipient === DonationRecipient.Medlemskab,
       )
     ) {
       return Response.json(

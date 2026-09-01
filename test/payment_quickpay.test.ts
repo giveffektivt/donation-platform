@@ -36,7 +36,7 @@ test("One-time donation using Quickpay", async () => {
     email: "hello@example.com",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 9 },
-      { recipient: DonationRecipient.AVitaminModFejlernæring, amount: 1 },
+      { recipient: DonationRecipient.AVitamin, amount: 1 },
     ],
     amount: 10,
     frequency: DonationFrequency.Once,
@@ -76,7 +76,7 @@ test("One-time donation using Quickpay", async () => {
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.AVitaminModFejlernæring,
+      recipient: DonationRecipient.AVitamin,
       amount: 1,
     },
   ]);
@@ -99,7 +99,7 @@ test("Monthly donation using Quickpay", async () => {
     email: "hello@example.com",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 9 },
-      { recipient: DonationRecipient.AVitaminModFejlernæring, amount: 1 },
+      { recipient: DonationRecipient.AVitamin, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
@@ -139,7 +139,7 @@ test("Monthly donation using Quickpay", async () => {
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.AVitaminModFejlernæring,
+      recipient: DonationRecipient.AVitamin,
       amount: 1,
     },
   ]);
@@ -193,7 +193,7 @@ test("Membership using Quickpay", async () => {
   expect(earmarks).toMatchObject([
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.GivEffektivtsMedlemskab,
+      recipient: DonationRecipient.Medlemskab,
       amount: 50,
     },
   ]);
@@ -210,7 +210,7 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     email: "hello@example.com",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 9 },
-      { recipient: DonationRecipient.AVitaminModFejlernæring, amount: 1 },
+      { recipient: DonationRecipient.AVitamin, amount: 1 },
     ],
     frequency: DonationFrequency.Monthly,
     method: PaymentMethod.CreditCard,
@@ -259,7 +259,7 @@ test("Add quickpay_id while preserving quickpay_order on the donation", async ()
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.AVitaminModFejlernæring,
+      recipient: DonationRecipient.AVitamin,
       amount: 1,
     },
   ]);
@@ -282,7 +282,7 @@ test("Recreate failed recurring donation", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 240 },
-      { recipient: DonationRecipient.VaccinerTilSpædbørn, amount: 60 },
+      { recipient: DonationRecipient.Spædbørnsvacciner, amount: 60 },
     ],
   });
 
@@ -354,7 +354,7 @@ test("Recreate failed recurring donation", async () => {
     },
     {
       donation_id: donations[0].id,
-      recipient: DonationRecipient.VaccinerTilSpædbørn,
+      recipient: DonationRecipient.Spædbørnsvacciner,
       amount: 60,
     },
     {
@@ -364,7 +364,7 @@ test("Recreate failed recurring donation", async () => {
     },
     {
       donation_id: donations[1].id,
-      recipient: DonationRecipient.VaccinerTilSpædbørn,
+      recipient: DonationRecipient.Spædbørnsvacciner,
       amount: 60,
     },
   ]);

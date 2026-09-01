@@ -114,7 +114,7 @@ export async function getDailyDonatedStats(
             join charge c on c.donation_id = d.id
         where
             c.status = 'charged'
-            and not exists (select 1 from earmark where donation_id = d.id and recipient = 'Giv Effektivts medlemskab')
+            and not exists (select 1 from earmark where donation_id = d.id and recipient = 'medlemskab')
         group by
             date_trunc('day', c.created_at)
         order by

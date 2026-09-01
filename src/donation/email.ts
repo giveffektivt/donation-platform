@@ -9,6 +9,7 @@ import {
   getBankAccount,
   getDonationsToEmail,
   buildNorwegianCauseAreaDistribution,
+  getDonationRecipientLabel,
   logError,
   setDonationEmailed,
 } from "src";
@@ -78,7 +79,7 @@ export async function sendReceiptEmail(
   const is_membership =
     donation.earmarks.length === 1 &&
     donation.earmarks[0].recipient ===
-      DonationRecipient.GivEffektivtsMedlemskab;
+      DonationRecipient.Medlemskab;
   const distribution = buildDonationEmailDistribution(donation);
 
   const days_until_next_year = differenceInDays(
@@ -161,7 +162,7 @@ export async function sendFailedRecurringDonationEmail(
             process.env.VERCEL_ENV === "production" ? "" : "DEV: ",
           amount: amount.toLocaleString("da-DK"),
           name: donor_name ?? null,
-          recipient,
+          recipient: getDonationRecipientLabel(recipient),
           payment_link: payment_link ?? null,
         },
       },

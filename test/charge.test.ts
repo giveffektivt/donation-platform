@@ -35,7 +35,7 @@ test("Insert charge for a donation", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -67,7 +67,7 @@ test("Insert initial charge for a donation via Quickpay only once", async () => 
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -104,7 +104,7 @@ test("Do not insert initial charge for a matching donation", async () => {
     message: "Thanks!",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -125,7 +125,7 @@ test("Update charge status", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 

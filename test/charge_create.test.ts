@@ -47,7 +47,7 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 84 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -60,7 +60,7 @@ test("Donations due for a new charge appear with correct next charge date", asyn
     tin: "222222-2222",
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 73 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 4 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 4 },
     ],
   });
 
@@ -132,7 +132,7 @@ test("Donation that has no charges does not appear in the create charges view", 
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -150,7 +150,7 @@ test("Cancelled donation does not appear in the create charges view", async () =
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -175,7 +175,7 @@ test("Bank transfer donation does not appear in the create charges view", async 
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -224,7 +224,7 @@ test("Donations with already scheduled future charges should not get more charge
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -236,7 +236,7 @@ test("Donations with already scheduled future charges should not get more charge
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.MedicinModMalaria, amount: 5 },
+      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
     ],
   });
 
@@ -333,7 +333,7 @@ test("MobilePay membership charged this January is scheduled for next April", as
     frequency: DonationFrequency.Yearly,
     method: PaymentMethod.MobilePay,
     taxDeductible: false,
-    earmarks: [{ recipient: DonationRecipient.GivEffektivtsMedlemskab, amount: 50 }],
+    earmarks: [{ recipient: DonationRecipient.Medlemskab, amount: 50 }],
   });
 
   await insertChargeWithCreatedAt(db, {

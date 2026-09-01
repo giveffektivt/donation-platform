@@ -32,7 +32,7 @@ test("Insert donor same email different tin", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 240 },
-      { recipient: DonationRecipient.VaccinerTilSpædbørn, amount: 60 },
+      { recipient: DonationRecipient.Spædbørnsvacciner, amount: 60 },
     ],
   });
 
@@ -104,7 +104,7 @@ test("Insert donor same email same tin enriches same record with new info", asyn
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 240 },
-      { recipient: DonationRecipient.VaccinerTilSpædbørn, amount: 60 },
+      { recipient: DonationRecipient.Spædbørnsvacciner, amount: 60 },
     ],
   });
 
@@ -190,7 +190,7 @@ test("Insert donor lowercases and trims email", async () => {
     taxDeductible: false,
     earmarks: [
       { recipient: DonationRecipient.SmartFordeling, amount: 240 },
-      { recipient: DonationRecipient.VaccinerTilSpædbørn, amount: 60 },
+      { recipient: DonationRecipient.Spædbørnsvacciner, amount: 60 },
     ],
   });
 

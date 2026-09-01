@@ -180,7 +180,7 @@ export async function registerMembershipViaQuickpay(
         false,
         JSON.stringify([
           {
-            recipient: DonationRecipient.GivEffektivtsMedlemskab,
+            recipient: DonationRecipient.Medlemskab,
             amount: 50,
           },
         ]),
@@ -695,7 +695,7 @@ export async function getAggregatedDonationsByEmail(
       with donations as (
         select
           case
-            when cdt.earmark = 'Giv Effektivts arbejde og vækst' then 'Giv Effektivts arbejde og vækst'
+            when cdt.earmark = 'drift' then 'Giv Effektivts arbejde og vækst'
             when t.recipient = 'Against Malaria Foundation' then 'Myggenet mod malaria'
             when t.recipient = 'Malaria Consortium' then 'Medicin mod malaria'
             when t.recipient = 'Helen Keller International' then 'A-vitamin mod fejlernæring'
@@ -758,11 +758,11 @@ export async function getDonationsByEmail(
             select jsonb_agg(
               jsonb_build_object(
                 'recipient', case
-                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'Giv Effektivt'
+                  when e.recipient = 'drift' then 'Giv Effektivt'
                   else (case when t.created_at > now() then 'Forventet: ' else '' end) || t.recipient
                 end,
                 'unit', case
-                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'kr. til vores arbejde og vækst'
+                  when e.recipient = 'drift' then 'kr. til vores arbejde og vækst'
                   when t.recipient = 'Against Malaria Foundation' then 'Antimalaria myggenet'
                   when t.recipient = 'Malaria Consortium' then 'Malariabehandlinger'
                   when t.recipient = 'Helen Keller International' then 'A-vitamintilskud'
@@ -771,7 +771,7 @@ export async function getDonationsByEmail(
                   when t.recipient = 'SCI Foundation' then 'Ormekure'
                 end,
                 'organization', case
-                  when e.recipient = 'Giv Effektivts arbejde og vækst' then 'Giv Effektivts arbejde og vækst'
+                  when e.recipient = 'drift' then 'Giv Effektivts arbejde og vækst'
                   when t.recipient = 'Against Malaria Foundation' then 'Myggenet mod malaria'
                   when t.recipient = 'Malaria Consortium' then 'Medicin mod malaria'
                   when t.recipient = 'Helen Keller International' then 'A-vitamin mod fejlernæring'
@@ -781,7 +781,7 @@ export async function getDonationsByEmail(
                 end,
                 'amount', round(e.amount, 1),
                 'count', case
-                  when e.recipient = 'Giv Effektivts arbejde og vækst' then round(e.amount, 1)
+                  when e.recipient = 'drift' then round(e.amount, 1)
                   else round(
                     e.amount / t.exchange_rate
                     / (t.unit_cost_external / t.unit_cost_conversion),
@@ -801,7 +801,7 @@ export async function getDonationsByEmail(
                 and t.created_at > now()
               )
             where e.donation_id = cd.donation_id
-              and (t.id is not null or e.recipient = 'Giv Effektivts arbejde og vækst')
+              and (t.id is not null or e.recipient = 'drift')
           ),
           '[]'::jsonb
         ) as impact
