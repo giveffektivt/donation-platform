@@ -22,7 +22,7 @@ export type Kpi = {
 };
 
 export type PendingDistribution = {
-  recipient: string;
+  earmark: DonationRecipient;
   dkk_total: number;
   payments_total: number;
 };

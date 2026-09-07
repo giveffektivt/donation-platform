@@ -7,17 +7,30 @@ import {
   getTimeDistribution,
   getTransferOverview,
   getTransferredDistribution,
+  getDonationRecipientLabel,
   logError,
+  DonationRecipient,
+  type Kpi,
+  type PendingDistribution,
+  type TimeDistribution,
+  type TransferredDistribution,
 } from "src";
 
 const CACHE_TTL_MS = 30_000;
 
+const kpiEarmarkLabels: Partial<Record<DonationRecipient, string>> = {
+  [DonationRecipient.SmartFordelingGlobal]: "Smart fordeling - global sundhed",
+  [DonationRecipient.SmartFordelingDyr]: "Smart fordeling - dyrevelfærd",
+};
+
+type HumanFriendlyEarmark<T> = Omit<T, "earmark"> & { earmark: string };
+
 type KpiResponse = {
-  kpi: Awaited<ReturnType<typeof getKpi>>;
-  pending: Awaited<ReturnType<typeof getPendingDistribution>>;
-  transferred: Awaited<ReturnType<typeof getTransferredDistribution>>;
-  transfer_overview: Awaited<ReturnType<typeof getTransferOverview>>;
-  collected: Awaited<ReturnType<typeof getTimeDistribution>>;
+  kpi: Kpi;
+  pending: HumanFriendlyEarmark<PendingDistribution>[];
+  transferred: TransferredDistribution[];
+  transfer_overview: HumanFriendlyEarmark<TransferredDistribution>[];
+  collected: TimeDistribution[];
 };
 
 const responseCache = new Map<
@@ -110,14 +123,25 @@ async function getKpiResponse(
 
     return {
       kpi,
-      pending,
+      pending: withHumanFriendlyEarmarks(pending),
       transferred,
-      transfer_overview,
+      transfer_overview: withHumanFriendlyEarmarks(transfer_overview),
       collected,
     };
   } finally {
     dbRelease(db);
   }
+}
+
+function withHumanFriendlyEarmarks<T extends { earmark: string }>(
+  items: T[],
+): HumanFriendlyEarmark<T>[] {
+  return items.map(({ earmark, ...item }) => ({
+    ...item,
+    earmark:
+      kpiEarmarkLabels[earmark as DonationRecipient] ??
+      getDonationRecipientLabel(earmark),
+  }));
 }
 
 function toISOOrDefault(timestamp: string | null, fallback: string): string {
