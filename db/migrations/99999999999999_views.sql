@@ -386,26 +386,55 @@ select
 
 --------------------------------------
 create view gavebrev_checkins_to_create as
-select
-    *
-from
-    (
+with
+    eligible_years as (
         select distinct
-            on (g.donor_id) g.donor_id as donor_id,
-            coalesce(c.year + 1, date_part('year', g.created_at)::numeric) as year,
-            coalesce(c.income_verified, coalesce(c.income_preliminary, coalesce(c.income_inferred, 0))) as income_inferred
+            g.donor_id,
+            y.year::numeric as year
         from
             gavebrev g
-            left join gavebrev_checkin c on g.donor_id = c.donor_id
+            cross join lateral generate_series(
+                extract(
+                    year
+                    from
+                        g.started_at
+                )::int,
+                extract(
+                    year
+                    from
+                        current_date
+                )::int
+            ) as y (year)
         where
             g.status = 'signed'
-            and g.stopped_at >= now()
+            and g.started_at < make_date(y.year + 1, 1, 1)
+            and g.stopped_at > make_date(y.year, 1, 1)
+    )
+select
+    e.donor_id,
+    e.year,
+    coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0) as income_inferred
+from
+    eligible_years e
+    left join gavebrev_checkin existing on existing.donor_id = e.donor_id
+    and existing.year = e.year
+    left join lateral (
+        select
+            c.income_verified,
+            c.income_preliminary,
+            c.income_inferred
+        from
+            gavebrev_checkin c
+        where
+            c.donor_id = e.donor_id
+            and c.year < e.year
         order by
-            g.donor_id,
             c.year desc
-    ) s
+        limit
+            1
+    ) c on true
 where
-    year <= date_part('year', now());
+    existing.id is null;
 
 grant
 select
@@ -415,7 +444,7 @@ select
     cron.schedule (
         'create-gavebrev-checkins',
         '0 4 * * *',
-        'insert into gavebrev_checkin(donor_id, year, income_inferred) select * from gavebrev_checkins_to_create'
+        'insert into gavebrev_checkin(donor_id, year, income_inferred) select * from gavebrev_checkins_to_create on conflict (donor_id, year) do nothing'
     );
 
 --------------------------------------
@@ -722,7 +751,9 @@ select
     ) as gavebrev_start
 from
     annual_tax_report_const
-    join gavebrev g on coalesce(stopped_at, now()) > year_from
+    join gavebrev g on g.status = 'signed'
+    and g.started_at < year_to
+    and g.stopped_at > year_from
     join donor p on p.id = donor_id
 group by
     donor_id,
@@ -762,11 +793,13 @@ select
         sum(
             case
                 when g.type = 'percentage' then greatest(0, c.income - coalesce(c.custom_minimal_income, g.minimal_income, 0)) * g.amount / 100
+                when g.type = 'amount'
+                and coalesce(c.custom_minimal_income, g.minimal_income, 0) <= 0 then g.amount
                 when g.type = 'amount' then greatest(
                     0,
                     cast(
                         c.income > 0
-                        and c.income >= coalesce(c.custom_minimal_income, g.minimal_income, 0) as integer
+                        and c.income >= coalesce(c.custom_minimal_income, g.minimal_income) as integer
                     ) * g.amount
                 )
             end
@@ -776,11 +809,9 @@ from
     annual_tax_report_gavebrev_checkins c
     inner join donor p on p.tin = c.tin
     inner join gavebrev g on g.donor_id = p.id
-    and extract(
-        year
-        from
-            g.started_at
-    ) <= c.year
+    and g.status = 'signed'
+    and g.started_at < make_date(c.year::int + 1, 1, 1)
+    and g.stopped_at > make_date(c.year::int, 1, 1)
 group by
     c.tin,
     c.year,
@@ -797,6 +828,8 @@ with
         from
             gavebrev g
             inner join donor p on g.donor_id = p.id
+        where
+            g.status = 'signed'
         group by
             tin
     ),
@@ -2247,7 +2280,8 @@ with
             gavebrev
         where
             status = 'signed'
-            and stopped_at >= now()
+            and started_at <= now()
+            and stopped_at > now()
     ),
     is_max_tax_deduction_known as (
         select
@@ -2284,16 +2318,16 @@ with
     ),
     missing_gavebrev_income_proof as (
         select
-            count(1)::numeric as missing_gavebrev_income_proof
+            count(distinct c.donor_id)::numeric as missing_gavebrev_income_proof
         from
-            gavebrev_checkin
+            gavebrev_checkin c
         where
-            year = extract(
+            c.year = extract(
                 year
                 from
                     current_date
             )::int - 1
-            and income_verified is null
+            and c.income_verified is null
             and current_date > make_date(
                 extract(
                     year
@@ -2303,15 +2337,31 @@ with
                 3,
                 15
             )
+            and exists (
+                select
+                    1
+                from
+                    gavebrev g
+                where
+                    g.donor_id = c.donor_id
+                    and g.status = 'signed'
+                    and g.started_at < make_date(c.year::int + 1, 1, 1)
+                    and g.stopped_at > make_date(c.year::int, 1, 1)
+                    and (
+                        g.type = 'percentage'
+                        or coalesce(c.custom_minimal_income, g.minimal_income, 0) > 0
+                    )
+            )
     ),
     missing_gavebrev_preliminary_income as (
         select
-            count(1)::numeric as missing_gavebrev_preliminary_income
+            count(distinct c.donor_id)::numeric as missing_gavebrev_preliminary_income
         from
-            gavebrev_checkin
+            gavebrev_checkin c
         where
-            income_preliminary is null
-            and year = extract(
+            c.income_preliminary is null
+            and c.income_verified is null
+            and c.year = extract(
                 year
                 from
                     current_date
@@ -2327,6 +2377,21 @@ with
                 ) then 0
                 else 1
             end
+            and exists (
+                select
+                    1
+                from
+                    gavebrev g
+                where
+                    g.donor_id = c.donor_id
+                    and g.status = 'signed'
+                    and g.started_at < make_date(c.year::int + 1, 1, 1)
+                    and g.stopped_at > make_date(c.year::int, 1, 1)
+                    and (
+                        g.type = 'percentage'
+                        or coalesce(c.custom_minimal_income, g.minimal_income, 0) > 0
+                    )
+            )
     ),
     pending_skat_update as (
         select

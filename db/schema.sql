@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 17.10
+-- Dumped from database version 17.2
 -- Dumped by pg_dump version 18.6
 
 SET statement_timeout = 0;
@@ -1198,6 +1198,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_all_payments AS
             max(g.stopped_at) AS stopped_at
            FROM (giveffektivt.gavebrev g
              JOIN giveffektivt.donor p ON ((g.donor_id = p.id)))
+          WHERE (g.status = 'signed'::giveffektivt.gavebrev_status)
           GROUP BY p.tin
         ), gavebrev_tin_years_until_now AS (
          SELECT g.tin,
@@ -1231,7 +1232,7 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_since AS
     p.tin,
     min(EXTRACT(year FROM g.started_at)) AS gavebrev_start
    FROM ((giveffektivt.annual_tax_report_const
-     JOIN giveffektivt.gavebrev g ON ((COALESCE(g.stopped_at, now()) > annual_tax_report_const.year_from)))
+     JOIN giveffektivt.gavebrev g ON (((g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < annual_tax_report_const.year_to) AND (g.stopped_at > annual_tax_report_const.year_from))))
      JOIN giveffektivt.donor p ON ((p.id = g.donor_id)))
   GROUP BY g.donor_id, p.tin;
 
@@ -1286,12 +1287,13 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
     round(sum(
         CASE
             WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
-            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric))))::integer)::numeric * g.amount))
+            WHEN ((g.type = 'amount'::giveffektivt.gavebrev_type) AND (COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric) <= (0)::numeric)) THEN g.amount
+            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= COALESCE(c.custom_minimal_income, g.minimal_income))))::integer)::numeric * g.amount))
             ELSE NULL::numeric
         END)) AS expected_total
    FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
      JOIN giveffektivt.donor p ON ((p.tin = c.tin)))
-     JOIN giveffektivt.gavebrev g ON (((g.donor_id = p.id) AND (EXTRACT(year FROM g.started_at) <= c.year))))
+     JOIN giveffektivt.gavebrev g ON (((g.donor_id = p.id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)))))
   GROUP BY c.tin, c.year, c.income, c.limit_normal_donation;
 
 
@@ -2472,17 +2474,26 @@ CREATE TABLE giveffektivt.gateway_webhook (
 --
 
 CREATE VIEW giveffektivt.gavebrev_checkins_to_create AS
- SELECT donor_id,
-    year,
-    income_inferred
-   FROM ( SELECT DISTINCT ON (g.donor_id) g.donor_id,
-            COALESCE((c.year + (1)::numeric), (date_part('year'::text, g.created_at))::numeric) AS year,
-            COALESCE(c.income_verified, COALESCE(c.income_preliminary, COALESCE(c.income_inferred, (0)::numeric))) AS income_inferred
+ WITH eligible_years AS (
+         SELECT DISTINCT g.donor_id,
+            (y.year)::numeric AS year
            FROM (giveffektivt.gavebrev g
-             LEFT JOIN giveffektivt.gavebrev_checkin c ON ((g.donor_id = c.donor_id)))
-          WHERE ((g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.stopped_at >= now()))
-          ORDER BY g.donor_id, c.year DESC) s
-  WHERE ((year)::double precision <= date_part('year'::text, now()));
+             CROSS JOIN LATERAL generate_series((EXTRACT(year FROM g.started_at))::integer, (EXTRACT(year FROM CURRENT_DATE))::integer) y(year))
+          WHERE ((g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date((y.year + 1), 1, 1)) AND (g.stopped_at > make_date(y.year, 1, 1)))
+        )
+ SELECT e.donor_id,
+    e.year,
+    COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric) AS income_inferred
+   FROM ((eligible_years e
+     LEFT JOIN giveffektivt.gavebrev_checkin existing ON (((existing.donor_id = e.donor_id) AND (existing.year = e.year))))
+     LEFT JOIN LATERAL ( SELECT c_1.income_verified,
+            c_1.income_preliminary,
+            c_1.income_inferred
+           FROM giveffektivt.gavebrev_checkin c_1
+          WHERE ((c_1.donor_id = e.donor_id) AND (c_1.year < e.year))
+          ORDER BY c_1.year DESC
+         LIMIT 1) c ON (true))
+  WHERE (existing.id IS NULL);
 
 
 --
@@ -2593,7 +2604,7 @@ CREATE VIEW giveffektivt.kpi AS
         ), number_of_gavebrev AS (
          SELECT (count(1))::numeric AS number_of_gavebrev
            FROM giveffektivt.gavebrev
-          WHERE ((gavebrev.status = 'signed'::giveffektivt.gavebrev_status) AND (gavebrev.stopped_at >= now()))
+          WHERE ((gavebrev.status = 'signed'::giveffektivt.gavebrev_status) AND (gavebrev.started_at <= now()) AND (gavebrev.stopped_at > now()))
         ), is_max_tax_deduction_known AS (
          SELECT ((max(max_tax_deduction.year) = EXTRACT(year FROM now())))::integer AS is_max_tax_deduction_known
            FROM giveffektivt.max_tax_deduction
@@ -2604,17 +2615,21 @@ CREATE VIEW giveffektivt.kpi AS
                   WHERE (donations_overview_internal.status = 'charged'::giveffektivt.charge_status)
                   GROUP BY donations_overview_internal.email) unnamed_subquery
         ), missing_gavebrev_income_proof AS (
-         SELECT (count(1))::numeric AS missing_gavebrev_income_proof
-           FROM giveffektivt.gavebrev_checkin
-          WHERE ((gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (gavebrev_checkin.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)))
+         SELECT (count(DISTINCT c.donor_id))::numeric AS missing_gavebrev_income_proof
+           FROM giveffektivt.gavebrev_checkin c
+          WHERE ((c.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (c.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)) AND (EXISTS ( SELECT 1
+                   FROM giveffektivt.gavebrev g
+                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric) > (0)::numeric))))))
         ), missing_gavebrev_preliminary_income AS (
-         SELECT (count(1))::numeric AS missing_gavebrev_preliminary_income
-           FROM giveffektivt.gavebrev_checkin
-          WHERE ((gavebrev_checkin.income_preliminary IS NULL) AND (gavebrev_checkin.year = (((EXTRACT(year FROM CURRENT_DATE))::integer -
+         SELECT (count(DISTINCT c.donor_id))::numeric AS missing_gavebrev_preliminary_income
+           FROM giveffektivt.gavebrev_checkin c
+          WHERE ((c.income_preliminary IS NULL) AND (c.income_verified IS NULL) AND (c.year = (((EXTRACT(year FROM CURRENT_DATE))::integer -
                 CASE
                     WHEN (CURRENT_DATE >= make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 12, 1)) THEN 0
                     ELSE 1
-                END))::numeric))
+                END))::numeric) AND (EXISTS ( SELECT 1
+                   FROM giveffektivt.gavebrev g
+                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric) > (0)::numeric))))))
         ), pending_skat_update AS (
          SELECT (count(1))::numeric AS pending_skat_update
            FROM giveffektivt.annual_tax_report_pending_update
@@ -3800,6 +3815,14 @@ ALTER TABLE ONLY giveffektivt.gateway_webhook
 
 
 --
+-- Name: gavebrev_checkin gavebrev_checkin_donor_id_year_key; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
+--
+
+ALTER TABLE ONLY giveffektivt.gavebrev_checkin
+    ADD CONSTRAINT gavebrev_checkin_donor_id_year_key UNIQUE (donor_id, year);
+
+
+--
 -- Name: general_assembly_voting_code general_assembly_voting_code_pkey; Type: CONSTRAINT; Schema: giveffektivt; Owner: -
 --
 
@@ -4246,4 +4269,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260801130000'),
     ('20260901165953'),
     ('20260901173341'),
+    ('20260919232349'),
     ('99999999999999');

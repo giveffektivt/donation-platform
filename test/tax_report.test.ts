@@ -8,10 +8,12 @@ import {
   dbClient,
   dbRollbackTransaction,
   type Gavebrev,
+  GavebrevStatus,
   GavebrevType,
   PaymentMethod,
   registerDonationViaQuickpay,
   registerGavebrev,
+  setGavebrevStatus,
   setGavebrevStopped,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
@@ -1194,7 +1196,7 @@ test("Gavebrev with missing income report is processed as if income is zero", as
   await gavebrev(db, {
     tin: "111111-1111",
     amount: 10_000,
-    when_income_over: 0,
+    when_income_over: 1,
   });
   await gavebrev(db, { tin: "222222-2222", percentage: 10, of_income_over: 0 });
 
@@ -1483,8 +1485,9 @@ const gavebrev = async (
 ): Promise<Gavebrev> => {
   const startYear = getYear(years_ago);
 
+  let agreement: Gavebrev;
   if (amount) {
-    return await registerGavebrev(db, {
+    agreement = await registerGavebrev(db, {
       name: "John Smith",
       email: `${tin}@example.com`,
       tin,
@@ -1494,9 +1497,8 @@ const gavebrev = async (
       started_at: new Date(Date.UTC(startYear, 0, 1)),
       stopped_at: new Date(Date.UTC(startYear + 10, 0, 1)),
     });
-  }
-  if (percentage) {
-    return await registerGavebrev(db, {
+  } else if (percentage) {
+    agreement = await registerGavebrev(db, {
       name: "John Smith",
       email: `${tin}@example.com`,
       tin,
@@ -1506,8 +1508,12 @@ const gavebrev = async (
       started_at: new Date(Date.UTC(startYear, 0, 1)),
       stopped_at: new Date(Date.UTC(startYear + 10, 0, 1)),
     });
+  } else {
+    throw Error("Unable to create gavebrev: amount or percentage is required");
   }
-  throw Error("Unable to create gavebrev: amount or percentage is required");
+
+  await setGavebrevStatus(db, agreement.id, GavebrevStatus.Signed);
+  return agreement;
 };
 
 type incomeEveryoneArgs = {
