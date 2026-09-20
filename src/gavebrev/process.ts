@@ -48,6 +48,7 @@ export async function insertGavebrevData(
     type: submitData.percentage ? GavebrevType.Percentage : GavebrevType.Amount,
     amount: submitData.percentage ?? submitData.amount ?? 0,
     minimal_income: submitData.minimalIncome,
+    percentage_above_threshold: submitData.percentageAboveThreshold,
     started_at: new Date(Date.UTC(submitData.startYear, 0, 1)),
     stopped_at: new Date(Date.UTC(submitData.startYear + 10, 0, 1)),
   });

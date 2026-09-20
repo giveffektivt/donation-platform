@@ -763,12 +763,12 @@ create view annual_tax_report_gavebrev_checkins as
 select
     tin,
     y as year,
-    least(coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0), c.custom_maximum_income) as income,
+    coalesce(c.income_verified, c.income_preliminary, c.income_inferred, 0) as income,
     case
         when c.year is null then 0
         else c.limit_normal_donation
     end as limit_normal_donation,
-    c.custom_minimal_income
+    c.percentage_tier_threshold
 from
     annual_tax_report_const
     cross join annual_tax_report_gavebrev_since g
@@ -789,22 +789,33 @@ select
     c.year,
     c.income,
     c.limit_normal_donation,
-    round(
-        sum(
-            case
-                when g.type = 'percentage' then greatest(0, c.income - coalesce(c.custom_minimal_income, g.minimal_income, 0)) * g.amount / 100
-                when g.type = 'amount'
-                and coalesce(c.custom_minimal_income, g.minimal_income, 0) <= 0 then g.amount
-                when g.type = 'amount' then greatest(
-                    0,
-                    cast(
-                        c.income > 0
-                        and c.income >= coalesce(c.custom_minimal_income, g.minimal_income) as integer
-                    ) * g.amount
-                )
-            end
+    case
+        when bool_or(
+            g.percentage_above_threshold is not null
+            and (
+                c.percentage_tier_threshold is null
+                or c.percentage_tier_threshold < coalesce(g.minimal_income, 0)
+            )
+        ) then null
+        else round(
+            sum(
+                case
+                    when g.type = 'percentage'
+                    and g.percentage_above_threshold is null then greatest(0, c.income - coalesce(g.minimal_income, 0)) * g.amount / 100
+                    when g.type = 'percentage' then greatest(0, least(c.income, c.percentage_tier_threshold) - coalesce(g.minimal_income, 0)) * g.amount / 100 + greatest(0, c.income - c.percentage_tier_threshold) * g.percentage_above_threshold / 100
+                    when g.type = 'amount'
+                    and coalesce(g.minimal_income, 0) <= 0 then g.amount
+                    when g.type = 'amount' then greatest(
+                        0,
+                        cast(
+                            c.income > 0
+                            and c.income >= g.minimal_income as integer
+                        ) * g.amount
+                    )
+                end
+            )
         )
-    ) as expected_total
+    end as expected_total
 from
     annual_tax_report_gavebrev_checkins c
     inner join donor p on p.tin = c.tin
@@ -2349,7 +2360,7 @@ with
                     and g.stopped_at > make_date(c.year::int, 1, 1)
                     and (
                         g.type = 'percentage'
-                        or coalesce(c.custom_minimal_income, g.minimal_income, 0) > 0
+                        or coalesce(g.minimal_income, 0) > 0
                     )
             )
     ),
@@ -2389,8 +2400,44 @@ with
                     and g.stopped_at > make_date(c.year::int, 1, 1)
                     and (
                         g.type = 'percentage'
-                        or coalesce(c.custom_minimal_income, g.minimal_income, 0) > 0
+                        or coalesce(g.minimal_income, 0) > 0
                     )
+            )
+    ),
+    missing_gavebrev_percentage_tier_threshold as (
+        select
+            count(distinct c.donor_id)::numeric as missing_gavebrev_percentage_tier_threshold
+        from
+            gavebrev_checkin c
+        where
+            c.percentage_tier_threshold is null
+            and c.year = extract(
+                year
+                from
+                    current_date
+            )::int - case
+                when current_date >= make_date(
+                    extract(
+                        year
+                        from
+                            current_date
+                    )::int,
+                    12,
+                    1
+                ) then 0
+                else 1
+            end
+            and exists (
+                select
+                    1
+                from
+                    gavebrev g
+                where
+                    g.donor_id = c.donor_id
+                    and g.status = 'signed'
+                    and g.percentage_above_threshold is not null
+                    and g.started_at < make_date(c.year::int + 1, 1, 1)
+                    and g.stopped_at > make_date(c.year::int, 1, 1)
             )
     ),
     pending_skat_update as (
@@ -2416,6 +2463,7 @@ from
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof,
     missing_gavebrev_preliminary_income,
+    missing_gavebrev_percentage_tier_threshold,
     pending_skat_update;
 
 grant
@@ -3765,6 +3813,7 @@ create function register_gavebrev (
     p_type gavebrev_type,
     p_amount numeric,
     p_minimal_income numeric,
+    p_percentage_above_threshold numeric,
     p_started_at date,
     p_stopped_at date
 ) returns gavebrev language plpgsql as $$
@@ -3778,8 +3827,8 @@ begin
     set name = coalesce(excluded.name, donor.name)
     returning * into v_donor;
 
-    insert into gavebrev(donor_id, status, type, amount, minimal_income, started_at, stopped_at)
-    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_started_at, p_stopped_at)
+    insert into gavebrev(donor_id, status, type, amount, minimal_income, percentage_above_threshold, started_at, stopped_at)
+    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_percentage_above_threshold, p_started_at, p_stopped_at)
     returning * into v_gavebrev;
 
     return v_gavebrev;
@@ -3787,6 +3836,6 @@ end
 $$;
 
 grant
-execute on function register_gavebrev (text, text, text, gavebrev_type, numeric, numeric, date, date) to writer;
+execute on function register_gavebrev (text, text, text, gavebrev_type, numeric, numeric, numeric, date, date) to writer;
 
 -- migrate:down

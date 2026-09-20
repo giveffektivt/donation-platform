@@ -17,6 +17,7 @@ export type Gavebrev = {
   type: GavebrevType;
   amount: number;
   minimal_income: number;
+  percentage_above_threshold?: number;
   started_at: Date;
   stopped_at: Date;
   created_at: Date;
@@ -31,8 +32,7 @@ export type GavebrevCheckin = {
   income_preliminary?: number;
   income_verified?: number;
   limit_normal_donation?: number | null;
-  custom_minimal_income?: number;
-  custom_maximum_income?: number;
+  percentage_tier_threshold?: number;
   created_at: Date;
   updated_at: Date;
 };

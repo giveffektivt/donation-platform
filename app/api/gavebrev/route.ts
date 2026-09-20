@@ -15,6 +15,7 @@ const PayloadCreateSchema = z
     email: z.email().max(500),
     startYear: z.coerce.number().min(new Date().getFullYear()),
     percentage: z.coerce.number().min(1).max(100).optional(),
+    percentageAboveThreshold: z.coerce.number().min(1).max(100).optional(),
     amount: z.coerce.number().min(1).optional(),
     minimalIncome: z.coerce.number().min(0).optional(),
   })
@@ -25,6 +26,10 @@ const PayloadCreateSchema = z
   .refine((data) => !data.amount || !data.percentage, {
     path: ["amount"],
     error: "choose either percentage or amount, not both",
+  })
+  .refine((data) => !data.percentageAboveThreshold || data.percentage, {
+    path: ["percentageAboveThreshold"],
+    error: "percentageAboveThreshold requires percentage",
   });
 
 const PayloadStatusSchema = z.object({

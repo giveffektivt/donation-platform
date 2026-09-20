@@ -829,15 +829,17 @@ CREATE TABLE giveffektivt.gavebrev (
     stopped_at timestamp with time zone NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    shared_skat_access_at timestamp with time zone
+    shared_skat_access_at timestamp with time zone,
+    percentage_above_threshold numeric,
+    CONSTRAINT gavebrev_percentage_above_threshold_check CHECK (((percentage_above_threshold IS NULL) OR ((type = 'percentage'::giveffektivt.gavebrev_type) AND (percentage_above_threshold > (0)::numeric) AND (percentage_above_threshold <= (100)::numeric))))
 );
 
 
 --
--- Name: register_gavebrev(text, text, text, giveffektivt.gavebrev_type, numeric, numeric, date, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
+-- Name: register_gavebrev(text, text, text, giveffektivt.gavebrev_type, numeric, numeric, numeric, date, date); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
-CREATE FUNCTION giveffektivt.register_gavebrev(p_name text, p_email text, p_tin text, p_type giveffektivt.gavebrev_type, p_amount numeric, p_minimal_income numeric, p_started_at date, p_stopped_at date) RETURNS giveffektivt.gavebrev
+CREATE FUNCTION giveffektivt.register_gavebrev(p_name text, p_email text, p_tin text, p_type giveffektivt.gavebrev_type, p_amount numeric, p_minimal_income numeric, p_percentage_above_threshold numeric, p_started_at date, p_stopped_at date) RETURNS giveffektivt.gavebrev
     LANGUAGE plpgsql
     AS $$
 declare
@@ -850,8 +852,8 @@ begin
     set name = coalesce(excluded.name, donor.name)
     returning * into v_donor;
 
-    insert into gavebrev(donor_id, status, type, amount, minimal_income, started_at, stopped_at)
-    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_started_at, p_stopped_at)
+    insert into gavebrev(donor_id, status, type, amount, minimal_income, percentage_above_threshold, started_at, stopped_at)
+    values (v_donor.id, 'created', p_type, p_amount, p_minimal_income, p_percentage_above_threshold, p_started_at, p_stopped_at)
     returning * into v_gavebrev;
 
     return v_gavebrev;
@@ -1251,8 +1253,8 @@ CREATE TABLE giveffektivt.gavebrev_checkin (
     limit_normal_donation numeric,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    custom_minimal_income numeric,
-    custom_maximum_income numeric
+    percentage_tier_threshold numeric,
+    CONSTRAINT gavebrev_checkin_percentage_tier_threshold_check CHECK (((percentage_tier_threshold IS NULL) OR (percentage_tier_threshold >= (0)::numeric)))
 );
 
 
@@ -1263,12 +1265,12 @@ CREATE TABLE giveffektivt.gavebrev_checkin (
 CREATE VIEW giveffektivt.annual_tax_report_gavebrev_checkins AS
  SELECT g.tin,
     y.y AS year,
-    LEAST(COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric), c.custom_maximum_income) AS income,
+    COALESCE(c.income_verified, c.income_preliminary, c.income_inferred, (0)::numeric) AS income,
         CASE
             WHEN (c.year IS NULL) THEN (0)::numeric
             ELSE c.limit_normal_donation
         END AS limit_normal_donation,
-    c.custom_minimal_income
+    c.percentage_tier_threshold
    FROM (((giveffektivt.annual_tax_report_const
      CROSS JOIN giveffektivt.annual_tax_report_gavebrev_since g)
      CROSS JOIN LATERAL generate_series(g.gavebrev_start, (EXTRACT(year FROM annual_tax_report_const.year_to) - (1)::numeric)) y(y))
@@ -1284,13 +1286,17 @@ CREATE VIEW giveffektivt.annual_tax_report_gavebrev_expected_totals AS
     c.year,
     c.income,
     c.limit_normal_donation,
-    round(sum(
         CASE
-            WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
-            WHEN ((g.type = 'amount'::giveffektivt.gavebrev_type) AND (COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric) <= (0)::numeric)) THEN g.amount
-            WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= COALESCE(c.custom_minimal_income, g.minimal_income))))::integer)::numeric * g.amount))
-            ELSE NULL::numeric
-        END)) AS expected_total
+            WHEN bool_or(((g.percentage_above_threshold IS NOT NULL) AND ((c.percentage_tier_threshold IS NULL) OR (c.percentage_tier_threshold < COALESCE(g.minimal_income, (0)::numeric))))) THEN NULL::numeric
+            ELSE round(sum(
+            CASE
+                WHEN ((g.type = 'percentage'::giveffektivt.gavebrev_type) AND (g.percentage_above_threshold IS NULL)) THEN ((GREATEST((0)::numeric, (c.income - COALESCE(g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric)
+                WHEN (g.type = 'percentage'::giveffektivt.gavebrev_type) THEN (((GREATEST((0)::numeric, (LEAST(c.income, c.percentage_tier_threshold) - COALESCE(g.minimal_income, (0)::numeric))) * g.amount) / (100)::numeric) + ((GREATEST((0)::numeric, (c.income - c.percentage_tier_threshold)) * g.percentage_above_threshold) / (100)::numeric))
+                WHEN ((g.type = 'amount'::giveffektivt.gavebrev_type) AND (COALESCE(g.minimal_income, (0)::numeric) <= (0)::numeric)) THEN g.amount
+                WHEN (g.type = 'amount'::giveffektivt.gavebrev_type) THEN GREATEST((0)::numeric, (((((c.income > (0)::numeric) AND (c.income >= g.minimal_income)))::integer)::numeric * g.amount))
+                ELSE NULL::numeric
+            END))
+        END AS expected_total
    FROM ((giveffektivt.annual_tax_report_gavebrev_checkins c
      JOIN giveffektivt.donor p ON ((p.tin = c.tin)))
      JOIN giveffektivt.gavebrev g ON (((g.donor_id = p.id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)))))
@@ -2619,7 +2625,7 @@ CREATE VIEW giveffektivt.kpi AS
            FROM giveffektivt.gavebrev_checkin c
           WHERE ((c.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (c.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)) AND (EXISTS ( SELECT 1
                    FROM giveffektivt.gavebrev g
-                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric) > (0)::numeric))))))
+                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(g.minimal_income, (0)::numeric) > (0)::numeric))))))
         ), missing_gavebrev_preliminary_income AS (
          SELECT (count(DISTINCT c.donor_id))::numeric AS missing_gavebrev_preliminary_income
            FROM giveffektivt.gavebrev_checkin c
@@ -2629,7 +2635,17 @@ CREATE VIEW giveffektivt.kpi AS
                     ELSE 1
                 END))::numeric) AND (EXISTS ( SELECT 1
                    FROM giveffektivt.gavebrev g
-                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(c.custom_minimal_income, g.minimal_income, (0)::numeric) > (0)::numeric))))))
+                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(g.minimal_income, (0)::numeric) > (0)::numeric))))))
+        ), missing_gavebrev_percentage_tier_threshold AS (
+         SELECT (count(DISTINCT c.donor_id))::numeric AS missing_gavebrev_percentage_tier_threshold
+           FROM giveffektivt.gavebrev_checkin c
+          WHERE ((c.percentage_tier_threshold IS NULL) AND (c.year = (((EXTRACT(year FROM CURRENT_DATE))::integer -
+                CASE
+                    WHEN (CURRENT_DATE >= make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 12, 1)) THEN 0
+                    ELSE 1
+                END))::numeric) AND (EXISTS ( SELECT 1
+                   FROM giveffektivt.gavebrev g
+                  WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.percentage_above_threshold IS NOT NULL) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1))))))
         ), pending_skat_update AS (
          SELECT (count(1))::numeric AS pending_skat_update
            FROM giveffektivt.annual_tax_report_pending_update
@@ -2649,6 +2665,7 @@ CREATE VIEW giveffektivt.kpi AS
     oldest_stopped_donation_age.oldest_stopped_donation_age,
     missing_gavebrev_income_proof.missing_gavebrev_income_proof,
     missing_gavebrev_preliminary_income.missing_gavebrev_preliminary_income,
+    missing_gavebrev_percentage_tier_threshold.missing_gavebrev_percentage_tier_threshold,
     pending_skat_update.pending_skat_update
    FROM dkk_total,
     dkk_total_ops,
@@ -2664,6 +2681,7 @@ CREATE VIEW giveffektivt.kpi AS
     oldest_stopped_donation_age,
     missing_gavebrev_income_proof,
     missing_gavebrev_preliminary_income,
+    missing_gavebrev_percentage_tier_threshold,
     pending_skat_update;
 
 
@@ -4270,4 +4288,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260901165953'),
     ('20260901173341'),
     ('20260919232349'),
+    ('20260920001055'),
     ('99999999999999');

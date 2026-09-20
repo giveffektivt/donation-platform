@@ -36,5 +36,6 @@ export type NewGavebrev = {
   startYear: number;
   amount?: number;
   percentage?: number;
+  percentageAboveThreshold?: number;
   minimalIncome?: number;
 };

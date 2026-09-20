@@ -1265,96 +1265,75 @@ test("Gavebrev debt (but not aconto!) carries over when gavebrev conditions are 
   ]);
 });
 
-test("Amount-based gavebrev with custom_minimal_income overrides the gavebrev minimal_income", async () => {
+test("Percentage gavebrev applies X% above minimal income up to the annual tier threshold, then Y% above it", async () => {
   const db = await client;
 
   await gavebrev(db, {
     tin: "111111-1111",
-    amount: 10_000,
-    when_income_over: 500_000,
-  });
-
-  await incomeEveryone(db, {
-    income_verified: 550_000,
-    custom_minimal_income: 600_000,
-  });
-
-  await donate(db, { tin: "111111-1111", amount: 10_000 });
-
-  const taxReport = await findAnnualTaxReport(db);
-  expect(taxReport).toMatchObject([
-    {
-      tin: "111111-1111",
-      ll8a_or_gavebrev: "L",
-      total: 0,
-      aconto_debt: 10_000,
-    },
-  ]);
-});
-
-test("Percentage-based gavebrev with custom_minimal_income overrides the gavebrev minimal_income", async () => {
-  const db = await client;
-
-  await gavebrev(db, {
-    tin: "222222-2222",
     percentage: 10,
-    of_income_over: 500_000,
-  });
-
-  await incomeEveryone(db, {
-    income_verified: 600_000,
-    custom_minimal_income: 550_000,
-  });
-
-  await donate(db, { tin: "222222-2222", amount: 10_000 });
-
-  const taxReport = await findAnnualTaxReport(db);
-  expect(taxReport).toMatchObject([
-    {
-      tin: "222222-2222",
-      ll8a_or_gavebrev: "L",
-      total: 5_000, // should only donate 10% of (600_000 - 550_000) = 5_000
-      aconto_debt: 5_000, // remaining 5_000 goes to aconto
-    },
-  ]);
-});
-
-test("Gavebrev with custom_maximum_income caps the income used for calculations", async () => {
-  const db = await client;
-
-  await gavebrev(db, {
-    tin: "111111-1111",
-    amount: 10_000,
-    when_income_over: 600_000,
-  });
-  await gavebrev(db, {
-    tin: "222222-2222",
-    percentage: 10,
-    of_income_over: 0,
+    percentage_above_threshold: 5,
+    of_income_over: 300_000,
+    years_ago: 1,
   });
 
   await incomeEveryone(db, {
     income_verified: 1_000_000,
-    custom_maximum_income: 500_000,
+    percentage_tier_threshold: 600_000,
+    years_ago: 1,
+  });
+  await incomeEveryone(db, {
+    income_verified: 1_000_000,
+    percentage_tier_threshold: 700_000,
   });
 
-  await donate(db, { tin: "111111-1111", amount: 10_000 });
-  await donate(db, { tin: "222222-2222", amount: 50_000 });
+  const expectedTotals = (
+    await db.query(
+      `select year, expected_total
+       from annual_tax_report_gavebrev_expected_totals
+       where tin = '111111-1111'
+       order by year`,
+    )
+  ).rows;
 
-  const taxReport = await findAnnualTaxReport(db);
-  expect(taxReport).toMatchObject([
-    {
-      tin: "111111-1111",
-      ll8a_or_gavebrev: "L",
-      total: 0, // expected 0 (capped income 500k < 600k threshold)...
-      aconto_debt: 10_000, // ...so the entire donation goes to aconto
-    },
-    {
-      tin: "222222-2222",
-      ll8a_or_gavebrev: "L",
-      total: 50_000, // expected 10% of capped 500k = 50k, donated exactly 50k
-      aconto_debt: 0,
-    },
+  expect(expectedTotals).toMatchObject([
+    { year: getYear(1), expected_total: 50_000 },
+    { year: getYear(), expected_total: 55_000 },
+  ]);
+});
+
+test("Percentage and amount gavebrev interpret minimal income according to their distinct semantics", async () => {
+  const db = await client;
+
+  await gavebrev(db, {
+    tin: "111111-1111",
+    percentage: 10,
+    of_income_over: 550_000,
+  });
+  await gavebrev(db, {
+    tin: "222222-2222",
+    amount: 10_000,
+    when_income_over: 600_000,
+  });
+  await gavebrev(db, {
+    tin: "333333-3333",
+    amount: 10_000,
+    when_income_over: 600_001,
+  });
+
+  await incomeEveryone(db, { income_verified: 600_000 });
+
+  const expectedTotals = (
+    await db.query(
+      `select tin, expected_total
+       from annual_tax_report_gavebrev_expected_totals
+       order by tin`,
+    )
+  ).rows;
+
+  expect(expectedTotals).toMatchObject([
+    { tin: "111111-1111", expected_total: 5_000 },
+    { tin: "222222-2222", expected_total: 10_000 },
+    { tin: "333333-3333", expected_total: 0 },
   ]);
 });
 
@@ -1477,11 +1456,12 @@ type gavebrevArgs = {
   years_ago?: number;
   when_income_over?: number;
   of_income_over?: number;
+  percentage_above_threshold?: number;
 };
 
 const gavebrev = async (
   db: PoolClient,
-  { tin, amount, percentage, years_ago = 0, when_income_over, of_income_over }: gavebrevArgs,
+  { tin, amount, percentage, years_ago = 0, when_income_over, of_income_over, percentage_above_threshold }: gavebrevArgs,
 ): Promise<Gavebrev> => {
   const startYear = getYear(years_ago);
 
@@ -1505,6 +1485,7 @@ const gavebrev = async (
       type: GavebrevType.Percentage,
       amount: percentage,
       minimal_income: of_income_over,
+      percentage_above_threshold,
       started_at: new Date(Date.UTC(startYear, 0, 1)),
       stopped_at: new Date(Date.UTC(startYear + 10, 0, 1)),
     });
@@ -1520,13 +1501,12 @@ type incomeEveryoneArgs = {
   income_verified?: number;
   years_ago?: number;
   limit_normal_donation?: number | null;
-  custom_minimal_income?: number;
-  custom_maximum_income?: number;
+  percentage_tier_threshold?: number;
 };
 
 const incomeEveryone = async (
   db: PoolClient,
-  { income_verified = 1_000_000, years_ago = 0, limit_normal_donation = 0, custom_minimal_income, custom_maximum_income }: incomeEveryoneArgs,
+  { income_verified = 1_000_000, years_ago = 0, limit_normal_donation = 0, percentage_tier_threshold }: incomeEveryoneArgs,
 ) => {
   for (const donor of await findAllDonors(db)) {
     await insertGavebrevCheckin(db, {
@@ -1534,8 +1514,7 @@ const incomeEveryone = async (
       year: getYear(years_ago),
       income_verified,
       limit_normal_donation,
-      custom_minimal_income,
-      custom_maximum_income,
+      percentage_tier_threshold,
     });
   }
 };

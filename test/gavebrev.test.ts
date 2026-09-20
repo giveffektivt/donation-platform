@@ -73,6 +73,7 @@ test("Create a Gavebrev of percentage type with minimal income", async () => {
     email: "hello@example.com",
     startYear: 2030,
     percentage: 10,
+    percentageAboveThreshold: 5,
     minimalIncome: 200,
   });
 
@@ -93,6 +94,7 @@ test("Create a Gavebrev of percentage type with minimal income", async () => {
       stopped_at: new Date(Date.UTC(2040, 0, 1)),
       amount: 10,
       minimal_income: 200,
+      percentage_above_threshold: 5,
       type: GavebrevType.Percentage,
       status: GavebrevStatus.Created,
     },

@@ -19,6 +19,7 @@ export type Kpi = {
   is_max_tax_deduction_known: number;
   oldest_stopped_donation_age: number;
   missing_gavebrev_income_proof: number;
+  missing_gavebrev_percentage_tier_threshold: number;
 };
 
 export type PendingDistribution = {

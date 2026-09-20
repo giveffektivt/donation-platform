@@ -10,6 +10,7 @@ export async function registerGavebrev(
     type: GavebrevType;
     amount: number;
     minimal_income?: number;
+    percentage_above_threshold?: number;
     started_at: Date;
     stopped_at: Date;
   },
@@ -23,8 +24,9 @@ export async function registerGavebrev(
         p_type => $4,
         p_amount => $5,
         p_minimal_income => $6,
-        p_started_at => $7,
-        p_stopped_at => $8
+        p_percentage_above_threshold => $7,
+        p_started_at => $8,
+        p_stopped_at => $9
       )`,
       [
         data.name,
@@ -33,6 +35,7 @@ export async function registerGavebrev(
         data.type,
         data.amount,
         data.minimal_income,
+        data.percentage_above_threshold,
         data.started_at,
         data.stopped_at,
       ],
