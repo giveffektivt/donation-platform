@@ -2333,21 +2333,8 @@ with
         from
             gavebrev_checkin c
         where
-            c.year = extract(
-                year
-                from
-                    current_date
-            )::int - 1
-            and c.income_verified is null
-            and current_date > make_date(
-                extract(
-                    year
-                    from
-                        current_date
-                )::int,
-                3,
-                15
-            )
+            c.income_verified is null
+            and current_date > make_date(c.year::int + 1, 3, 15)
             and exists (
                 select
                     1

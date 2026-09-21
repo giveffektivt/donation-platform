@@ -2623,7 +2623,7 @@ CREATE VIEW giveffektivt.kpi AS
         ), missing_gavebrev_income_proof AS (
          SELECT (count(DISTINCT c.donor_id))::numeric AS missing_gavebrev_income_proof
            FROM giveffektivt.gavebrev_checkin c
-          WHERE ((c.year = (((EXTRACT(year FROM CURRENT_DATE))::integer - 1))::numeric) AND (c.income_verified IS NULL) AND (CURRENT_DATE > make_date((EXTRACT(year FROM CURRENT_DATE))::integer, 3, 15)) AND (EXISTS ( SELECT 1
+          WHERE ((c.income_verified IS NULL) AND (CURRENT_DATE > make_date(((c.year)::integer + 1), 3, 15)) AND (EXISTS ( SELECT 1
                    FROM giveffektivt.gavebrev g
                   WHERE ((g.donor_id = c.donor_id) AND (g.status = 'signed'::giveffektivt.gavebrev_status) AND (g.started_at < make_date(((c.year)::integer + 1), 1, 1)) AND (g.stopped_at > make_date((c.year)::integer, 1, 1)) AND ((g.type = 'percentage'::giveffektivt.gavebrev_type) OR (COALESCE(g.minimal_income, (0)::numeric) > (0)::numeric))))))
         ), missing_gavebrev_preliminary_income AS (
