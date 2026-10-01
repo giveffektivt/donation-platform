@@ -430,6 +430,100 @@ $$;
 
 
 --
+-- Name: copy_donation(uuid, numeric, giveffektivt.donation_frequency, jsonb, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, jsonb, uuid, boolean, text, text, giveffektivt.emailed_status, boolean, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.copy_donation(p_donation_id uuid, p_amount numeric DEFAULT NULL::numeric, p_frequency giveffektivt.donation_frequency DEFAULT NULL::giveffektivt.donation_frequency, p_earmarks jsonb DEFAULT NULL::jsonb, p_gateway giveffektivt.payment_gateway DEFAULT NULL::giveffektivt.payment_gateway, p_method giveffektivt.payment_method DEFAULT NULL::giveffektivt.payment_method, p_tax_deductible boolean DEFAULT NULL::boolean, p_gateway_metadata jsonb DEFAULT NULL::jsonb, p_fundraiser_id uuid DEFAULT NULL::uuid, p_public_message_author boolean DEFAULT NULL::boolean, p_message_author text DEFAULT NULL::text, p_message text DEFAULT NULL::text, p_emailed giveffektivt.emailed_status DEFAULT NULL::giveffektivt.emailed_status, p_cancelled boolean DEFAULT NULL::boolean, p_referral_code text DEFAULT NULL::text) RETURNS giveffektivt.donation
+    LANGUAGE plpgsql
+    AS $$
+declare
+    v_source donation%rowtype;
+    v_donor donor%rowtype;
+    v_copy donation%rowtype;
+    v_amount numeric;
+    v_gateway payment_gateway;
+    v_metadata jsonb;
+    v_earmarks jsonb;
+begin
+    select * into v_source from donation where id = p_donation_id;
+
+    if not found then
+        raise exception 'donation with ID % not found', p_donation_id;
+    end if;
+
+    select * into v_donor from donor where id = v_source.donor_id;
+    v_amount := coalesce(p_amount, v_source.amount);
+    v_gateway := coalesce(p_gateway, v_source.gateway);
+
+    if v_amount <= 0 then
+        raise exception 'donation amount must be > 0';
+    end if;
+
+    if p_earmarks is not null then
+        v_earmarks := p_earmarks;
+    elsif v_amount = v_source.amount then
+        select jsonb_agg(jsonb_build_object('recipient', recipient, 'amount', amount))
+        into v_earmarks
+        from earmark where donation_id = p_donation_id;
+    else
+        select jsonb_agg(jsonb_build_object(
+            'recipient', recipient,
+            'amount', scaled_amount + case when position = 1 then v_amount - total else 0 end
+        )) into v_earmarks
+        from (
+            select recipient, scaled_amount,
+                row_number() over (order by scaled_amount desc, recipient) as position,
+                sum(scaled_amount) over () as total
+            from (
+                select recipient, round(amount * v_amount / nullif(v_source.amount, 0), 2) as scaled_amount
+                from earmark where donation_id = p_donation_id
+            ) scaled
+        ) adjusted;
+    end if;
+
+    if v_earmarks is null or jsonb_typeof(v_earmarks) <> 'array' then
+        raise exception 'earmarks must be a non-empty JSON array of {recipient, amount}';
+    end if;
+
+    select * into v_copy from register_donation(
+        p_amount => v_amount,
+        p_frequency => coalesce(p_frequency, v_source.frequency),
+        p_gateway => v_gateway,
+        p_method => coalesce(p_method, v_source.method),
+        p_tax_deductible => coalesce(p_tax_deductible, v_source.tax_deductible),
+        p_earmarks => v_earmarks,
+        p_email => v_donor.email,
+        p_tin => v_donor.tin,
+        p_name => v_donor.name,
+        p_fundraiser_id => coalesce(p_fundraiser_id, v_source.fundraiser_id),
+        p_public_message_author => coalesce(p_public_message_author, v_source.public_message_author),
+        p_message_author => coalesce(p_message_author, v_source.message_author),
+        p_message => coalesce(p_message, v_source.message),
+        p_address => v_donor.address,
+        p_postcode => v_donor.postcode,
+        p_city => v_donor.city,
+        p_country => v_donor.country,
+        p_birthday => v_donor.birthday,
+        p_emailed => coalesce(p_emailed, v_source.emailed),
+        p_referral_code => coalesce(p_referral_code, v_source.referral_code)
+    );
+
+    v_metadata := coalesce(p_gateway_metadata,
+        case when v_gateway = v_source.gateway then v_source.gateway_metadata else v_copy.gateway_metadata end);
+
+    update donation
+    set donor_id = v_source.donor_id,
+        gateway_metadata = v_metadata,
+        cancelled = coalesce(p_cancelled, v_source.cancelled)
+    where id = v_copy.id
+    returning * into v_copy;
+
+    return v_copy;
+end
+$$;
+
+
+--
 -- Name: earmark_sum_check(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 

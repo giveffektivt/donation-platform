@@ -46,6 +46,7 @@ value_lost_analysis cascade;
 
 drop function if exists register_donation,
 change_donation,
+copy_donation,
 change_donor_tax_unit,
 register_gavebrev,
 recreate_failed_recurring_donation,
@@ -3593,6 +3594,116 @@ $$;
 
 grant
 execute on function change_donation (uuid, numeric, jsonb, text) to writer;
+
+--------------------------------------
+create function copy_donation (
+    p_donation_id uuid,
+    p_amount numeric default null,
+    p_frequency donation_frequency default null,
+    p_earmarks jsonb default null,
+    p_gateway payment_gateway default null,
+    p_method payment_method default null,
+    p_tax_deductible boolean default null,
+    p_gateway_metadata jsonb default null,
+    p_fundraiser_id uuid default null,
+    p_public_message_author boolean default null,
+    p_message_author text default null,
+    p_message text default null,
+    p_emailed emailed_status default null,
+    p_cancelled boolean default null,
+    p_referral_code text default null
+) returns donation language plpgsql as $$
+declare
+    v_source donation%rowtype;
+    v_donor donor%rowtype;
+    v_copy donation%rowtype;
+    v_amount numeric;
+    v_gateway payment_gateway;
+    v_metadata jsonb;
+    v_earmarks jsonb;
+begin
+    select * into v_source from donation where id = p_donation_id;
+
+    if not found then
+        raise exception 'donation with ID % not found', p_donation_id;
+    end if;
+
+    select * into v_donor from donor where id = v_source.donor_id;
+    v_amount := coalesce(p_amount, v_source.amount);
+    v_gateway := coalesce(p_gateway, v_source.gateway);
+
+    if v_amount <= 0 then
+        raise exception 'donation amount must be > 0';
+    end if;
+
+    if p_earmarks is not null then
+        v_earmarks := p_earmarks;
+    elsif v_amount = v_source.amount then
+        select jsonb_agg(jsonb_build_object('recipient', recipient, 'amount', amount))
+        into v_earmarks
+        from earmark where donation_id = p_donation_id;
+    else
+        select jsonb_agg(jsonb_build_object(
+            'recipient', recipient,
+            'amount', scaled_amount + case when position = 1 then v_amount - total else 0 end
+        )) into v_earmarks
+        from (
+            select recipient, scaled_amount,
+                row_number() over (order by scaled_amount desc, recipient) as position,
+                sum(scaled_amount) over () as total
+            from (
+                select recipient, round(amount * v_amount / nullif(v_source.amount, 0), 2) as scaled_amount
+                from earmark where donation_id = p_donation_id
+            ) scaled
+        ) adjusted;
+    end if;
+
+    if v_earmarks is null or jsonb_typeof(v_earmarks) <> 'array' then
+        raise exception 'earmarks must be a non-empty JSON array of {recipient, amount}';
+    end if;
+
+    select * into v_copy from register_donation(
+        p_amount => v_amount,
+        p_frequency => coalesce(p_frequency, v_source.frequency),
+        p_gateway => v_gateway,
+        p_method => coalesce(p_method, v_source.method),
+        p_tax_deductible => coalesce(p_tax_deductible, v_source.tax_deductible),
+        p_earmarks => v_earmarks,
+        p_email => v_donor.email,
+        p_tin => v_donor.tin,
+        p_name => v_donor.name,
+        p_fundraiser_id => coalesce(p_fundraiser_id, v_source.fundraiser_id),
+        p_public_message_author => coalesce(p_public_message_author, v_source.public_message_author),
+        p_message_author => coalesce(p_message_author, v_source.message_author),
+        p_message => coalesce(p_message, v_source.message),
+        p_address => v_donor.address,
+        p_postcode => v_donor.postcode,
+        p_city => v_donor.city,
+        p_country => v_donor.country,
+        p_birthday => v_donor.birthday,
+        p_emailed => coalesce(p_emailed, v_source.emailed),
+        p_referral_code => coalesce(p_referral_code, v_source.referral_code)
+    );
+
+    v_metadata := coalesce(p_gateway_metadata,
+        case when v_gateway = v_source.gateway then v_source.gateway_metadata else v_copy.gateway_metadata end);
+
+    update donation
+    set donor_id = v_source.donor_id,
+        gateway_metadata = v_metadata,
+        cancelled = coalesce(p_cancelled, v_source.cancelled)
+    where id = v_copy.id
+    returning * into v_copy;
+
+    return v_copy;
+end
+$$;
+
+grant
+execute on function copy_donation (
+    uuid, numeric, donation_frequency, jsonb, payment_gateway, payment_method,
+    boolean, jsonb, uuid, boolean, text, text, emailed_status, boolean, text
+) to writer;
 
 --------------------------------------
 create function change_donor_tax_unit (p_donor_id uuid, p_new_name text, p_new_tin text) returns donor language plpgsql as $$
