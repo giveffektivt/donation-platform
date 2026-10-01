@@ -11,7 +11,10 @@ import { z } from "zod";
 const PayloadCreateSchema = z
   .object({
     name: z.string().min(1).max(500),
-    tin: z.string().regex(/^\d{6}-\d{4}$/),
+    tin: z
+      .string()
+      .regex(/^(\d{6}-?\d{4}|\d{8})$/)
+      .transform((s) => s.replace(/^(\d{6})(\d{4})$/, "$1-$2")),
     email: z.email().max(500),
     startYear: z.coerce.number().min(new Date().getFullYear()),
     percentage: z.coerce.number().min(1).max(100).optional(),
