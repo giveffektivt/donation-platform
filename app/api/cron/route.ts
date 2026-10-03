@@ -23,7 +23,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    logError("api/cron:", err);
+    await logError("api/cron:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

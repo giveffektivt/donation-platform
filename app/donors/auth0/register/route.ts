@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       content: "00000000-0000-0000-0000-000000000000",
     });
   } catch (err) {
-    logError("donors/auth0/register:", err);
+    await logError("donors/auth0/register:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

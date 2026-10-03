@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     return Response.json(response);
   } catch (e) {
-    logError("api/kpi: ", e);
+    await logError(`api/kpi: ${JSON.stringify({ from, to })}`, e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

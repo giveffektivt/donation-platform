@@ -1,4 +1,10 @@
-import { dbClient, dbRelease, insertFundraiser, logError } from "src";
+import {
+  dbClient,
+  dbRelease,
+  insertFundraiser,
+  logError,
+  logRequestError,
+} from "src";
 import { z } from "zod";
 
 const PayloadSchema = z
@@ -15,6 +21,7 @@ const PayloadSchema = z
 
 export async function POST(req: Request) {
   let db = null;
+  let payload: unknown;
   try {
     if (!process.env.FUNDRAISER_API_KEY) {
       throw new Error("FUNDRAISER_API_KEY is not defined");
@@ -24,16 +31,14 @@ export async function POST(req: Request) {
       req.headers.get("Authorization") !==
       `Bearer ${process.env.FUNDRAISER_API_KEY}`
     ) {
-      logError("POST api/fundraiser: Unauthorized");
+      await logError("POST api/fundraiser: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const parsed = await PayloadSchema.safeParseAsync(await req.json());
+    payload = await req.json();
+    const parsed = await PayloadSchema.safeParseAsync(payload);
     if (!parsed.success) {
-      logError(
-        "POST api/fundraiser: Validation failed for request body: ",
-        parsed.error,
-      );
+      await logRequestError("POST api/fundraiser:", parsed.error, payload);
       return Response.json(
         {
           message: "Validation failed",
@@ -61,7 +66,7 @@ export async function POST(req: Request) {
       admin: `${process.env.HOMEPAGE_URL}/indsamling-admin/?id=${fundraiser.id}#key=${fundraiser.key}`,
     });
   } catch (err) {
-    logError("api/fundraiser:", err);
+    await logRequestError("POST api/fundraiser:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

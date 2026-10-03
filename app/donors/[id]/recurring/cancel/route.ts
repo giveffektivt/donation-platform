@@ -1,7 +1,7 @@
 import {
   dbClient,
   dbRelease,
-  logError,
+  logRequestError,
   setDonationCancelledByIdAndEmail,
   verifyJwtBearerToken,
 } from "src";
@@ -35,7 +35,10 @@ export async function PUT(req: NextRequest) {
 
     return Response.json({ status: 200, content: true });
   } catch (e) {
-    logError("donors/[id]/recurring/cancel: ", e);
+    await logRequestError("PUT donors/[id]/recurring/cancel:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+      id,
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

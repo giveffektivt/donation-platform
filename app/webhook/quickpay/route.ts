@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import {
   dbClient,
   dbRelease,
-  logError,
+  logRequestError,
   PaymentGateway,
   quickpayHandleChange,
 } from "src";
@@ -10,6 +10,7 @@ import { insertGatewayWebhook } from "src/gateways/repository";
 
 export async function POST(req: Request) {
   let db = null;
+  let payload: unknown;
   try {
     if (
       !process.env.QUICKPAY_DONATION_PRIVATE_KEY ||
@@ -37,17 +38,19 @@ export async function POST(req: Request) {
       throw new Error("Quickpay callback has invalid signature");
     }
 
+    const change = JSON.parse(body);
+    payload = change;
     db = await dbClient();
 
     // Store gateway webhook payload
     await insertGatewayWebhook(db, PaymentGateway.Quickpay, body);
 
     // Process the change
-    await quickpayHandleChange(db, JSON.parse(body));
+    await quickpayHandleChange(db, change);
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    logError("api/quickpay-callback:", err);
+    await logRequestError("webhook/quickpay:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

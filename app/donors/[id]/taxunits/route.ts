@@ -3,7 +3,7 @@ import {
   dbRelease,
   getDonorsDetailedByEmail,
   insertDonorTaxUnit,
-  logError,
+  logRequestError,
   toTaxUnit,
   verifyJwtBearerToken,
 } from "src";
@@ -45,7 +45,9 @@ export async function GET(req: Request) {
       content: donors.map(toTaxUnit),
     });
   } catch (e) {
-    logError("donors/[id]/taxunits: ", e);
+    await logRequestError("GET donors/[id]/taxunits:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);
@@ -96,7 +98,9 @@ export async function POST(req: Request) {
       content: toTaxUnit(donors[idx], idx),
     });
   } catch (e) {
-    logError("POST donors/[id]/taxunits: ", e);
+    await logRequestError("POST donors/[id]/taxunits:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

@@ -1,6 +1,6 @@
 import {
   DonationFrequency,
-  logError,
+  logRequestError,
   mapFromNorwegianOrgId,
   mapFromNorwegianPaymentMethods,
   type NewDonation,
@@ -126,8 +126,10 @@ const PayloadSchema = z
   });
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
-    const submitData = await PayloadSchema.parseAsync(await req.json());
+    payload = await req.json();
+    const submitData = await PayloadSchema.parseAsync(payload);
 
     const [response, donorId] = await processPayment(submitData);
 
@@ -135,9 +137,10 @@ export async function POST(req: Request) {
       try {
         await SubscribeToNewsletter(submitData.email);
       } catch (err) {
-        logError(
+        await logRequestError(
           `donation/register: Error subscribing ${donorId} to newsletter`,
           err,
+          payload,
         );
       }
     }
@@ -152,7 +155,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
-    logError("donation/register:", err);
+    await logRequestError("donation/register:", err, payload);
     return Response.json({}, { status: 500 });
   }
 }

@@ -106,7 +106,7 @@ export async function quickpayChargeSubscription(
   charge: ChargeToChargeQuickpay,
 ) {
   if (!charge.donation_gateway_metadata?.quickpay_id) {
-    logError(
+    await logError(
       `Charge with ID '${charge.id}' does not have a corresponding Quickpay ID that is required for charging`,
     );
     await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
@@ -134,7 +134,7 @@ export async function quickpayChargeSubscription(
       !isMobilePay, // MobilePay Subscriptions sends empty response on success
     );
   } catch (err) {
-    logError(`Error while charging ID '${charge.id}':`, err);
+    await logError(`Error while charging ID '${charge.id}':`, err);
     status = ChargeStatus.Error;
   }
 

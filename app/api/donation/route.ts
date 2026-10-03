@@ -2,7 +2,7 @@ import {
   DonationFrequency,
   DonationRecipient,
   getBankAccount,
-  logError,
+  logRequestError,
   type NewDonation,
   PaymentMethod,
   processBankTransferDonation,
@@ -66,8 +66,10 @@ const PayloadSchema = z
   }));
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
-    const submitData = await PayloadSchema.parseAsync(await req.json());
+    payload = await req.json();
+    const submitData = await PayloadSchema.parseAsync(payload);
 
     const [response, donorId] = await processPayment(submitData);
 
@@ -75,16 +77,17 @@ export async function POST(req: Request) {
       try {
         await SubscribeToNewsletter(submitData.email);
       } catch (err) {
-        logError(
+        await logRequestError(
           `api/donation: Error subscribing ${donorId} to newsletter`,
           err,
+          payload,
         );
       }
     }
 
     return Response.json(response);
   } catch (err) {
-    logError("api/donation:", err);
+    await logRequestError("api/donation:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

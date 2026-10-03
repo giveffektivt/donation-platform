@@ -1,4 +1,4 @@
-import { logError, processQuickpayMembership } from "src";
+import { logRequestError, processQuickpayMembership } from "src";
 import { z } from "zod";
 
 const PayloadSchema = z
@@ -24,8 +24,10 @@ const PayloadSchema = z
   );
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
-    const submitData = await PayloadSchema.parseAsync(await req.json());
+    payload = await req.json();
+    const submitData = await PayloadSchema.parseAsync(payload);
 
     const [redirect] = await processQuickpayMembership(submitData);
 
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
       redirect,
     });
   } catch (err) {
-    logError("api/membership:", err);
+    await logRequestError("api/membership:", err, payload);
     return Response.json({}, { status: 500 });
   }
 }

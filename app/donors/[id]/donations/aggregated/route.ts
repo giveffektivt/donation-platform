@@ -2,7 +2,7 @@ import {
   dbClient,
   dbRelease,
   getAggregatedDonationsByEmail,
-  logError,
+  logRequestError,
   verifyJwtBearerToken,
 } from "src";
 
@@ -31,7 +31,9 @@ export async function GET(req: Request) {
       })),
     });
   } catch (e) {
-    logError("donors/[id]/donations/aggregated: ", e);
+    await logRequestError("GET donors/[id]/donations/aggregated:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

@@ -45,7 +45,7 @@ export async function sendFailedRecurringDonationEmails(
         `Sent new payment link for a failed recurring donation: ${info.donation_id}`,
       );
     } catch (err) {
-      logError(
+      await logError(
         `Error sending new payment link for a failed recurring donation: ${info.donation_id}`,
         err,
       );

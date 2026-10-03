@@ -1,4 +1,4 @@
-import { logError } from "src";
+import { logRequestError } from "src";
 import { z } from "zod";
 
 const PayloadSchema = z.object({
@@ -7,12 +7,14 @@ const PayloadSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
     if (!process.env.BREVO_API_URL || !process.env.BREVO_API_KEY) {
       throw new Error("Missing required Brevo environment variables");
     }
 
-    const { email, type } = await PayloadSchema.parseAsync(await req.json());
+    payload = await req.json();
+    const { email, type } = await PayloadSchema.parseAsync(payload);
     const response = await fetch(`${process.env.BREVO_API_URL}/contacts`, {
       method: "POST",
       headers: {
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
 
     return Response.json({ status: 200, content: {} });
   } catch (err) {
-    logError("forms/submit:", err);
+    await logRequestError("forms/submit:", err, payload);
     return Response.json({}, { status: 500 });
   }
 }

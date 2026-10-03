@@ -1,4 +1,4 @@
-import { getRenewPaymentLink, logError } from "src";
+import { getRenewPaymentLink, logError, logRequestError } from "src";
 import { z } from "zod";
 
 const PayloadSchema = z.object({
@@ -6,13 +6,15 @@ const PayloadSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
-    const submitData = await PayloadSchema.parseAsync(await req.json());
+    payload = await req.json();
+    const submitData = await PayloadSchema.parseAsync(payload);
 
     const url = await getRenewPaymentLink(submitData.id);
 
     if (url == null) {
-      logError(
+      await logError(
         `api/renew-payment: attempted to renew payment on donation '${submitData.id}' that doesn't allow it`,
       );
       return Response.json({ message: "Not found" }, { status: 404 });
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK", url });
   } catch (err) {
-    logError("api/renew-payment:", err);
+    await logRequestError("api/renew-payment:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

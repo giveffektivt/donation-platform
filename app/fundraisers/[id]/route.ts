@@ -15,7 +15,7 @@ export async function GET(
       content: await getFundraiserNew(db, id),
     });
   } catch (err) {
-    logError(`fundraisers/${id}:`, err);
+    await logError(`fundraisers/${id}:`, err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

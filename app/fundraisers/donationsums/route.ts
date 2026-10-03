@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { dbClient, dbRelease, getFundraiserSums, logError } from "src";
+import { dbClient, dbRelease, getFundraiserSums, logRequestError } from "src";
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
       content: await getFundraiserSums(db, ids),
     });
   } catch (err) {
-    logError("fundraisers/donationsums:", err);
+    await logRequestError("fundraisers/donationsums:", err, { id: ids.join(",") });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

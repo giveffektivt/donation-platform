@@ -35,7 +35,7 @@ export async function sendNewEmails() {
         await sendReceiptEmail(donation);
         await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
       } catch (err) {
-        logError(`Error sending email for ID "${donation.id}"`, err);
+        await logError(`Error sending email for ID "${donation.id}"`, err);
       }
     }
   });
@@ -136,7 +136,7 @@ export async function sendReceiptEmail(
   }
 
   if (result.body) {
-    logError(
+    await logError(
       `Email for receipt ID ${donation.id} was probably sent, but with possible errors or warnings`,
       result.body,
     );
@@ -183,7 +183,7 @@ export async function sendFailedRecurringDonationEmail(
   }
 
   if (result.body) {
-    logError(
+    await logError(
       `Email for failed recurring donation to donor ID ${donor_id} was probably sent, but with possible errors or warnings`,
       result.body,
     );

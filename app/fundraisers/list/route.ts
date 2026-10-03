@@ -10,7 +10,7 @@ export async function GET() {
       content: await getFundraisers(db),
     });
   } catch (err) {
-    logError("fundraisers/list:", err);
+    await logError("fundraisers/list:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

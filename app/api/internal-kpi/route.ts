@@ -14,7 +14,7 @@ export async function GET(req: Request) {
       req.headers.get("Authorization") !==
       `Bearer ${process.env.INTERNAL_KPI_KEY}`
     ) {
-      logError("api/internal-kpi: Unauthorized");
+      await logError("api/internal-kpi: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
 
     return Response.json(result);
   } catch (e) {
-    logError("api/internal-kpi: ", e);
+    await logError("api/internal-kpi: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

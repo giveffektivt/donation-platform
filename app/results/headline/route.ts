@@ -16,7 +16,7 @@ export async function GET() {
       },
     });
   } catch (e) {
-    logError("results/headline: ", e);
+    await logError("results/headline: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

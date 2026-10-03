@@ -20,7 +20,7 @@ export async function GET() {
       content: buildOverview(transfer_overview),
     });
   } catch (e) {
-    logError("results/donations/monthly/outputs: ", e);
+    await logError("results/donations/monthly/outputs: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

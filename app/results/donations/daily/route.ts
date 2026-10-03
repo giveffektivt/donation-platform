@@ -11,7 +11,7 @@ export async function GET() {
       content: await getDailyDonatedStats(db),
     });
   } catch (e) {
-    logError("results/donations/daily: ", e);
+    await logError("results/donations/daily: ", e);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

@@ -20,7 +20,7 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
   }
 
   if (process.env.VERCEL_ENV === "production" && change.test_mode) {
-    logError(
+    await logError(
       `Quickpay subscription ${change.order_id} was paid using test card, ignoring.`,
     );
     return;
@@ -80,7 +80,7 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
 
     const log =
       status === ChargeStatus.Error && !isCardExpired ? logError : console.log;
-    log(`Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`);
+    await log(`Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`);
     await setChargeStatusByShortId(db, {
       status,
       short_id: change.order_id,

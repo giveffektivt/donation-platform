@@ -3,6 +3,7 @@ import {
   GavebrevStatus,
   listGavebrev,
   logError,
+  logRequestError,
   stopGavebrev,
   updateGavebrevStatus,
 } from "src";
@@ -58,30 +59,29 @@ function authorize(req: Request): boolean {
 export async function GET(req: Request) {
   try {
     if (!authorize(req)) {
-      logError("GET api/gavebrev: Unauthorized");
+      await logError("GET api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     return Response.json({ message: "OK", data: await listGavebrev() });
   } catch (err) {
-    logError("api/gavebrev:", err);
+    await logError("api/gavebrev:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
     if (!authorize(req)) {
-      logError("POST api/gavebrev: Unauthorized");
+      await logError("POST api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const parsed = await PayloadCreateSchema.safeParseAsync(await req.json());
+    payload = await req.json();
+    const parsed = await PayloadCreateSchema.safeParseAsync(payload);
     if (!parsed.success) {
-      logError(
-        "POST api/gavebrev: Validation failed for request body: ",
-        parsed.error,
-      );
+      await logRequestError("POST api/gavebrev:", parsed.error, payload);
       return Response.json(
         {
           message: "Validation failed",
@@ -99,24 +99,23 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK", agreementId });
   } catch (err) {
-    logError("api/gavebrev:", err);
+    await logRequestError("POST api/gavebrev:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: Request) {
+  let payload: unknown;
   try {
     if (!authorize(req)) {
-      logError("PATCH api/gavebrev: Unauthorized");
+      await logError("PATCH api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const parsed = await PayloadStatusSchema.safeParseAsync(await req.json());
+    payload = await req.json();
+    const parsed = await PayloadStatusSchema.safeParseAsync(payload);
     if (!parsed.success) {
-      logError(
-        "PATCH api/gavebrev: Validation failed for request body:",
-        parsed.error,
-      );
+      await logRequestError("PATCH api/gavebrev:", parsed.error, payload);
       return Response.json(
         {
           message: "Validation failed",
@@ -134,29 +133,28 @@ export async function PATCH(req: Request) {
       parsed.data.status,
     );
     if (!found) {
-      logError(`PATCH api/gavebrev: agreement ${parsed.data.id} not found`);
+      await logError(`PATCH api/gavebrev: agreement ${parsed.data.id} not found`);
       return Response.json({ message: "Not found" }, { status: 404 });
     }
     return Response.json({ message: "OK" });
   } catch (err) {
-    logError("api/gavebrev:", err);
+    await logRequestError("PATCH api/gavebrev:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
+  let payload: unknown;
   try {
     if (!authorize(req)) {
-      logError("DELETE api/gavebrev: Unauthorized");
+      await logError("DELETE api/gavebrev: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const parsed = await PayloadStopSchema.safeParseAsync(await req.json());
+    payload = await req.json();
+    const parsed = await PayloadStopSchema.safeParseAsync(payload);
     if (!parsed.success) {
-      logError(
-        "DELETE api/gavebrev: Validation failed for request body: ",
-        parsed.error,
-      );
+      await logRequestError("DELETE api/gavebrev:", parsed.error, payload);
       return Response.json(
         {
           message: "Validation failed",
@@ -172,12 +170,12 @@ export async function DELETE(req: Request) {
 
     const found = await stopGavebrev(parsed.data.id);
     if (!found) {
-      logError(`DELETE api/gavebrev: agreement ${parsed.data.id} not found`);
+      await logError(`DELETE api/gavebrev: agreement ${parsed.data.id} not found`);
       return Response.json({ message: "Not found" }, { status: 404 });
     }
     return Response.json({ message: "OK" });
   } catch (err) {
-    logError("api/gavebrev:", err);
+    await logRequestError("DELETE api/gavebrev:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

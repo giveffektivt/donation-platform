@@ -22,7 +22,7 @@ export async function charge() {
             throw new Error(`Unsupported gateway: ${charge.gateway}`);
         }
       } catch (err) {
-        logError(`Error charging ID '${charge.id}'`, err);
+        await logError(`Error charging ID '${charge.id}'`, err);
       }
     }
   });

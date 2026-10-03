@@ -11,7 +11,7 @@ export async function POST(req: Request) {
       req.headers.get("Authorization") !==
       `Bearer ${process.env.FAILED_RECURRING_DONATIONS_API_KEY}`
     ) {
-      logError("api/failed-recurring-donations: Unauthorized");
+      await logError("api/failed-recurring-donations: Unauthorized");
       return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    logError("api/failed-recurring-donations:", err);
+    await logError("api/failed-recurring-donations:", err);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

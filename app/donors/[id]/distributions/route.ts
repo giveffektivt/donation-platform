@@ -3,7 +3,7 @@ import {
   buildNorwegianCauseAreaDistribution,
   dbRelease,
   getDonationDistributions,
-  logError,
+  logRequestError,
   verifyJwtBearerToken,
   getDonorIdsByEmail,
 } from "src";
@@ -58,7 +58,10 @@ export async function GET(req: NextRequest) {
       }),
     });
   } catch (e) {
-    logError("donors/[id]/distributions: ", e);
+    await logRequestError("GET donors/[id]/distributions:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+      id: kids.join(","),
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

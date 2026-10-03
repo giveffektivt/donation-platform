@@ -63,7 +63,7 @@ async function sendEmails(
     await sendReceiptEmail(donationToEmail, bankTransferInfo);
     await setDonationEmailed(db, donationToEmail.id, EmailedStatus.Yes);
   } catch (err) {
-    logError(`Error sending payment email for ID "${donation.id}":`, err);
+    await logError(`Error sending payment email for ID "${donation.id}":`, err);
   } finally {
     dbRelease(db);
   }

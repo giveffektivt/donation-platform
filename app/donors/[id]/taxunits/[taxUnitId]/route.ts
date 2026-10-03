@@ -3,7 +3,7 @@ import {
   dbExecuteInTransaction,
   getDonorIdsByEmail,
   getDonorsDetailedByEmail,
-  logError,
+  logRequestError,
   toTaxUnit,
   verifyJwtBearerToken,
 } from "src";
@@ -92,7 +92,10 @@ export async function PUT(
       content: taxUnit,
     });
   } catch (e: any) {
-    logError("PUT donors/[id]/taxunits/[taxUnitId]: ", e);
+    await logRequestError("PUT donors/[id]/taxunits/[taxUnitId]:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+      id: taxUnitId,
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

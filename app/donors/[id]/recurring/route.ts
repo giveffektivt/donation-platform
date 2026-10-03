@@ -7,7 +7,7 @@ import {
   getDonorsDetailedByEmail,
   getRecurringDonationByIdAndEmail,
   getRecurringDonationsByEmail,
-  logError,
+  logRequestError,
   mapFromNorwegianOrgId,
   norwegianCauseAreas,
   verifyJwtBearerToken,
@@ -135,7 +135,9 @@ export async function GET(req: Request) {
       })),
     });
   } catch (e) {
-    logError("donors/[id]/recurring: ", e);
+    await logRequestError("GET donors/[id]/recurring:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);
@@ -288,7 +290,10 @@ export async function PUT(req: NextRequest) {
 
     return Response.json({ status: 200, content: true });
   } catch (e) {
-    logError("PUT donors/[id]/recurring: ", e);
+    await logRequestError("PUT donors/[id]/recurring:", e, {
+      email,
+      id: donationId,
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

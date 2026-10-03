@@ -1,4 +1,4 @@
-import { logError, SubscribeToNewsletter } from "src";
+import { logError, logRequestError, SubscribeToNewsletter } from "src";
 import { z } from "zod";
 
 const PayloadSchema = z.object({
@@ -6,13 +6,15 @@ const PayloadSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  let payload: unknown;
   try {
-    const submitData = await PayloadSchema.parseAsync(await req.json());
+    payload = await req.json();
+    const submitData = await PayloadSchema.parseAsync(payload);
 
     try {
       await SubscribeToNewsletter(submitData.email);
     } catch (err) {
-      logError(
+      await logError(
         `api/newsletter: Error subscribing ${submitData.email} to newsletter`,
         err,
       );
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
 
     return Response.json({ message: "OK" });
   } catch (err) {
-    logError("api/newsletter:", err);
+    await logRequestError("api/newsletter:", err, payload);
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   }
 }

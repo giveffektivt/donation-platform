@@ -2,7 +2,7 @@ import {
   dbClient,
   dbRelease,
   getDonorByEmail,
-  logError,
+  logRequestError,
   verifyJwtBearerToken,
 } from "src";
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (e) {
-    logError("donors/[id]: ", e);
+    await logRequestError("GET donors/[id]:", e, { email });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);

@@ -4,7 +4,7 @@ import {
   enumerateIds,
   getDonationsByEmail,
   getDonorIdsByEmail,
-  logError,
+  logRequestError,
   verifyJwtBearerToken,
 } from "src";
 
@@ -49,7 +49,9 @@ export async function GET(req: Request) {
       ),
     });
   } catch (e) {
-    logError("donors/[id]/donations: ", e);
+    await logRequestError("GET donors/[id]/donations:", e, {
+      email: user[process.env.AUTH0_EMAIL_CLAIM],
+    });
     return Response.json({ message: "Something went wrong" }, { status: 500 });
   } finally {
     dbRelease(db);
