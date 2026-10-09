@@ -1,7 +1,7 @@
 import {
   buildOrganizations,
   norwegianCauseAreas,
-  norwegianOrgs,
+  norwegianOrganizationCatalog,
 } from "src/helpers/norway-shim";
 
 export async function GET() {
@@ -19,7 +19,9 @@ export async function GET() {
       ordering: idx + 1,
       standardPercentageShare: causeArea.standardPercentageShare,
       organizations: buildOrganizations(
-        norwegianOrgs.filter((org) => org.causeAreaId === causeArea.id),
+        norwegianOrganizationCatalog.filter(
+          (org) => org.causeAreaId === causeArea.id,
+        ),
       ),
     })),
   });

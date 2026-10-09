@@ -61,7 +61,7 @@ test("formats custom global health and poverty recipients below their cause area
   ).toEqual([
     { name: "Global sundhed og fattigdom", amount: "" },
     {
-      name: "↳ Smart fordeling - global sundhed og fattigdom",
+      name: "↳ Smart fordeling",
       amount: "475 kr",
     },
     { name: "↳ Myggenet mod malaria", amount: "95 kr" },
@@ -88,11 +88,11 @@ test("formats animal welfare and food transition recipients", () => {
   ).toEqual([
     { name: "Dyrevelfærd og fødevareomstilling", amount: "" },
     {
-      name: "↳ Smart fordeling - dyrevelfærd og fødevareomstilling",
+      name: "↳ Smart fordeling",
       amount: "300 kr",
     },
     {
-      name: "↳ Fødevareomstilling, der mindsker efterspørgslen på animalske produkter",
+      name: "↳ Fødevareomstilling",
       amount: "200 kr",
     },
     { name: "Sum", amount: "500 kr" },

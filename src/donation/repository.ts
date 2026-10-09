@@ -702,6 +702,7 @@ export async function getAggregatedDonationsByEmail(
             when t.recipient = 'New Incentives' then 'Vacciner til spædbørn'
             when t.recipient = 'Give Directly' then 'Kontantoverførsler til verdens fattigste'
             when t.recipient = 'SCI Foundation' then 'Ormekure'
+            else t.recipient::text
           end as earmark,
           cdt.amount,
           cdt.charged_at
@@ -711,6 +712,7 @@ export async function getAggregatedDonationsByEmail(
           or (
             cdt.transfer_id is null
             and cdt.earmark = t.earmark
+            and cdt.earmark <> 'andet'
             and t.created_at > now()
           )
         where cdt.email = $1
@@ -758,30 +760,26 @@ export async function getDonationsByEmail(
             select jsonb_agg(
               jsonb_build_object(
                 'recipient', case
-                  when e.recipient = 'drift' then 'Giv Effektivt'
+                  when e.earmark = 'drift' then 'Giv Effektivt'
                   else (case when t.created_at > now() then 'Forventet: ' else '' end) || t.recipient
                 end,
                 'unit', case
-                  when e.recipient = 'drift' then 'kr. til vores arbejde og vækst'
-                  when t.recipient = 'Against Malaria Foundation' then 'Antimalaria myggenet'
-                  when t.recipient = 'Malaria Consortium' then 'Malariabehandlinger'
-                  when t.recipient = 'Helen Keller International' then 'A-vitamintilskud'
-                  when t.recipient = 'New Incentives' then 'Vaccinationsprogrammer'
-                  when t.recipient = 'Give Directly' then 'Dollars'
-                  when t.recipient = 'SCI Foundation' then 'Ormekure'
+                  when e.earmark = 'drift' then 'kr. til vores arbejde og vækst'
+                  else t.unit
                 end,
                 'organization', case
-                  when e.recipient = 'drift' then 'Giv Effektivts arbejde og vækst'
+                  when e.earmark = 'drift' then 'Giv Effektivts arbejde og vækst'
                   when t.recipient = 'Against Malaria Foundation' then 'Myggenet mod malaria'
                   when t.recipient = 'Malaria Consortium' then 'Medicin mod malaria'
                   when t.recipient = 'Helen Keller International' then 'A-vitamin mod fejlernæring'
                   when t.recipient = 'New Incentives' then 'Vacciner til spædbørn'
                   when t.recipient = 'Give Directly' then 'Kontantoverførsler til verdens fattigste'
                   when t.recipient = 'SCI Foundation' then 'Ormekure'
+                  else t.recipient::text
                 end,
-                'amount', round(e.amount, 1),
+                'amount', e.amount,
                 'count', case
-                  when e.recipient = 'drift' then round(e.amount, 1)
+                  when e.earmark = 'drift' then round(e.amount, 1)
                   else round(
                     e.amount / t.exchange_rate
                     / (t.unit_cost_external / t.unit_cost_conversion),
@@ -790,18 +788,17 @@ export async function getDonationsByEmail(
                 end
               )
             )
-            from earmark e
-            left join charge_transfer ct
-              on ct.charge_id = cd.charge_id and ct.earmark = e.recipient
+            from charged_donations_by_transfer e
             left join transfer t
-              on ct.transfer_id = t.id
+              on e.transfer_id = t.id
               or (
-                ct.transfer_id is null
-                and e.recipient = t.earmark
+                e.transfer_id is null
+                and e.earmark = t.earmark
+                and e.earmark <> 'andet'
                 and t.created_at > now()
               )
-            where e.donation_id = cd.donation_id
-              and (t.id is not null or e.recipient = 'drift')
+            where e.charge_id = cd.charge_id
+              and (t.id is not null or e.earmark = 'drift')
           ),
           '[]'::jsonb
         ) as impact

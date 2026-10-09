@@ -22,7 +22,7 @@ test("exposes recipient labels to API consumers", () => {
   const organization = buildOrganizations(norwegianOrgs).find(({ id }) => id === 22);
 
   expect(organization).toMatchObject({
-    name: "Fødevareomstilling, der mindsker efterspørgslen på animalske produkter",
-    widgetDisplayName: "Fødevareomstilling, der mindsker efterspørgslen på animalske produkter",
+    name: "Fødevareomstilling",
+    widgetDisplayName: "Fødevareomstilling",
   });
 });

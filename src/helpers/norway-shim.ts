@@ -120,13 +120,58 @@ export const norwegianOrgs: NorwegianOrg[] = [
   {
     id: 99,
     name: DonationRecipient.Medlemskab,
-    description: getDonationRecipientLabel(
-      DonationRecipient.Medlemskab,
-    ),
+    description: getDonationRecipientLabel(DonationRecipient.Medlemskab),
     infoUrl: "/",
     causeAreaId: 99,
     isActive: false,
   },
+];
+
+type ImpactOnlyOrg = Omit<NorwegianOrg, "name" | "isActive"> & {
+  name: string;
+  isActive: false;
+};
+
+export const norwegianImpactOrgs: ImpactOnlyOrg[] = [
+  {
+    id: 100,
+    name: "TaRL Africa",
+    description:
+      "Målrettet undervisning tilpasset børns færdigheder i læsning og matematik.",
+    infoUrl: "https://www.tarlafrica.org/",
+    causeAreaId: 1,
+    isActive: false,
+  },
+  {
+    id: 101,
+    name: "Evidence Action",
+    description:
+      "Programmer for blandt andet ormekur, jerntilskud og adgang til rent vand.",
+    infoUrl: "https://www.evidenceaction.org/",
+    causeAreaId: 1,
+    isActive: false,
+  },
+  {
+    id: 102,
+    name: "Taimaka",
+    description: "Behandling af akut underernæring hos børn.",
+    infoUrl: "https://taimaka.org/",
+    causeAreaId: 1,
+    isActive: false,
+  },
+  {
+    id: 103,
+    name: "Lafiya",
+    description: "Adgang til prævention og familieplanlægning.",
+    infoUrl: "https://www.lafiya.org/",
+    causeAreaId: 1,
+    isActive: false,
+  },
+];
+
+export const norwegianOrganizationCatalog = [
+  ...norwegianOrgs,
+  ...norwegianImpactOrgs,
 ];
 
 export const norwegianCauseAreas = [
@@ -173,9 +218,7 @@ export const norwegianCauseAreas = [
   {
     id: 99,
     name: getDonationRecipientLabel(DonationRecipient.Medlemskab),
-    description: getDonationRecipientLabel(
-      DonationRecipient.Medlemskab,
-    ),
+    description: getDonationRecipientLabel(DonationRecipient.Medlemskab),
     standardPercentageShare: 0,
     standardOrganizationId: 99,
     isActive: false,
@@ -279,7 +322,7 @@ export const toTaxUnit = (donor: any, idx: number) => ({
   taxDeductions: donor.tax_deductions,
 });
 
-export const buildOrganizations = (orgs: NorwegianOrg[]) =>
+export const buildOrganizations = (orgs: (NorwegianOrg | ImpactOnlyOrg)[]) =>
   orgs.map((org, idx) => ({
     id: org.id,
     name: getDonationRecipientLabel(org.name),

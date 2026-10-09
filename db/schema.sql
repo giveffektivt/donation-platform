@@ -139,7 +139,11 @@ CREATE TYPE giveffektivt.transfer_recipient AS ENUM (
     'Helen Keller International',
     'New Incentives',
     'Give Directly',
-    'SCI Foundation'
+    'SCI Foundation',
+    'TaRL Africa',
+    'Evidence Action',
+    'Taimaka',
+    'Lafiya'
 );
 
 
@@ -425,6 +429,44 @@ begin
     end if;
 
     return v_new_donor;
+end
+$$;
+
+
+--
+-- Name: check_charge_transfer_allocation_total(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.check_charge_transfer_allocation_total() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+    v_donation_id uuid := coalesce(new.donation_id, old.donation_id);
+    v_earmark donation_recipient;
+    v_conflict record;
+begin
+    if tg_table_name = 'earmark' then
+        v_earmark := coalesce(new.recipient, old.recipient);
+    else
+        v_earmark := coalesce(new.earmark, old.earmark);
+    end if;
+
+    select ct.charge_id, sum(ct.amount) as allocated, e.amount as available
+    into v_conflict
+    from charge_transfer ct
+    join earmark e on e.donation_id = ct.donation_id and e.recipient = ct.earmark
+    where ct.donation_id = v_donation_id and ct.earmark = v_earmark
+    group by ct.charge_id, e.amount
+    having sum(ct.amount) > e.amount
+    limit 1;
+
+    if found then
+        raise exception 'Transfer allocations for charge %, earmark % exceed earmark amount %: allocated %',
+            v_conflict.charge_id, v_earmark, v_conflict.available, v_conflict.allocated
+            using errcode = '23514', constraint = 'charge_transfer_allocation_total';
+    end if;
+
+    return null;
 end
 $$;
 
@@ -718,6 +760,46 @@ $$;
 
 
 --
+-- Name: prepare_charge_transfer_allocation(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.prepare_charge_transfer_allocation() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+    v_key record;
+    v_amount numeric;
+begin
+    for v_key in
+        select distinct donation_id, earmark
+        from (
+            values
+                (case when tg_op <> 'INSERT' then old.donation_id end,
+                 case when tg_op <> 'INSERT' then old.earmark end),
+                (case when tg_op <> 'DELETE' then new.donation_id end,
+                 case when tg_op <> 'DELETE' then new.earmark end)
+        ) keys(donation_id, earmark)
+        where donation_id is not null
+        order by donation_id, earmark
+    loop
+        update earmark
+        set amount = amount
+        where donation_id = v_key.donation_id
+            and recipient = v_key.earmark
+        returning amount into v_amount;
+
+        if tg_op = 'INSERT' and new.amount is null
+            and new.donation_id = v_key.donation_id and new.earmark = v_key.earmark then
+            new.amount := v_amount;
+        end if;
+    end loop;
+
+    return case when tg_op = 'DELETE' then old else new end;
+end
+$$;
+
+
+--
 -- Name: record_audit_log(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -956,6 +1038,32 @@ $$;
 
 
 --
+-- Name: set_transfer_default_unit(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.set_transfer_default_unit() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+    if new.unit is null then
+        new.unit := case new.recipient
+            when 'Against Malaria Foundation' then 'Antimalaria myggenet'
+            when 'Malaria Consortium' then 'Malariabehandlinger'
+            when 'Helen Keller International' then 'A-vitamintilskud'
+            when 'New Incentives' then 'Vaccinationsprogrammer'
+            when 'Give Directly' then 'Dollars'
+            when 'SCI Foundation' then 'Ormekure'
+            when 'TaRL Africa' then 'Børn med målrettet undervisning'
+            when 'Taimaka' then 'Børn behandlet for akut underernæring'
+            when 'Lafiya' then 'Par-år med præventionsbeskyttelse'
+        end;
+    end if;
+    return new;
+end
+$$;
+
+
+--
 -- Name: trigger_update_timestamp(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -995,7 +1103,9 @@ CREATE TABLE giveffektivt.charge_transfer (
     donation_id uuid NOT NULL,
     earmark giveffektivt.donation_recipient NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    amount numeric NOT NULL,
+    CONSTRAINT charge_transfer_amount_positive_finite CHECK (((amount > (0)::numeric) AND (amount < 'Infinity'::numeric)))
 );
 
 
@@ -1011,6 +1121,31 @@ CREATE TABLE giveffektivt.earmark (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT earmark_amount_check CHECK ((amount > (0)::numeric))
 );
+
+
+--
+-- Name: charge_earmark_allocations; Type: VIEW; Schema: giveffektivt; Owner: -
+--
+
+CREATE VIEW giveffektivt.charge_earmark_allocations AS
+ SELECT c.id AS charge_id,
+    c.donation_id,
+    e.recipient AS earmark,
+    allocation.transfer_id,
+    allocation.amount
+   FROM ((giveffektivt.charge c
+     JOIN giveffektivt.earmark e ON ((e.donation_id = c.donation_id)))
+     CROSS JOIN LATERAL ( SELECT ct.transfer_id,
+            ct.amount
+           FROM giveffektivt.charge_transfer ct
+          WHERE ((ct.charge_id = c.id) AND (ct.earmark = e.recipient))
+        UNION ALL
+         SELECT NULL::uuid AS uuid,
+            (e.amount - COALESCE(sum(ct.amount), (0)::numeric))
+           FROM giveffektivt.charge_transfer ct
+          WHERE ((ct.charge_id = c.id) AND (ct.earmark = e.recipient))
+         HAVING ((e.amount - COALESCE(sum(ct.amount), (0)::numeric)) > (0)::numeric)) allocation)
+  WHERE (c.status = 'charged'::giveffektivt.charge_status);
 
 
 --
@@ -1080,23 +1215,6 @@ CREATE VIEW giveffektivt.charged_donations_internal AS
 
 
 --
--- Name: transfer; Type: TABLE; Schema: giveffektivt; Owner: -
---
-
-CREATE TABLE giveffektivt.transfer (
-    id uuid DEFAULT gen_random_uuid() NOT NULL,
-    recipient giveffektivt.transfer_recipient NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    unit_cost_external numeric,
-    life_cost_external numeric,
-    exchange_rate numeric,
-    earmark giveffektivt.donation_recipient NOT NULL,
-    unit_cost_conversion numeric
-);
-
-
---
 -- Name: charged_donations_by_transfer_internal; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1106,7 +1224,7 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer_internal AS
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(e.amount, 1) AS amount,
+    allocation.amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -1114,12 +1232,10 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer_internal AS
     cd.tax_deductible,
     cd.charge_id,
     cd.charged_at,
-    e.recipient AS earmark,
-    t.id AS transfer_id
-   FROM (((giveffektivt.charged_donations_internal cd
-     JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
-     LEFT JOIN giveffektivt.charge_transfer ct ON (((ct.charge_id = cd.charge_id) AND (ct.earmark = e.recipient))))
-     LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)))
+    allocation.earmark,
+    allocation.transfer_id
+   FROM (giveffektivt.charged_donations_internal cd
+     JOIN giveffektivt.charge_earmark_allocations allocation ON ((allocation.charge_id = cd.charge_id)))
   ORDER BY cd.charged_at DESC;
 
 
@@ -1156,6 +1272,25 @@ CREATE VIEW giveffektivt.charged_memberships_internal AS
 
 
 --
+-- Name: transfer; Type: TABLE; Schema: giveffektivt; Owner: -
+--
+
+CREATE TABLE giveffektivt.transfer (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    recipient giveffektivt.transfer_recipient NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    unit_cost_external numeric,
+    life_cost_external numeric,
+    exchange_rate numeric,
+    earmark giveffektivt.donation_recipient NOT NULL,
+    unit_cost_conversion numeric,
+    unit text,
+    CONSTRAINT transfer_unit_not_blank CHECK (((unit IS NULL) OR (length(btrim(unit)) > 0)))
+);
+
+
+--
 -- Name: annual_email_report; Type: VIEW; Schema: giveffektivt; Owner: -
 --
 
@@ -1168,6 +1303,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
             cdt.email,
             cdt.tax_deductible,
             min(t.recipient) AS recipient,
+            min(t.unit) AS unit_label,
             round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit,
             sum(cdt.amount) AS amount,
             min(cdt.charged_at) AS first_donated
@@ -1181,11 +1317,12 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data_per_transfer.email,
             data_per_transfer.tax_deductible,
             data_per_transfer.recipient,
+            data_per_transfer.unit_label,
             sum(data_per_transfer.unit) AS unit,
             sum(data_per_transfer.amount) AS total,
             min(data_per_transfer.first_donated) AS first_donated
            FROM data_per_transfer
-          GROUP BY data_per_transfer.tin, data_per_transfer.email, data_per_transfer.tax_deductible, data_per_transfer.recipient
+          GROUP BY data_per_transfer.tin, data_per_transfer.email, data_per_transfer.tax_deductible, data_per_transfer.recipient, data_per_transfer.unit_label
         ), members_confirmed AS (
          SELECT DISTINCT ON (charged_memberships_internal.tin) charged_memberships_internal.tin,
             charged_memberships_internal.email
@@ -1213,6 +1350,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data.email,
             data.tax_deductible,
             data.recipient,
+            data.unit_label,
             data.unit,
             data.total,
             data.first_donated
@@ -1223,6 +1361,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data.email,
             data.tax_deductible,
             data.recipient,
+            data.unit_label,
             data.unit,
             data.total,
             data.first_donated
@@ -1233,6 +1372,7 @@ CREATE VIEW giveffektivt.annual_email_report AS
             data.email,
             data.tax_deductible,
             data.recipient,
+            data.unit_label,
             data.unit,
             data.total,
             data.first_donated
@@ -1250,10 +1390,11 @@ CREATE VIEW giveffektivt.annual_email_report AS
     NULLIF((COALESCE(b.total, (0)::numeric) + COALESCE(c.total, (0)::numeric)), (0)::numeric) AS amount_not_tax_deductible,
     ((COALESCE(a.total, (0)::numeric) + COALESCE(b.total, (0)::numeric)) + COALESCE(c.total, (0)::numeric)) AS amount_total,
     ((COALESCE(a.unit, (0)::numeric) + COALESCE(b.unit, (0)::numeric)) + COALESCE(c.unit, (0)::numeric)) AS unit_total,
-    LEAST(a.first_donated, b.first_donated, c.first_donated) AS first_donated
+    LEAST(a.first_donated, b.first_donated, c.first_donated) AS first_donated,
+    COALESCE(a.unit_label, b.unit_label, c.unit_label) AS unit_label
    FROM (((((with_tax a
-     FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.recipient IS DISTINCT FROM b.recipient)))))
-     FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.recipient, b.recipient) IS DISTINCT FROM c.recipient)))))
+     FULL JOIN with_tin_no_tax b ON (((NOT (a.tin IS DISTINCT FROM b.tin)) AND (a.email = b.email) AND (NOT (a.recipient IS DISTINCT FROM b.recipient)) AND (NOT (a.unit_label IS DISTINCT FROM b.unit_label)))))
+     FULL JOIN with_no_tin_no_tax c ON (((COALESCE(a.email, b.email) = c.email) AND (NOT (COALESCE(a.recipient, b.recipient) IS DISTINCT FROM c.recipient)) AND (NOT (COALESCE(a.unit_label, b.unit_label) IS DISTINCT FROM c.unit_label)))))
      LEFT JOIN email_to_tin_guess d ON ((COALESCE(a.email, b.email, c.email) = d.email)))
      LEFT JOIN members_confirmed e ON ((COALESCE(a.tin, b.tin, d.tin) = e.tin)))
      LEFT JOIN active_gavebrev f ON ((COALESCE(a.tin, b.tin) = f.tin)))
@@ -1767,7 +1908,7 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(e.amount, 1) AS amount,
+    allocation.amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -1775,12 +1916,10 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer AS
     cd.tax_deductible,
     cd.charge_id,
     cd.charged_at,
-    e.recipient AS earmark,
-    t.id AS transfer_id
-   FROM (((giveffektivt.charged_donations cd
-     JOIN giveffektivt.earmark e ON ((cd.donation_id = e.donation_id)))
-     LEFT JOIN giveffektivt.charge_transfer ct ON (((ct.charge_id = cd.charge_id) AND (ct.earmark = e.recipient))))
-     LEFT JOIN giveffektivt.transfer t ON ((ct.transfer_id = t.id)))
+    allocation.earmark,
+    allocation.transfer_id
+   FROM (giveffektivt.charged_donations cd
+     JOIN giveffektivt.charge_earmark_allocations allocation ON ((allocation.charge_id = cd.charge_id)))
   ORDER BY cd.charged_at DESC;
 
 
@@ -1959,6 +2098,7 @@ CREATE VIEW giveffektivt.donor_impact_report AS
  WITH data AS (
          SELECT cdt.email,
             min(t.recipient) AS transferred_to,
+            min(t.unit) AS unit_label,
             min(t.created_at) AS transferred_at,
             sum(cdt.amount) AS amount,
             round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS units,
@@ -1972,7 +2112,8 @@ CREATE VIEW giveffektivt.donor_impact_report AS
     COALESCE(to_char(transferred_at, 'YYYY-MM-DD'::text), '== Fremtiden =='::text) AS transferred_at,
     amount,
     units,
-    lives
+    lives,
+    unit_label
    FROM data
   ORDER BY email, data.transferred_at;
 
@@ -2743,6 +2884,7 @@ CREATE VIEW giveffektivt.kpi AS
         ), pending_skat_update AS (
          SELECT (count(1))::numeric AS pending_skat_update
            FROM giveffektivt.annual_tax_report_pending_update
+          WHERE (annual_tax_report_pending_update.year < EXTRACT(year FROM CURRENT_DATE))
         )
  SELECT dkk_total.dkk_total,
     dkk_total_ops.dkk_total_ops,
@@ -2822,40 +2964,22 @@ CREATE VIEW giveffektivt.renew_donations_to_email AS
 --
 
 CREATE VIEW giveffektivt.transfer_overview AS
- SELECT t.id,
-    t.earmark,
-    (
-        CASE
-            WHEN (t.created_at > now()) THEN 'Forventet: '::text
-            ELSE ''::text
-        END || t.recipient) AS recipient,
-        CASE
-            WHEN (t.recipient = 'Against Malaria Foundation'::giveffektivt.transfer_recipient) THEN 'Antimalaria myggenet'::text
-            WHEN (t.recipient = 'Malaria Consortium'::giveffektivt.transfer_recipient) THEN 'Malariabehandlinger'::text
-            WHEN (t.recipient = 'Helen Keller International'::giveffektivt.transfer_recipient) THEN 'A-vitamintilskud'::text
-            WHEN (t.recipient = 'New Incentives'::giveffektivt.transfer_recipient) THEN 'Vaccinationsprogrammer'::text
-            WHEN (t.recipient = 'Give Directly'::giveffektivt.transfer_recipient) THEN 'Dollars'::text
-            WHEN (t.recipient = 'SCI Foundation'::giveffektivt.transfer_recipient) THEN 'Ormekure'::text
-            ELSE NULL::text
-        END AS unit,
-    round(sum(cdt.amount)) AS total_dkk,
-    round((sum(cdt.amount) / max(t.exchange_rate))) AS total_usd,
-    round(max(t.unit_cost_external), 2) AS unit_cost_external,
-    round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
-    round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
-    round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
-    round(max(t.life_cost_external), 2) AS life_cost_external,
-    round((max(t.life_cost_external) * max(t.exchange_rate)), 2) AS life_cost_dkk,
-    round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
-    max(cdt.charged_at) AS computed_at,
-        CASE
-            WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
-            ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
-        END AS transferred_at
-   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
-     JOIN giveffektivt.transfer t ON (((cdt.transfer_id = t.id) OR ((cdt.transfer_id IS NULL) AND (cdt.earmark = t.earmark) AND (t.created_at > now())))))
-  GROUP BY t.id, t.earmark, t.recipient, t.created_at
-  ORDER BY t.created_at, (sum(cdt.amount)) DESC;
+SELECT
+    NULL::uuid AS id,
+    NULL::giveffektivt.donation_recipient AS earmark,
+    NULL::text AS recipient,
+    NULL::text AS unit,
+    NULL::numeric AS total_dkk,
+    NULL::numeric AS total_usd,
+    NULL::numeric AS unit_cost_external,
+    NULL::numeric AS unit_cost_conversion,
+    NULL::numeric AS unit_cost_dkk,
+    NULL::numeric AS unit_impact,
+    NULL::numeric AS life_cost_external,
+    NULL::numeric AS life_cost_dkk,
+    NULL::numeric AS life_impact,
+    NULL::timestamp with time zone AS computed_at,
+    NULL::text AS transferred_at;
 
 
 --
@@ -3679,7 +3803,7 @@ CREATE VIEW giveffektivt.time_distribution_monthly AS
 CREATE VIEW giveffektivt.transferred_distribution AS
  SELECT t.recipient,
     round(sum(cdt.amount)) AS dkk_total,
-    (count(*))::numeric AS payments_total
+    (count(DISTINCT cdt.charge_id))::numeric AS payments_total
    FROM (giveffektivt.charged_donations_by_transfer_internal cdt
      JOIN giveffektivt.transfer t ON ((cdt.transfer_id = t.id)))
   GROUP BY t.recipient
@@ -4012,10 +4136,57 @@ CREATE INDEX audit_log_table_name_idx ON giveffektivt.audit_log USING btree (tab
 
 
 --
+-- Name: charge_transfer_donation_earmark_idx; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX charge_transfer_donation_earmark_idx ON giveffektivt.charge_transfer USING btree (donation_id, earmark);
+
+
+--
 -- Name: donor_unique_email_tin; Type: INDEX; Schema: giveffektivt; Owner: -
 --
 
 CREATE UNIQUE INDEX donor_unique_email_tin ON giveffektivt.donor USING btree (email, COALESCE(tin, ''::text));
+
+
+--
+-- Name: transfer_overview _RETURN; Type: RULE; Schema: giveffektivt; Owner: -
+--
+
+CREATE OR REPLACE VIEW giveffektivt.transfer_overview AS
+ SELECT t.id,
+    t.earmark,
+    (
+        CASE
+            WHEN (t.created_at > now()) THEN 'Forventet: '::text
+            ELSE ''::text
+        END || t.recipient) AS recipient,
+    t.unit,
+    round(sum(cdt.amount)) AS total_dkk,
+    round((sum(cdt.amount) / max(t.exchange_rate))) AS total_usd,
+    round(max(t.unit_cost_external), 2) AS unit_cost_external,
+    round(max(t.unit_cost_conversion), 2) AS unit_cost_conversion,
+    round(((max(t.unit_cost_external) / max(t.unit_cost_conversion)) * max(t.exchange_rate)), 2) AS unit_cost_dkk,
+    round(((sum(cdt.amount) / max(t.exchange_rate)) / (max(t.unit_cost_external) / max(t.unit_cost_conversion))), 1) AS unit_impact,
+    round(max(t.life_cost_external), 2) AS life_cost_external,
+    round((max(t.life_cost_external) * max(t.exchange_rate)), 2) AS life_cost_dkk,
+    round(((sum(cdt.amount) / max(t.exchange_rate)) / max(t.life_cost_external)), 1) AS life_impact,
+    max(cdt.charged_at) AS computed_at,
+        CASE
+            WHEN (t.created_at > now()) THEN 'Næste overførsel'::text
+            ELSE to_char(t.created_at, 'yyyy-mm-dd'::text)
+        END AS transferred_at
+   FROM (giveffektivt.charged_donations_by_transfer_internal cdt
+     JOIN giveffektivt.transfer t ON (((cdt.transfer_id = t.id) OR ((cdt.transfer_id IS NULL) AND (cdt.earmark = t.earmark) AND (cdt.earmark <> 'andet'::giveffektivt.donation_recipient) AND (t.created_at > now())))))
+  GROUP BY t.id, t.earmark, t.recipient, t.created_at
+  ORDER BY t.created_at, (sum(cdt.amount)) DESC;
+
+
+--
+-- Name: charge_transfer charge_transfer_allocation_total; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER charge_transfer_allocation_total AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.charge_transfer DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION giveffektivt.check_charge_transfer_allocation_total();
 
 
 --
@@ -4044,6 +4215,13 @@ CREATE TRIGGER donor_update_timestamp BEFORE UPDATE ON giveffektivt.donor FOR EA
 --
 
 CREATE CONSTRAINT TRIGGER earmark_sum_check AFTER INSERT OR DELETE OR UPDATE ON giveffektivt.earmark DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION giveffektivt.earmark_sum_check();
+
+
+--
+-- Name: earmark earmark_transfer_allocation_total; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE CONSTRAINT TRIGGER earmark_transfer_allocation_total AFTER INSERT OR UPDATE ON giveffektivt.earmark DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION giveffektivt.check_charge_transfer_allocation_total();
 
 
 --
@@ -4079,6 +4257,20 @@ CREATE TRIGGER max_tax_deduction_update_timestamp BEFORE UPDATE ON giveffektivt.
 --
 
 CREATE TRIGGER ops_budget_update_timestamp BEFORE UPDATE ON giveffektivt.ops_budget FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: charge_transfer prepare_charge_transfer_allocation; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER prepare_charge_transfer_allocation BEFORE INSERT OR DELETE OR UPDATE ON giveffektivt.charge_transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.prepare_charge_transfer_allocation();
+
+
+--
+-- Name: transfer set_transfer_default_unit; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER set_transfer_default_unit BEFORE INSERT ON giveffektivt.transfer FOR EACH ROW EXECUTE FUNCTION giveffektivt.set_transfer_default_unit();
 
 
 --
@@ -4383,4 +4575,7 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20260901173341'),
     ('20260919232349'),
     ('20260920001055'),
+    ('20261001225542'),
+    ('20261001225543'),
+    ('20261001230906'),
     ('99999999999999');

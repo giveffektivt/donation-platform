@@ -14,6 +14,7 @@ annual_tax_report_pending_update,
 charged_donations,
 charged_donations_by_transfer,
 charged_donations_by_transfer_internal,
+charge_earmark_allocations,
 charged_donations_internal,
 charged_memberships,
 charged_memberships_internal,
@@ -242,6 +243,29 @@ select
     on charged_memberships to reader;
 
 --------------------------------------
+create view charge_earmark_allocations as
+select
+    c.id as charge_id,
+    c.donation_id,
+    e.recipient as earmark,
+    allocation.transfer_id,
+    allocation.amount
+from
+    charge c
+    join earmark e on e.donation_id = c.donation_id
+    cross join lateral (
+        select ct.transfer_id, ct.amount
+        from charge_transfer ct
+        where ct.charge_id = c.id and ct.earmark = e.recipient
+        union all
+        select null::uuid, e.amount - coalesce(sum(ct.amount), 0)
+        from charge_transfer ct
+        where ct.charge_id = c.id and ct.earmark = e.recipient
+        having e.amount - coalesce(sum(ct.amount), 0) > 0
+    ) allocation
+where
+    c.status = 'charged';
+
 create view charged_donations_by_transfer_internal as
 select
     cd.donor_id,
@@ -249,7 +273,7 @@ select
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(e.amount, 1) as amount,
+    allocation.amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -257,14 +281,11 @@ select
     cd.tax_deductible,
     cd.charge_id,
     cd.charged_at,
-    e.recipient as earmark,
-    t.id as transfer_id
+    allocation.earmark,
+    allocation.transfer_id
 from
     charged_donations_internal cd
-    join earmark e on cd.donation_id = e.donation_id
-    left join charge_transfer ct on ct.charge_id = cd.charge_id
-    and ct.earmark = e.recipient
-    left join transfer t on ct.transfer_id = t.id
+    join charge_earmark_allocations allocation on allocation.charge_id = cd.charge_id
 order by
     cd.charged_at desc;
 
@@ -275,7 +296,7 @@ select
     cd.email,
     cd.tin,
     cd.donation_id,
-    round(e.amount, 1) as amount,
+    allocation.amount,
     cd.frequency,
     cd.cancelled,
     cd.method,
@@ -283,14 +304,11 @@ select
     cd.tax_deductible,
     cd.charge_id,
     cd.charged_at,
-    e.recipient as earmark,
-    t.id as transfer_id
+    allocation.earmark,
+    allocation.transfer_id
 from
     charged_donations cd
-    join earmark e on cd.donation_id = e.donation_id
-    left join charge_transfer ct on ct.charge_id = cd.charge_id
-    and ct.earmark = e.recipient
-    left join transfer t on ct.transfer_id = t.id
+    join charge_earmark_allocations allocation on allocation.charge_id = cd.charge_id
 order by
     cd.charged_at desc;
 
@@ -1198,6 +1216,7 @@ with
             cdt.email,
             cdt.tax_deductible,
             min(t.recipient) as recipient,
+            min(t.unit) as unit_label,
             round(sum(cdt.amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as unit,
             sum(cdt.amount) as amount,
             min(cdt.charged_at) as first_donated
@@ -1219,6 +1238,7 @@ with
             email,
             tax_deductible,
             recipient,
+            unit_label,
             sum(unit) as unit,
             sum(amount) as total,
             min(first_donated) as first_donated
@@ -1228,7 +1248,8 @@ with
             tin,
             email,
             tax_deductible,
-            recipient
+            recipient,
+            unit_label
     ),
     members_confirmed as (
         select distinct
@@ -1309,14 +1330,17 @@ select
     nullif(coalesce(b.total, 0) + coalesce(c.total, 0), 0) as amount_not_tax_deductible,
     coalesce(a.total, 0) + coalesce(b.total, 0) + coalesce(c.total, 0) as amount_total,
     coalesce(a.unit, 0) + coalesce(b.unit, 0) + coalesce(c.unit, 0) as unit_total,
-    least(a.first_donated, b.first_donated, c.first_donated) as first_donated
+    least(a.first_donated, b.first_donated, c.first_donated) as first_donated,
+    coalesce(a.unit_label, b.unit_label, c.unit_label) as unit_label
 from
     with_tax a
     full join with_tin_no_tax b on a.tin is not distinct from b.tin
     and a.email = b.email
     and a.recipient is not distinct from b.recipient
+    and a.unit_label is not distinct from b.unit_label
     full join with_no_tin_no_tax c on coalesce(a.email, b.email) = c.email
     and coalesce(a.recipient, b.recipient) is not distinct from c.recipient
+    and coalesce(a.unit_label, b.unit_label) is not distinct from c.unit_label
     left join email_to_tin_guess d on coalesce(a.email, b.email, c.email) = d.email
     left join members_confirmed e on coalesce(a.tin, b.tin, d.tin) = e.tin
     left join active_gavebrev f on coalesce(a.tin, b.tin) = f.tin
@@ -1464,14 +1488,7 @@ select
         when t.created_at > now() then 'Forventet: '
         else ''
     end || t.recipient as recipient,
-    case
-        when t.recipient = 'Against Malaria Foundation' then 'Antimalaria myggenet'
-        when t.recipient = 'Malaria Consortium' then 'Malariabehandlinger'
-        when t.recipient = 'Helen Keller International' then 'A-vitamintilskud'
-        when t.recipient = 'New Incentives' then 'Vaccinationsprogrammer'
-        when t.recipient = 'Give Directly' then 'Dollars'
-        when t.recipient = 'SCI Foundation' then 'Ormekure'
-    end as unit,
+    t.unit,
     round(sum(amount))::numeric as total_dkk,
     round(sum(amount) / max(t.exchange_rate))::numeric as total_usd,
     round(max(t.unit_cost_external), 2) as unit_cost_external,
@@ -1492,6 +1509,7 @@ from
     or (
         cdt.transfer_id is null
         and cdt.earmark = t.earmark
+        and cdt.earmark <> 'andet'
         and t.created_at > now()
     )
 group by
@@ -1546,7 +1564,7 @@ create view transferred_distribution as
 select
     t.recipient,
     round(sum(amount))::numeric as dkk_total,
-    count(*)::numeric as payments_total
+    count(distinct cdt.charge_id)::numeric as payments_total
 from
     charged_donations_by_transfer_internal cdt
     join transfer t on cdt.transfer_id = t.id
@@ -2433,6 +2451,8 @@ with
             count(1)::numeric as pending_skat_update
         from
             annual_tax_report_pending_update
+        where
+            year < extract(year from current_date)
     )
 select
     *
@@ -2615,6 +2635,7 @@ with
         select
             email,
             min(t.recipient) as transferred_to,
+            min(t.unit) as unit_label,
             min(t.created_at) as transferred_at,
             sum(amount) as amount,
             round(sum(amount) / max(t.exchange_rate) / (max(t.unit_cost_external) / max(t.unit_cost_conversion)), 1) as units,
@@ -2632,7 +2653,8 @@ select
     coalesce(to_char(transferred_at, 'YYYY-MM-DD'), '== Fremtiden ==') as transferred_at,
     amount,
     units,
-    lives
+    lives,
+    unit_label
 from
     data
 order by
