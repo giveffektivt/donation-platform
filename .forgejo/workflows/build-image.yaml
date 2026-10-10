@@ -48,7 +48,7 @@ jobs:
           printf '%s' "$REGISTRY_TOKEN" | docker login "http://$REGISTRY" \
             --username "$REGISTRY_USERNAME" --password-stdin
           docker buildx build --progress plain \
-            --cache-from "type=registry,ref=$IMAGE:buildcache-$TAG" \
-            --cache-from "type=registry,ref=$IMAGE:buildcache-main" \
-            --cache-to "type=registry,ref=$IMAGE:buildcache-$TAG,mode=max,ignore-error=true" \
-            --tag "$IMAGE:$TAG" --push .
+            --cache-from "type=registry,ref=$IMAGE:buildcache-$TAG,registry.insecure=true" \
+            --cache-from "type=registry,ref=$IMAGE:buildcache-main,registry.insecure=true" \
+            --cache-to "type=registry,ref=$IMAGE:buildcache-$TAG,mode=max,ignore-error=true,registry.insecure=true" \
+            --tag "$IMAGE:$TAG" --output type=image,push=true,registry.insecure=true .
