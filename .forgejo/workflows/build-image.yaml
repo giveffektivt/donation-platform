@@ -1,0 +1,51 @@
+name: Build image
+
+on:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+concurrency:
+  group: giveffektivt-api-${{ forgejo.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: docker
+    container:
+      image: docker:29-cli
+    env:
+      DOCKER_HOST: tcp://127.0.0.1:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    steps:
+      - run: apk add --no-cache git nodejs
+
+      - uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build and publish
+        env:
+          REGISTRY: ${{ secrets.REGISTRY }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          IMAGE_OWNER: ${{ forgejo.repository_owner }}
+          BRANCH_NAME: ${{ forgejo.ref_name }}
+        run: |
+          set -eu
+          TAG=$(printf '%s' "$BRANCH_NAME" | LC_ALL=C tr -c 'a-zA-Z0-9_.-' '-' | cut -c1-110)
+          case "$TAG" in
+            ''|[.-]*) TAG="branch-$TAG" ;;
+          esac
+          if [ "$TAG" != "$BRANCH_NAME" ]; then
+            HASH=$(printf '%s' "$BRANCH_NAME" | sha256sum | cut -c1-12)
+            TAG="$TAG-$HASH"
+          fi
+          OWNER=$(printf '%s' "$IMAGE_OWNER" | tr '[:upper:]' '[:lower:]')
+          IMAGE="$REGISTRY/$OWNER/giveffektivt-api:$TAG"
+          docker build --tag "$IMAGE" .
+          printf '%s' "$REGISTRY_TOKEN" | docker login "http://$REGISTRY" \
+            --username "$REGISTRY_USERNAME" --password-stdin
+          docker push "$IMAGE"
