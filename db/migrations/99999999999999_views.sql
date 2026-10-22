@@ -282,7 +282,8 @@ select
     cd.charge_id,
     cd.charged_at,
     allocation.earmark,
-    allocation.transfer_id
+    allocation.transfer_id,
+    cd.donation_gateway_metadata
 from
     charged_donations_internal cd
     join charge_earmark_allocations allocation on allocation.charge_id = cd.charge_id
@@ -1586,8 +1587,8 @@ select
 from
     charged_donations_by_transfer_internal cdt
 where
-    earmark != 'drift'
-    and transfer_id is null
+    transfer_id is null
+    and not coalesce(donation_gateway_metadata ? 'quickpay_legacy', false)
 group by
     earmark
 order by
@@ -2191,8 +2192,8 @@ select
 from
     charged_donations_by_transfer_internal cdt
 where
-    earmark != 'drift'
-    and transfer_id is null
+    transfer_id is null
+    and not coalesce(donation_gateway_metadata ? 'quickpay_legacy', false)
 order by
     charged_at;
 
@@ -2225,6 +2226,16 @@ with
             floor(extract(epoch from (now() - min(charged_at)))) as oldest_pending_donation_age
         from
             transfer_pending
+        where
+            earmark != 'drift'
+    ),
+    dkk_pending_transfer_ops as (
+        select
+            coalesce(round(sum(amount))::numeric, 0) as dkk_pending_transfer_ops
+        from
+            transfer_pending
+        where
+            earmark = 'drift'
     ),
     dkk_last_30_days as (
         select
@@ -2460,6 +2471,7 @@ from
     dkk_total,
     dkk_total_ops,
     dkk_pending_transfer,
+    dkk_pending_transfer_ops,
     dkk_last_30_days,
     dkk_recurring_next_year,
     members_confirmed,

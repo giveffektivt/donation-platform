@@ -1233,7 +1233,8 @@ CREATE VIEW giveffektivt.charged_donations_by_transfer_internal AS
     cd.charge_id,
     cd.charged_at,
     allocation.earmark,
-    allocation.transfer_id
+    allocation.transfer_id,
+    cd.donation_gateway_metadata
    FROM (giveffektivt.charged_donations_internal cd
      JOIN giveffektivt.charge_earmark_allocations allocation ON ((allocation.charge_id = cd.charge_id)))
   ORDER BY cd.charged_at DESC;
@@ -2787,7 +2788,7 @@ CREATE VIEW giveffektivt.transfer_pending AS
     amount,
     earmark
    FROM giveffektivt.charged_donations_by_transfer_internal cdt
-  WHERE ((earmark <> 'drift'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
+  WHERE ((transfer_id IS NULL) AND (NOT COALESCE((donation_gateway_metadata ? 'quickpay_legacy'::text), false)))
   ORDER BY charged_at;
 
 
@@ -2808,6 +2809,11 @@ CREATE VIEW giveffektivt.kpi AS
          SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer,
             floor(EXTRACT(epoch FROM (now() - min(transfer_pending.charged_at)))) AS oldest_pending_donation_age
            FROM giveffektivt.transfer_pending
+          WHERE (transfer_pending.earmark <> 'drift'::giveffektivt.donation_recipient)
+        ), dkk_pending_transfer_ops AS (
+         SELECT COALESCE(round(sum(transfer_pending.amount)), (0)::numeric) AS dkk_pending_transfer_ops
+           FROM giveffektivt.transfer_pending
+          WHERE (transfer_pending.earmark = 'drift'::giveffektivt.donation_recipient)
         ), dkk_last_30_days AS (
          SELECT round(sum(charged_donations_internal.amount)) AS dkk_last_30_days
            FROM giveffektivt.charged_donations_internal
@@ -2890,6 +2896,7 @@ CREATE VIEW giveffektivt.kpi AS
     dkk_total_ops.dkk_total_ops,
     dkk_pending_transfer.dkk_pending_transfer,
     dkk_pending_transfer.oldest_pending_donation_age,
+    dkk_pending_transfer_ops.dkk_pending_transfer_ops,
     dkk_last_30_days.dkk_last_30_days,
     dkk_recurring_next_year.dkk_recurring_next_year,
     members_confirmed.members_confirmed,
@@ -2906,6 +2913,7 @@ CREATE VIEW giveffektivt.kpi AS
    FROM dkk_total,
     dkk_total_ops,
     dkk_pending_transfer,
+    dkk_pending_transfer_ops,
     dkk_last_30_days,
     dkk_recurring_next_year,
     members_confirmed,
@@ -2930,7 +2938,7 @@ CREATE VIEW giveffektivt.pending_distribution AS
     round(sum(amount)) AS dkk_total,
     (count(*))::numeric AS payments_total
    FROM giveffektivt.charged_donations_by_transfer_internal cdt
-  WHERE ((earmark <> 'drift'::giveffektivt.donation_recipient) AND (transfer_id IS NULL))
+  WHERE ((transfer_id IS NULL) AND (NOT COALESCE((donation_gateway_metadata ? 'quickpay_legacy'::text), false)))
   GROUP BY earmark
   ORDER BY (round(sum(amount))) DESC;
 
