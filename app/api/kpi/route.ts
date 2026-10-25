@@ -7,9 +7,8 @@ import {
   getTimeDistribution,
   getTransferOverview,
   getTransferredDistribution,
-  getDonationRecipientLabel,
+  getDonationRecipientPath,
   logError,
-  DonationRecipient,
   type Kpi,
   type PendingDistribution,
   type TimeDistribution,
@@ -17,11 +16,6 @@ import {
 } from "src";
 
 const CACHE_TTL_MS = 30_000;
-
-const kpiEarmarkLabels: Partial<Record<DonationRecipient, string>> = {
-  [DonationRecipient.SmartFordelingGlobal]: "Smart fordeling - global sundhed",
-  [DonationRecipient.SmartFordelingDyr]: "Smart fordeling - dyrevelfærd",
-};
 
 type HumanFriendlyEarmark<T> = Omit<T, "earmark"> & { earmark: string };
 
@@ -138,9 +132,7 @@ function withHumanFriendlyEarmarks<T extends { earmark: string }>(
 ): HumanFriendlyEarmark<T>[] {
   return items.map(({ earmark, ...item }) => ({
     ...item,
-    earmark:
-      kpiEarmarkLabels[earmark as DonationRecipient] ??
-      getDonationRecipientLabel(earmark),
+    earmark: getDonationRecipientPath(earmark),
   }));
 }
 

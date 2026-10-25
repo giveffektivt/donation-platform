@@ -258,6 +258,23 @@ export const mapToNorwegianOrgId = (recipient: string): number => {
   throw new Error(`Unknown organization ${recipient}`);
 };
 
+export const getDonationRecipientPath = (recipient: string): string => {
+  const label = getDonationRecipientLabel(recipient);
+  const org = norwegianOrgs.find(
+    (candidate) =>
+      candidate.name === recipient ||
+      (recipient === DonationRecipient.StorVelkendtEffekt &&
+        candidate.id === 1),
+  );
+  const causeArea = norwegianCauseAreas.find(
+    (candidate) => candidate.id === org?.causeAreaId,
+  );
+
+  return causeArea && causeArea.name !== label
+    ? `${causeArea.name} > ${label}`
+    : label;
+};
+
 export const buildNorwegianCauseAreaDistribution = (
   earmarks: { recipient: string; amount: number }[],
   donationAmount: number,
