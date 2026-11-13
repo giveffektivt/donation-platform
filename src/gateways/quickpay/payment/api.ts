@@ -6,6 +6,7 @@ import {
   logError,
   PaymentMethod,
   setChargeStatus,
+  setChargeQuickpayMetadata,
 } from "src";
 
 /** Make a request to Quickpay API to get Quickpay ID for a one time payment */
@@ -115,10 +116,10 @@ export async function quickpayChargeSubscription(
 
   const isMobilePay = charge.method === PaymentMethod.MobilePay;
 
-  let status = ChargeStatus.Waiting;
+  let response: Response;
 
   try {
-    await request(
+    response = await request(
       "POST",
       `subscriptions/${charge.donation_gateway_metadata.quickpay_id}/recurring`,
       buildAuthorizationHeader(
@@ -131,14 +132,35 @@ export async function quickpayChargeSubscription(
         text_on_statement: "giveffektivt.dk",
         description: `Giv Effektivt ${charge.short_id}`,
       },
-      !isMobilePay, // MobilePay Subscriptions sends empty response on success
+      false,
     );
   } catch (err) {
     await logError(`Error while charging ID '${charge.id}':`, err);
-    status = ChargeStatus.Error;
+    await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
+    return;
   }
 
-  await setChargeStatus(db, { id: charge.id, status });
+  await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Waiting });
+
+  try {
+    const quickpayId = isMobilePay
+      ? response.headers
+          .get("Location")
+          ?.match(/\/payments\/(\d+)(?:\/|$|\?)/)?.[1]
+      : (await response.json()).id;
+    if (quickpayId) {
+      await setChargeQuickpayMetadata(db, charge.short_id, quickpayId);
+    } else {
+      await logError(
+        `Quickpay payment ID missing for charge '${charge.id}'`,
+      );
+    }
+  } catch (err) {
+    await logError(
+      `Could not save Quickpay metadata for charge '${charge.id}':`,
+      err,
+    );
+  }
 }
 
 async function request(
@@ -165,6 +187,7 @@ async function request(
   if (parseResponse) {
     return await response.json();
   }
+  return response;
 }
 
 function buildAuthorizationHeader(isLegacy?: boolean) {

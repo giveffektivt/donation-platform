@@ -1,4 +1,5 @@
 export type QuickpayChange = {
+  id: number;
   accepted: boolean;
   acquirer: string;
   test_mode: boolean;

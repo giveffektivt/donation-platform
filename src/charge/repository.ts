@@ -47,6 +47,22 @@ export async function setChargeStatus(
   ]);
 }
 
+export async function setChargeQuickpayMetadata(
+  client: PoolClient,
+  short_id: string,
+  quickpay_id: string | number,
+) {
+  return await client.query(
+    `update charge set gateway_metadata = gateway_metadata || $1::jsonb where short_id = $2`,
+    [
+      JSON.stringify({
+        quickpay_id: String(quickpay_id),
+      }),
+      short_id,
+    ],
+  );
+}
+
 export async function setChargeStatusByShortId(
   client: PoolClient,
   charge: Partial<ChargeWithGatewayMetadata>,

@@ -10,6 +10,7 @@ import {
   sendFailedRecurringDonationEmail,
   sendFailedRecurringDonationEmails,
   setChargeStatusByShortId,
+  setChargeQuickpayMetadata,
   setDonationCancelledByQuickpayOrder,
   setDonationMethodByQuickpayOrder,
 } from "src";
@@ -65,6 +66,7 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
 
 /** Add gateway response to a charge */
 async function handleCharge(db: PoolClient, change: QuickpayChange) {
+  await setChargeQuickpayMetadata(db, change.order_id, change.id);
   const [status, msg] = getChargeStatusFromOperations(change);
   if (status) {
     const isCardExpired =

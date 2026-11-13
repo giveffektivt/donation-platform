@@ -16,6 +16,7 @@ import {
   registerDonationViaQuickpay,
   registerMembershipViaQuickpay,
   setDonationQuickpayId,
+  setChargeQuickpayMetadata,
 } from "src";
 
 export async function processQuickpayDonation(
@@ -121,6 +122,13 @@ async function addQuickpayId(
     : quickpayCreateSubscription(donation));
 
   await setDonationQuickpayId(db, donation);
+  if (charge) {
+    await setChargeQuickpayMetadata(
+      db,
+      charge.short_id,
+      donation.gateway_metadata.quickpay_id,
+    );
+  }
 
   return [donation, charge];
 }
