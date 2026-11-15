@@ -80,18 +80,23 @@ select
         ''
     ) as earmarks,
     d.cancelled,
+    d.subscription_confirmed_at,
     d.method,
     d.gateway,
     d.gateway_metadata as donation_gateway_metadata,
     d.tax_deductible,
     d.fundraiser_id,
+    d.referral_code,
+    d.emailed as donation_emailed,
+    d.created_at as donation_created_at,
+    d.updated_at as donation_updated_at,
     c.id as charge_id,
     c.short_id as charge_short_id,
     c.status,
     c.retry,
     c.gateway_metadata as charge_gateway_metadata,
     c.created_at as charged_at,
-    d.created_at as donation_created_at
+    c.updated_at as charge_updated_at
 from
     donor p
     join donation d on d.donor_id = p.id
@@ -121,6 +126,7 @@ select
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     case
@@ -129,6 +135,10 @@ select
     end as donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
@@ -138,7 +148,7 @@ select
         else null
     end as charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
 from
     donations_overview_internal;
 

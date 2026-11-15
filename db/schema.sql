@@ -1,6 +1,6 @@
 \restrict dbmate
 
--- Dumped from database version 17.10
+-- Dumped from database version 17.2
 -- Dumped by pg_dump version 18.7
 
 SET statement_timeout = 0;
@@ -1197,18 +1197,23 @@ CREATE VIEW giveffektivt.donations_overview_internal AS
            FROM giveffektivt.earmark e
           WHERE (e.donation_id = d.id)), ''::text) AS earmarks,
     d.cancelled,
+    d.subscription_confirmed_at,
     d.method,
     d.gateway,
     d.gateway_metadata AS donation_gateway_metadata,
     d.tax_deductible,
     d.fundraiser_id,
+    d.referral_code,
+    d.emailed AS donation_emailed,
+    d.created_at AS donation_created_at,
+    d.updated_at AS donation_updated_at,
     c.id AS charge_id,
     c.short_id AS charge_short_id,
     c.status,
     c.retry,
     c.gateway_metadata AS charge_gateway_metadata,
     c.created_at AS charged_at,
-    d.created_at AS donation_created_at
+    c.updated_at AS charge_updated_at
    FROM ((giveffektivt.donor p
      JOIN giveffektivt.donation d ON ((d.donor_id = p.id)))
      LEFT JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
@@ -1229,18 +1234,23 @@ CREATE VIEW giveffektivt.charged_donations_internal AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
     retry,
     charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
    FROM giveffektivt.donations_overview_internal d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
@@ -1287,18 +1297,23 @@ CREATE VIEW giveffektivt.charged_memberships_internal AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
     retry,
     charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
    FROM giveffektivt.donations_overview_internal d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
@@ -1879,6 +1894,7 @@ CREATE VIEW giveffektivt.donations_overview WITH (security_barrier='true') AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
         CASE
@@ -1887,6 +1903,10 @@ CREATE VIEW giveffektivt.donations_overview WITH (security_barrier='true') AS
         END AS donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
@@ -1896,7 +1916,7 @@ CREATE VIEW giveffektivt.donations_overview WITH (security_barrier='true') AS
             ELSE NULL::jsonb
         END AS charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
    FROM giveffektivt.donations_overview_internal;
 
 
@@ -1914,18 +1934,23 @@ CREATE VIEW giveffektivt.charged_donations AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
     retry,
     charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
    FROM giveffektivt.donations_overview d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
@@ -1971,18 +1996,23 @@ CREATE VIEW giveffektivt.charged_memberships AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
     retry,
     charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
    FROM giveffektivt.donations_overview d
   WHERE ((status = 'charged'::giveffektivt.charge_status) AND (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
@@ -2003,18 +2033,23 @@ CREATE VIEW giveffektivt.charged_or_created_donations AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
     retry,
     charge_gateway_metadata,
     charged_at,
-    donation_created_at
+    charge_updated_at
    FROM giveffektivt.donations_overview_internal d
   WHERE ((status = ANY (ARRAY['charged'::giveffektivt.charge_status, 'created'::giveffektivt.charge_status])) AND (NOT (EXISTS ( SELECT 1
            FROM giveffektivt.earmark e
@@ -3054,18 +3089,23 @@ CREATE VIEW giveffektivt.schedule_memberships_charges AS
     amount,
     earmarks,
     cancelled,
+    subscription_confirmed_at,
     method,
     gateway,
     donation_gateway_metadata,
     tax_deductible,
     fundraiser_id,
+    referral_code,
+    donation_emailed,
+    donation_created_at,
+    donation_updated_at,
     charge_id,
     charge_short_id,
     status,
     retry,
     charge_gateway_metadata,
     charged_at,
-    donation_created_at,
+    charge_updated_at,
     next_year_to_charge_at,
         CASE
             WHEN ((method = 'MobilePay'::giveffektivt.payment_method) AND (EXTRACT(year FROM charged_at) = EXTRACT(year FROM CURRENT_DATE))) THEN next_year_to_charge_at
@@ -3081,18 +3121,23 @@ CREATE VIEW giveffektivt.schedule_memberships_charges AS
             d.amount,
             d.earmarks,
             d.cancelled,
+            d.subscription_confirmed_at,
             d.method,
             d.gateway,
             d.donation_gateway_metadata,
             d.tax_deductible,
             d.fundraiser_id,
+            d.referral_code,
+            d.donation_emailed,
+            d.donation_created_at,
+            d.donation_updated_at,
             d.charge_id,
             d.charge_short_id,
             d.status,
             d.retry,
             d.charge_gateway_metadata,
             d.charged_at,
-            d.donation_created_at,
+            d.charge_updated_at,
             ((make_date(((EXTRACT(year FROM CURRENT_DATE))::integer + 1), 4, 5) + (d.charged_at)::time without time zone))::timestamp with time zone AS next_year_to_charge_at
            FROM giveffektivt.donations_overview d
           WHERE ((NOT d.cancelled) AND (EXISTS ( SELECT 1
