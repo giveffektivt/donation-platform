@@ -77,6 +77,24 @@ export async function setDonationCancelledByQuickpayOrder(
   );
 }
 
+export async function confirmSubscriptionByQuickpayOrder(
+  client: PoolClient,
+  quickpay_order: string,
+  quickpay_id: number,
+) {
+  return await client.query(
+    `update donation
+     set subscription_confirmed_at = now()
+     where gateway = 'Quickpay'
+       and gateway_metadata ->> 'quickpay_order' = $1
+       and gateway_metadata ->> 'quickpay_id' = $2
+       and frequency in ('monthly', 'yearly')
+       and not cancelled
+       and subscription_confirmed_at is null`,
+    [quickpay_order, String(quickpay_id)],
+  );
+}
+
 export async function setDonationMethodByQuickpayOrder(
   client: PoolClient,
   quickpay_order: string,

@@ -1,7 +1,7 @@
 \restrict dbmate
 
--- Dumped from database version 17.2
--- Dumped by pg_dump version 18.6
+-- Dumped from database version 17.10
+-- Dumped by pg_dump version 18.7
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -172,7 +172,8 @@ CREATE TABLE giveffektivt.donation (
     message text,
     public_message_author boolean DEFAULT false NOT NULL,
     message_author text,
-    referral_code text
+    referral_code text,
+    subscription_confirmed_at timestamp with time zone
 );
 
 
@@ -247,7 +248,11 @@ begin
         p_emailed => v_old_donation.emailed
     ) into v_new_donation;
 
-    update donation set gateway_metadata = v_old_donation.gateway_metadata where id = v_new_donation.id;
+    update donation
+    set gateway_metadata = v_old_donation.gateway_metadata,
+        subscription_confirmed_at = v_old_donation.subscription_confirmed_at
+    where id = v_new_donation.id
+    returning * into v_new_donation;
 
     if v_old_donation.method != 'Bank transfer' then
         insert into charge (donation_id, status, created_at)
@@ -472,6 +477,27 @@ $$;
 
 
 --
+-- Name: confirm_subscription_from_capture(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.confirm_subscription_from_capture() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+    if new.status = 'charged' then
+        update donation
+        set subscription_confirmed_at = new.created_at
+        where id = new.donation_id
+            and subscription_confirmed_at is null
+            and gateway in ('Quickpay', 'Scanpay')
+            and frequency in ('monthly', 'yearly');
+    end if;
+    return new;
+end
+$$;
+
+
+--
 -- Name: copy_donation(uuid, numeric, giveffektivt.donation_frequency, jsonb, giveffektivt.payment_gateway, giveffektivt.payment_method, boolean, jsonb, uuid, boolean, text, text, giveffektivt.emailed_status, boolean, text); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -556,6 +582,13 @@ begin
     update donation
     set donor_id = v_source.donor_id,
         gateway_metadata = v_metadata,
+        subscription_confirmed_at = case
+            when v_gateway = v_source.gateway
+                and v_metadata = v_source.gateway_metadata
+                and v_copy.frequency in ('monthly', 'yearly')
+            then v_source.subscription_confirmed_at
+            else null
+        end,
         cancelled = coalesce(p_cancelled, v_source.cancelled)
     where id = v_copy.id
     returning * into v_copy;
@@ -2593,14 +2626,7 @@ CREATE VIEW giveffektivt.donations_to_email AS
 --
 
 CREATE VIEW giveffektivt.failed_recurring_donations AS
- WITH paid_before AS (
-         SELECT DISTINCT ON (d.id) d.id
-           FROM ((giveffektivt.donation d
-             JOIN giveffektivt.donor p ON ((d.donor_id = p.id)))
-             JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
-          WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (c.status = 'charged'::giveffektivt.charge_status))
-          ORDER BY d.id
-        ), single_recipient AS (
+ WITH single_recipient AS (
          SELECT earmark.donation_id,
                 CASE
                     WHEN (count(*) = 1) THEN max(earmark.recipient)
@@ -2647,8 +2673,7 @@ CREATE VIEW giveffektivt.failed_recurring_donations AS
              JOIN giveffektivt.donor p ON ((d.donor_id = p.id)))
              JOIN giveffektivt.charge c ON ((c.donation_id = d.id)))
              LEFT JOIN single_recipient sr ON ((sr.donation_id = d.id)))
-          WHERE (d.id IN ( SELECT paid_before.id
-                   FROM paid_before))
+          WHERE ((d.gateway = ANY (ARRAY['Quickpay'::giveffektivt.payment_gateway, 'Scanpay'::giveffektivt.payment_gateway])) AND (NOT d.cancelled) AND (d.frequency = ANY (ARRAY['monthly'::giveffektivt.donation_frequency, 'yearly'::giveffektivt.donation_frequency])) AND (d.subscription_confirmed_at IS NOT NULL))
           ORDER BY d.id, c.created_at DESC) s
   WHERE (status = 'error'::giveffektivt.charge_status)
   ORDER BY failed_at DESC;
@@ -4205,6 +4230,13 @@ CREATE TRIGGER charge_update_timestamp BEFORE UPDATE ON giveffektivt.charge FOR 
 
 
 --
+-- Name: charge confirm_subscription_from_capture; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER confirm_subscription_from_capture AFTER INSERT OR UPDATE OF status ON giveffektivt.charge FOR EACH ROW EXECUTE FUNCTION giveffektivt.confirm_subscription_from_capture();
+
+
+--
 -- Name: donation donation_update_timestamp; Type: TRIGGER; Schema: giveffektivt; Owner: -
 --
 
@@ -4586,4 +4618,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20261001225542'),
     ('20261001225543'),
     ('20261001230906'),
+    ('20261115101104'),
     ('99999999999999');

@@ -600,21 +600,6 @@ update on charges_to_charge to writer;
 --------------------------------------
 create view failed_recurring_donations as
 with
-    paid_before as (
-        select distinct
-            on (d.id) d.id
-        from
-            donation d
-            inner join donor p on d.donor_id = p.id
-            inner join charge c on c.donation_id = d.id
-        where
-            gateway in ('Quickpay', 'Scanpay')
-            and not cancelled
-            and frequency in ('monthly', 'yearly')
-            and status = 'charged'
-        order by
-            d.id
-    ),
     single_recipient as (
         select
             donation_id,
@@ -655,12 +640,10 @@ from
             inner join charge c on c.donation_id = d.id
             left join single_recipient sr on sr.donation_id = d.id
         where
-            d.id in (
-                select
-                    id
-                from
-                    paid_before
-            )
+            d.gateway in ('Quickpay', 'Scanpay')
+            and not d.cancelled
+            and d.frequency in ('monthly', 'yearly')
+            and d.subscription_confirmed_at is not null
         order by
             d.id,
             c.created_at desc
@@ -3609,7 +3592,11 @@ begin
         p_emailed => v_old_donation.emailed
     ) into v_new_donation;
 
-    update donation set gateway_metadata = v_old_donation.gateway_metadata where id = v_new_donation.id;
+    update donation
+    set gateway_metadata = v_old_donation.gateway_metadata,
+        subscription_confirmed_at = v_old_donation.subscription_confirmed_at
+    where id = v_new_donation.id
+    returning * into v_new_donation;
 
     if v_old_donation.method != 'Bank transfer' then
         insert into charge (donation_id, status, created_at)
@@ -3725,6 +3712,13 @@ begin
     update donation
     set donor_id = v_source.donor_id,
         gateway_metadata = v_metadata,
+        subscription_confirmed_at = case
+            when v_gateway = v_source.gateway
+                and v_metadata = v_source.gateway_metadata
+                and v_copy.frequency in ('monthly', 'yearly')
+            then v_source.subscription_confirmed_at
+            else null
+        end,
         cancelled = coalesce(p_cancelled, v_source.cancelled)
     where id = v_copy.id
     returning * into v_copy;

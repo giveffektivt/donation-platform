@@ -49,6 +49,7 @@ export type Donation = {
   amount: number;
   frequency: DonationFrequency;
   cancelled: boolean;
+  subscription_confirmed_at: Date | null;
   gateway: PaymentGateway;
   method: PaymentMethod;
   tax_deductible: boolean;

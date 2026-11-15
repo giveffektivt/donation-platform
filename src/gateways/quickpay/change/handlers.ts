@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import {
   ChargeStatus,
+  confirmSubscriptionByQuickpayOrder,
   getDonationIdByChargeShortId,
   getFailedRecurringDonationByQuickpayOrder,
   insertInitialChargeQuickpay,
@@ -42,6 +43,10 @@ async function handleSubscription(db: PoolClient, change: QuickpayChange) {
       info.donor_name,
     );
     return;
+  }
+
+  if (change.state === "active") {
+    await confirmSubscriptionByQuickpayOrder(db, change.order_id, change.id);
   }
 
   if (change.acquirer === "vmpepayment") {
