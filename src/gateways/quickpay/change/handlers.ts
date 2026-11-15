@@ -78,7 +78,7 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
         "card not found",
         "user action required",
         "rejected user_action_required",
-        "amount exceeds charge limit for agreement",
+        "charge amount too high. amount exceeds charge limit for agreement",
       ].includes((msg ?? "").toLocaleLowerCase());
 
     const log =
