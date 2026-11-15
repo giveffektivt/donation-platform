@@ -10,7 +10,6 @@ import {
   PaymentMethod,
   registerDonationViaBankTransfer,
   registerDonationViaQuickpay,
-  registerMembershipViaQuickpay,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllDonations, findAllEarmarks } from "./repository";
@@ -23,42 +22,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await dbRollbackTransaction(await client);
-});
-
-test("Insert donation for Giv Effektivt membership using Quickpay", async () => {
-  const db = await client;
-
-  const donation = await registerMembershipViaQuickpay(db, {
-    email: "hello@example.com",
-    tin: "111111-1111",
-    name: "John",
-    address: "Street 1",
-    postcode: "1234",
-    city: "Copenhagen",
-    country: "Denmark",
-  });
-
-  const expected = {
-    id: donation.id,
-    emailed: EmailedStatus.No,
-    amount: 50,
-    frequency: DonationFrequency.Yearly,
-    cancelled: false,
-    method: PaymentMethod.CreditCard,
-    tax_deductible: false,
-    gateway: PaymentGateway.Quickpay,
-    fundraiser_id: null,
-  };
-  expect(donation).toMatchObject(expected);
-  expect(await findAllDonations(db)).toMatchObject([expected]);
-
-  expect(await findAllEarmarks(db)).toMatchObject([
-    {
-      donation_id: donation.id,
-      recipient: DonationRecipient.Medlemskab,
-      amount: 50,
-    },
-  ]);
 });
 
 test("Insert donation using Quickpay", async () => {

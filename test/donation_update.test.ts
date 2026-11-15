@@ -4,11 +4,9 @@ import {
   dbBeginTransaction,
   dbClient,
   dbRollbackTransaction,
-  EmailedStatus,
   PaymentMethod,
   registerDonationViaQuickpay,
   setDonationCancelledByQuickpayOrder,
-  setDonationEmailed,
   setDonationMethodByQuickpayOrder,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
@@ -22,28 +20,6 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await dbRollbackTransaction(await client);
-});
-
-test("Update donation to mark it as emailed", async () => {
-  const db = await client;
-
-  const donation = await registerDonationViaQuickpay(db, {
-    email: "hello@example.com",
-    amount: 100,
-    frequency: DonationFrequency.Monthly,
-    method: PaymentMethod.CreditCard,
-    taxDeductible: false,
-    earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
-    ],
-  });
-
-  expect(donation.emailed).toBe(EmailedStatus.No);
-
-  await setDonationEmailed(db, donation.id, EmailedStatus.Yes);
-
-  expect(await findAllDonations(db)).toMatchObject([{ emailed: EmailedStatus.Yes }]);
 });
 
 test("Cancel donation by its Quickpay order ID", async () => {

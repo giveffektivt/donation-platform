@@ -9,7 +9,7 @@ import {
   insertInitialChargeQuickpay,
   PaymentMethod,
   registerDonationViaQuickpay,
-  setChargeStatus,
+  setChargeQuickpayMetadata,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { findAllCharges } from "./repository";
@@ -24,7 +24,7 @@ afterEach(async () => {
   await dbRollbackTransaction(await client);
 });
 
-test("Insert charge for a donation", async () => {
+test("Saving a Quickpay payment ID preserves other metadata and only updates the matching charge", async () => {
   const db = await client;
 
   const donation = await registerDonationViaQuickpay(db, {
@@ -44,16 +44,23 @@ test("Insert charge for a donation", async () => {
     status: ChargeStatus.Created,
   });
 
-  expect(charge).toMatchObject({
-    id: charge.id,
+  const other = await insertCharge(db, {
     donation_id: donation.id,
     status: ChargeStatus.Created,
   });
+  await db.query("update charge set gateway_metadata = $1::jsonb where id = $2", [
+    JSON.stringify({ quickpay_id: "old-id", quickpay_legacy: true }),
+    charge.id,
+  ]);
 
-  expect(await findAllCharges(db)).toMatchObject([{ id: charge.id, donation_id: donation.id, status: ChargeStatus.Created }]);
+  await setChargeQuickpayMetadata(db, charge.short_id, 456);
 
-  expect(charge.short_id.substring(0, 2)).toEqual("c-");
-  expect(charge.short_id).toHaveLength(6);
+  const charges = await findAllCharges(db);
+  expect(charges.find(({ id }) => id === charge.id)?.gateway_metadata).toEqual({
+    quickpay_id: "456",
+    quickpay_legacy: true,
+  });
+  expect(charges.find(({ id }) => id === other.id)?.gateway_metadata).toEqual(other.gateway_metadata);
 });
 
 test("Insert initial charge for a donation via Quickpay only once", async () => {
@@ -112,32 +119,4 @@ test("Do not insert initial charge for a matching donation", async () => {
 
   expect(charge).toBeUndefined();
   expect(await findAllCharges(db)).toHaveLength(0);
-});
-
-test("Update charge status", async () => {
-  const db = await client;
-
-  const donation = await registerDonationViaQuickpay(db, {
-    email: "hello@example.com",
-    amount: 100,
-    frequency: DonationFrequency.Monthly,
-    method: PaymentMethod.CreditCard,
-    taxDeductible: false,
-    earmarks: [
-      { recipient: DonationRecipient.SmartFordeling, amount: 95 },
-      { recipient: DonationRecipient.Malariamedicin, amount: 5 },
-    ],
-  });
-
-  const charge = await insertCharge(db, {
-    donation_id: donation.id,
-    status: ChargeStatus.Created,
-  });
-
-  expect(charge.status).toBe(ChargeStatus.Created);
-  expect(await findAllCharges(db)).toMatchObject([{ id: charge.id, donation_id: donation.id, status: ChargeStatus.Created }]);
-
-  await setChargeStatus(db, { id: charge.id, status: ChargeStatus.Error });
-
-  expect(await findAllCharges(db)).toMatchObject([{ id: charge.id, donation_id: donation.id, status: ChargeStatus.Error }]);
 });

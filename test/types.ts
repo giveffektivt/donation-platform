@@ -1,4 +1,4 @@
-import type { Donation, DonationRecipient, PaymentGateway } from "../src";
+import type { Donation, DonationRecipient } from "../src";
 
 export type Donor = {
   id: string;
@@ -16,11 +16,6 @@ export type Donor = {
 
 export type DonationWithGatewayInfoAny = Donation & {
   gateway_metadata: any;
-};
-
-export type GatewayWebhook = {
-  gateway: PaymentGateway;
-  payload: object;
 };
 
 export type TaxReportLine = {

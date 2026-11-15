@@ -17,7 +17,6 @@ vi.mock("src", () => ({
 
 import { quickpayChargeSubscription } from "../src/gateways/quickpay/payment/api";
 import { quickpayHandleChange } from "../src/gateways/quickpay/change/handlers";
-import { setChargeQuickpayMetadata as saveMetadata } from "../src/charge/repository";
 
 const db = {} as PoolClient;
 const charge = {
@@ -34,17 +33,6 @@ afterEach(() => {
   vi.clearAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
-});
-
-test("merges Quickpay payment metadata without replacing other gateway fields", async () => {
-  const query = vi.fn().mockResolvedValue({ rows: [] });
-
-  await saveMetadata({ query } as unknown as PoolClient, "c-test", 456);
-
-  expect(query).toHaveBeenCalledWith(expect.stringContaining("gateway_metadata = gateway_metadata || $1::jsonb"), [
-    JSON.stringify({ quickpay_id: "456" }),
-    "c-test",
-  ]);
 });
 
 test.each(["https://api.quickpay.net/payments/456/operations/1", "/payments/456/operations/1"])(

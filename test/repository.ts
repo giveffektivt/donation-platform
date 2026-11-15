@@ -9,7 +9,6 @@ import type {
   DonationWithGatewayInfoAny,
   Donor,
   Earmark,
-  GatewayWebhook,
   TaxReportLine,
 } from "./types";
 
@@ -58,12 +57,6 @@ export async function findAllEarmarks(client: PoolClient): Promise<Earmark[]> {
   return (
     await client.query(`select * from earmark order by donation_id, recipient`)
   ).rows;
-}
-
-export async function findAllGatewayWebhooks(
-  client: PoolClient,
-): Promise<GatewayWebhook[]> {
-  return (await client.query(`select * from gateway_webhook`)).rows;
 }
 
 export async function findAnnualTaxReport(

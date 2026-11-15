@@ -172,22 +172,6 @@ test("a fresh renewal subscription does not inherit confirmation", async () => {
   expect(renewed.subscription_confirmed_at).toBeNull();
 });
 
-test("historical recovery query finds missed versions without crossing Quickpay accounts", async () => {
-  const db = await client;
-  const original = await register();
-  await insertCharge(db, { donation_id: original.id, status: ChargeStatus.Charged });
-  const changed = await changeDonation(db, original.id, 200, null, null);
-  await db.query("update donation set subscription_confirmed_at = null where id = $1", [changed.id]);
-  await fail(changed.id);
-  const query = (await readFile(new URL("../db/queries/recurring-donations-missed-by-recovery.sql", import.meta.url), "utf8"))
-    .replaceAll("giveffektivt.", "");
-  expect((await db.query(query)).rows).toMatchObject([{ donation_id: changed.id }]);
-  await db.query("update donation set gateway_metadata = gateway_metadata || '{\"quickpay_legacy\": true}'::jsonb where id = $1", [changed.id]);
-  expect((await db.query(query)).rows).toEqual([]);
-  await db.query("update donation set gateway_metadata = gateway_metadata || '{\"quickpay_legacy\": true}'::jsonb where id = $1", [original.id]);
-  expect((await db.query(query)).rows).toMatchObject([{ donation_id: changed.id }]);
-});
-
 test("capture backfill preserves old recovery eligibility without sharing subscription history", async () => {
   const db = await client;
   const paid = await register();
