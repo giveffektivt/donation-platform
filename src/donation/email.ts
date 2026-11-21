@@ -1,5 +1,6 @@
 import { addYears, differenceInDays, startOfYear } from "date-fns";
 import { EmailParams, MailerSend, Recipient } from "mailersend";
+import { getLargeDonationBcc } from "./receipt-bcc";
 import {
   type BankTransferInfo,
   DonationRecipient,
@@ -112,23 +113,8 @@ export async function sendReceiptEmail(
       },
     ]);
 
-  const isDonationOnceLarge =
-    donation.frequency === "once" &&
-    donation.amount >=
-      Number.parseInt(process.env.BCC_DONATION_ONCE_LARGE_AMOUNT ?? "0");
-
-  const isDonationMonthlyLarge =
-    donation.frequency === "monthly" &&
-    donation.amount >=
-      Number.parseInt(process.env.BCC_DONATION_MONTHLY_LARGE_AMOUNT ?? "0");
-
-  if (
-    process.env.BCC_DONATION_LARGE_EMAIL &&
-    process.env.BCC_DONATION_LARGE_EMAIL !== donation.email &&
-    (isDonationOnceLarge || isDonationMonthlyLarge)
-  ) {
-    emailParams.setBcc([new Recipient(process.env.BCC_DONATION_LARGE_EMAIL)]);
-  }
+  const bcc = getLargeDonationBcc(donation);
+  if (bcc) emailParams.setBcc([new Recipient(bcc)]);
 
   const result = await mailerSend.email.send(emailParams);
   if (result.statusCode !== 202) {

@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@date-fns/utc": "^2.1.1",
+    "@fontsource/open-sans": "^5.3.0",
+    "@react-email/render": "^2.3.1",
     "auth0": "^5.1.0",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
@@ -22,6 +24,8 @@
     "kysely": "^0.28.9",
     "mailersend": "^2.6.0",
     "next": "^16.1.2",
+    "nodemailer": "^10.6.1",
+    "pdfkit": "^0.21.0",
     "pg": "^8.17.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
@@ -30,6 +34,8 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/node": "^25.0.9",
+    "@types/nodemailer": "^8.0.2",
+    "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.16.0",
     "@types/react": "^19.2.8",
     "create-ts-index": "^1.14.0",

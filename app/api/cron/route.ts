@@ -4,6 +4,7 @@ import {
   logError,
   sendNewEmails,
 } from "src";
+import { sendCompanyChargeReceipts } from "src/company-receipts/send";
 
 export async function POST(req: Request) {
   try {
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
     await charge();
     await sendNewEmails();
     await autoRenewFailedRecurringDonations();
+    await sendCompanyChargeReceipts();
 
     return Response.json({ message: "OK" });
   } catch (err) {

@@ -793,6 +793,26 @@ $$;
 
 
 --
+-- Name: initialize_company_receipt_status(); Type: FUNCTION; Schema: giveffektivt; Owner: -
+--
+
+CREATE FUNCTION giveffektivt.initialize_company_receipt_status() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'pg_catalog'
+    AS $_$
+begin
+    if exists (
+        select 1 from giveffektivt.donation d join giveffektivt.donor p on p.id = d.donor_id
+        where d.id = new.donation_id and p.tin ~ '^[1-9][0-9]{7}$'
+    ) then
+        new.company_receipt_status := 'pending';
+    end if;
+    return new;
+end;
+$_$;
+
+
+--
 -- Name: prepare_charge_transfer_allocation(); Type: FUNCTION; Schema: giveffektivt; Owner: -
 --
 
@@ -1122,7 +1142,9 @@ CREATE TABLE giveffektivt.charge (
     gateway_metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    retry numeric DEFAULT 0 NOT NULL
+    retry numeric DEFAULT 0 NOT NULL,
+    company_receipt_status text DEFAULT 'skipped'::text NOT NULL,
+    CONSTRAINT charge_company_receipt_status_check CHECK ((company_receipt_status = ANY (ARRAY['skipped'::text, 'pending'::text, 'not_found'::text, 'attempted'::text, 'sent'::text, 'failed'::text])))
 );
 
 
@@ -2611,7 +2633,8 @@ CREATE VIEW giveffektivt.donations_to_create_retry_charges AS
             charge.gateway_metadata,
             charge.created_at,
             charge.updated_at,
-            charge.retry
+            charge.retry,
+            charge.company_receipt_status
            FROM giveffektivt.charge
           ORDER BY charge.donation_id, charge.created_at DESC, charge.updated_at DESC, charge.id DESC
         )
@@ -4214,6 +4237,13 @@ CREATE INDEX audit_log_table_name_idx ON giveffektivt.audit_log USING btree (tab
 
 
 --
+-- Name: charge_company_receipt_candidates_idx; Type: INDEX; Schema: giveffektivt; Owner: -
+--
+
+CREATE INDEX charge_company_receipt_candidates_idx ON giveffektivt.charge USING btree (created_at, id) WHERE ((status = 'charged'::giveffektivt.charge_status) AND (company_receipt_status = 'pending'::text));
+
+
+--
 -- Name: charge_transfer_donation_earmark_idx; Type: INDEX; Schema: giveffektivt; Owner: -
 --
 
@@ -4328,6 +4358,13 @@ CREATE TRIGGER gavebrev_checkin_update_timestamp BEFORE UPDATE ON giveffektivt.g
 --
 
 CREATE TRIGGER gavebrev_update_timestamp BEFORE UPDATE ON giveffektivt.gavebrev FOR EACH ROW EXECUTE FUNCTION giveffektivt.trigger_update_timestamp();
+
+
+--
+-- Name: charge initialize_company_receipt_status; Type: TRIGGER; Schema: giveffektivt; Owner: -
+--
+
+CREATE TRIGGER initialize_company_receipt_status BEFORE INSERT ON giveffektivt.charge FOR EACH ROW EXECUTE FUNCTION giveffektivt.initialize_company_receipt_status();
 
 
 --
@@ -4664,4 +4701,5 @@ INSERT INTO giveffektivt.schema_migrations (version) VALUES
     ('20261001225543'),
     ('20261001230906'),
     ('20261115101104'),
+    ('20261121212433'),
     ('99999999999999');
