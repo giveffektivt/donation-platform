@@ -2,12 +2,14 @@ import type { PoolClient } from "pg";
 import {
   type Charge,
   ChargeStatus,
+  type Donation,
   DonationFrequency,
   type DonationWithGatewayInfoQuickpay,
   dbExecuteInTransaction,
   insertCharge,
   type NewDonation,
   type NewMembership,
+  PaymentMethod,
   quickpayCreatePayment,
   quickpayCreateSubscription,
   quickpayOneTimeUrl,
@@ -154,13 +156,40 @@ async function generateRedirectUrl(
     ? `${process.env.HOMEPAGE_URL}/api/fundraiser/redirect?fundraiserId=${donation.fundraiser_id}&secret=${process.env.REVALIDATE_TOKEN}`
     : isMembership
       ? process.env.SUCCESS_URL_MEMBERSHIP_ONLY
-      : process.env.SUCCESS_URL;
+      : withPlausibleParam(process.env.SUCCESS_URL, donation);
 
   const url = await (charge
     ? quickpayOneTimeUrl(donation, successUrl)
     : quickpaySubscriptionUrl(donation, successUrl));
 
   return url;
+}
+
+/**
+ * Adds the `plausible` query parameter that the thank-you page decodes to send the revenue
+ * event to Plausible: base64 of a JSON object with the amount, the method, whether the
+ * donation is recurring and the donation id as "kid".
+ */
+export function withPlausibleParam(
+  successUrl: string,
+  donation: Pick<Donation, "id" | "amount" | "frequency" | "method">,
+): string {
+  const data = {
+    revenue: String(donation.amount),
+    method: donation.method === PaymentMethod.MobilePay ? "mobilepay" : "card",
+    recurring:
+      donation.frequency === DonationFrequency.Monthly ||
+      donation.frequency === DonationFrequency.Yearly,
+    kid: donation.id,
+  };
+
+  // URL keeps any query parameters SUCCESS_URL already has and encodes the value.
+  const url = new URL(successUrl);
+  url.searchParams.set(
+    "plausible",
+    Buffer.from(JSON.stringify(data)).toString("base64"),
+  );
+  return url.toString();
 }
 
 async function generateRenewUrl(
