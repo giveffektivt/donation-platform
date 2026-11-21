@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   build:
-    runs-on: docker
+    runs-on: docker-arm64
     container:
       image: docker:29-cli
     env:
