@@ -14,6 +14,7 @@ import {
   recreateQuickpayRecurringDonation,
   registerDonationViaQuickpay,
   setDonationQuickpayId,
+  withPlausibleParam,
 } from "src";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { utc } from "./helpers";
@@ -386,4 +387,52 @@ test("Recreate failed recurring donation", async () => {
     },
   ];
   expect(charges).toMatchObject(expectedCharges);
+});
+
+const decodePlausible = (url: string) => JSON.parse(Buffer.from(new URL(url).searchParams.get("plausible") ?? "", "base64").toString("utf8"));
+
+test("Success URL carries Plausible data for a one-time MobilePay donation", () => {
+  const url = withPlausibleParam("https://example.com/tak", {
+    id: "donation-1",
+    amount: 150,
+    frequency: DonationFrequency.Once,
+    method: PaymentMethod.MobilePay,
+  });
+
+  expect(url.startsWith("https://example.com/tak?plausible=")).toBe(true);
+  expect(decodePlausible(url)).toEqual({
+    revenue: "150",
+    method: "mobilepay",
+    recurring: false,
+    kid: "donation-1",
+  });
+});
+
+test("Success URL carries Plausible data for a monthly card donation", () => {
+  const url = withPlausibleParam("https://example.com/tak", {
+    id: "donation-2",
+    amount: 200,
+    frequency: DonationFrequency.Monthly,
+    method: PaymentMethod.CreditCard,
+  });
+
+  expect(decodePlausible(url)).toEqual({
+    revenue: "200",
+    method: "card",
+    recurring: true,
+    kid: "donation-2",
+  });
+});
+
+test("Success URL keeps its existing query parameters", () => {
+  const url = withPlausibleParam("https://example.com/tak?utm_source=test", {
+    id: "donation-3",
+    amount: 50,
+    frequency: DonationFrequency.Yearly,
+    method: PaymentMethod.CreditCard,
+  });
+
+  const params = new URL(url).searchParams;
+  expect(params.get("utm_source")).toBe("test");
+  expect(decodePlausible(url).recurring).toBe(true);
 });
