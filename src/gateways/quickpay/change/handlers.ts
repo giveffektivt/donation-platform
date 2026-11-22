@@ -84,11 +84,13 @@ async function handleCharge(db: PoolClient, change: QuickpayChange) {
         "user action required",
         "rejected user_action_required",
         "charge amount too high. amount exceeds charge limit for agreement",
-      ].includes((msg ?? "").toLocaleLowerCase());
+      ].includes(msg.toLocaleLowerCase());
 
     const log =
       status === ChargeStatus.Error && !isCardExpired ? logError : console.log;
-    await log(`Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`);
+    await log(
+      `Charge ${change.order_id} is now ${status} (${msg}) with Quickpay`,
+    );
     await setChargeStatusByShortId(db, {
       status,
       short_id: change.order_id,
@@ -121,19 +123,21 @@ const getChargeStatusFromOperations = (
     return [null, ""];
   }
 
-  const latest = change.operations?.sort((a, b) => b.id - a.id)[0];
+  const latest = change.operations.sort((a, b) => b.id - a.id)[0];
+  const msg =
+    latest.aq_status_msg?.trim() || latest.qp_status_msg?.trim() || "";
 
-  switch (latest?.qp_status_code) {
+  switch (latest.qp_status_code) {
     case "40000":
-      return [ChargeStatus.Error, latest.aq_status_msg];
+      return [ChargeStatus.Error, msg];
     case "20000":
       switch (latest.type) {
         case "capture":
-          return [ChargeStatus.Charged, latest.aq_status_msg];
+          return [ChargeStatus.Charged, msg];
         case "refund":
-          return [ChargeStatus.Refunded, latest.aq_status_msg];
+          return [ChargeStatus.Refunded, msg];
         case "cancel":
-          return [ChargeStatus.Error, latest.aq_status_msg];
+          return [ChargeStatus.Error, msg];
       }
   }
   return [null, ""];

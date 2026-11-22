@@ -1,9 +1,19 @@
 import type { PoolClient } from "pg";
 import { afterEach, expect, test, vi } from "vitest";
 
-const { setChargeQuickpayMetadata, setChargeStatus, logError } = vi.hoisted(() => ({
+const {
+  setChargeQuickpayMetadata,
+  setChargeStatus,
+  setChargeStatusByShortId,
+  getDonationIdByChargeShortId,
+  sendFailedRecurringDonationEmails,
+  logError,
+} = vi.hoisted(() => ({
   setChargeQuickpayMetadata: vi.fn(),
   setChargeStatus: vi.fn(),
+  setChargeStatusByShortId: vi.fn(),
+  getDonationIdByChargeShortId: vi.fn().mockResolvedValue("donation-id"),
+  sendFailedRecurringDonationEmails: vi.fn(),
   logError: vi.fn(),
 }));
 
@@ -12,6 +22,9 @@ vi.mock("src", () => ({
   PaymentMethod: { MobilePay: "MobilePay", CreditCard: "CreditCard" },
   setChargeQuickpayMetadata,
   setChargeStatus,
+  setChargeStatusByShortId,
+  getDonationIdByChargeShortId,
+  sendFailedRecurringDonationEmails,
   logError,
 }));
 
@@ -31,6 +44,7 @@ const charge = {
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -142,4 +156,39 @@ test("stores metadata from a payment webhook even without a status change", asyn
   });
 
   expect(setChargeQuickpayMetadata).toHaveBeenCalledWith(db, "c-test", 456);
+});
+
+function handleRecurringFailure(aq_status_msg: string | null, qp_status_msg: string) {
+  return quickpayHandleChange(db, {
+    id: 456,
+    order_id: "c-test",
+    type: "Payment",
+    state: "rejected",
+    accepted: false,
+    acquirer: "clearhaus",
+    test_mode: false,
+    operations: [{ id: 1, type: "recurring", qp_status_code: "40000", aq_status_msg, qp_status_msg }],
+  });
+}
+
+const tokenFailure = "Unable to retrieve card token from payment network";
+
+test("reports the gateway token failure when the acquirer message is missing", async () => {
+  await handleRecurringFailure(null, tokenFailure);
+
+  expect(logError).toHaveBeenCalledWith(`Charge c-test is now error (${tokenFailure}) with Quickpay`);
+  expect(setChargeStatusByShortId).toHaveBeenCalledWith(db, { short_id: "c-test", status: "error" });
+  expect(sendFailedRecurringDonationEmails).not.toHaveBeenCalled();
+});
+
+test.each([
+  ["Card expired", tokenFailure],
+  [null, "Card expired"],
+])("uses the resolved failure reason for donor emails (%s / %s)", async (acquirerMessage, gatewayMessage) => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+
+  await handleRecurringFailure(acquirerMessage, gatewayMessage);
+
+  expect(sendFailedRecurringDonationEmails).toHaveBeenCalledWith(db, ["donation-id"]);
+  expect(logError).not.toHaveBeenCalled();
 });
